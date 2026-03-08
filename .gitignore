@@ -1,0 +1,50 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# === 虚拟环境 ===
+.venv/
+venv/
+env/
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# === 测试与覆盖率 ===
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# === 项目敏感文件 ===
+config.yaml
+CLAUDE.md
+.env
+.env.*
+
+# === 运行时数据 ===
+data/simulations/*
+data/exports/*
+!data/simulations/.gitkeep
+!data/exports/.gitkeep
+*.duckdb
+*.duckdb.wal
+
+# === Ruff ===
+.ruff_cache/
+
+# === 日志 ===
+*.log

@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "civilization-simulator"
+version = "0.1.0"
+description = "AI驱动的文明模拟器 - 三层智能体金字塔架构"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "zephyr", email = "huangsuxiang5@gmail.com"},
+]
+dependencies = [
+    "mesa>=3.0",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "duckdb>=1.0",
+    "litellm>=1.40",
+    "pydantic>=2.5",
+    "pyyaml>=6.0",
+    "noise>=1.2",
+    "paho-mqtt>=2.0",
+    "matplotlib>=3.8",
+    "plotly>=5.18",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
