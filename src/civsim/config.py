@@ -113,7 +113,7 @@ class SettlementPlacementConfig(BaseModel):
     """聚落自动放置配置。"""
 
     auto_placement: bool = True
-    min_suitability_score: float = Field(default=0.6, ge=0.0, le=1.0)
+    min_suitability_score: float = Field(default=0.3, ge=0.0, le=1.0)
     initial_count: int = Field(default=8, gt=0)
 
 
