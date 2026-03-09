@@ -1,6 +1,7 @@
 """Mesa DataCollector 扩展。
 
-采集全局指标：各状态人数、资源总量、满意度分布、抗议率。
+采集全局指标：各状态人数、资源总量、满意度分布、抗议率、
+贸易量、外交关系数、革命次数。
 """
 
 import mesa
@@ -55,6 +56,48 @@ def avg_hunger(model: mesa.Model) -> float:
     return float(np.mean([c.hunger for c in civilians]))
 
 
+def trade_volume(model: mesa.Model) -> float:
+    """当前总贸易量。"""
+    tm = getattr(model, "trade_manager", None)
+    if tm is not None:
+        return tm.total_volume
+    return 0.0
+
+
+def alliance_count(model: mesa.Model) -> int:
+    """当前联盟数量。"""
+    dm = getattr(model, "diplomacy", None)
+    if dm is None:
+        return 0
+    relations = getattr(dm, "_relations", {})
+    return sum(1 for s in relations.values() if int(s) >= 4)
+
+
+def war_count(model: mesa.Model) -> int:
+    """当前战争数量。"""
+    dm = getattr(model, "diplomacy", None)
+    if dm is None:
+        return 0
+    relations = getattr(dm, "_relations", {})
+    return sum(1 for s in relations.values() if int(s) == 0)
+
+
+def revolution_count(model: mesa.Model) -> int:
+    """累计革命次数。"""
+    rt = getattr(model, "revolution_tracker", None)
+    if rt is not None:
+        return rt.revolution_count
+    return 0
+
+
+def faction_count(model: mesa.Model) -> int:
+    """当前阵营数量。"""
+    leaders = getattr(model, "leaders", None)
+    if leaders is not None:
+        return len(leaders)
+    return 0
+
+
 def create_datacollector() -> mesa.DataCollector:
     """创建标准的 DataCollector 实例。
 
@@ -78,6 +121,11 @@ def create_datacollector() -> mesa.DataCollector:
             "avg_satisfaction": avg_satisfaction,
             "avg_hunger": avg_hunger,
             "protest_ratio": protest_ratio,
+            "trade_volume": trade_volume,
+            "alliance_count": alliance_count,
+            "war_count": war_count,
+            "revolution_count": revolution_count,
+            "faction_count": faction_count,
         },
         agent_reporters={
             "state": lambda a: a.state.value if isinstance(a, Civilian) else None,

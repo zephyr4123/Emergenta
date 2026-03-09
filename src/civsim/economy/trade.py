@@ -1,0 +1,238 @@
+"""聚落间贸易系统。
+
+实现供需匹配、贸易路线和利润计算。
+"""
+
+from __future__ import annotations
+
+import logging
+import math
+from dataclasses import dataclass
+
+from civsim.economy.resources import RESOURCE_NAMES
+from civsim.economy.settlement import Settlement
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class TradeRoute:
+    """贸易路线。
+
+    Attributes:
+        seller_id: 卖方聚落 ID。
+        buyer_id: 买方聚落 ID。
+        resource: 交易资源类型。
+        amount: 交易数量。
+        price_gold: 金币价格。
+        distance: 路线距离。
+    """
+
+    seller_id: int
+    buyer_id: int
+    resource: str
+    amount: float
+    price_gold: float
+    distance: float = 0.0
+
+
+# 资源基础价格（金币/单位）
+BASE_PRICES: dict[str, float] = {
+    "food": 1.0,
+    "wood": 1.5,
+    "ore": 3.0,
+}
+
+# 最小可交易盈余比例
+MIN_SURPLUS_RATIO = 0.3
+
+
+class TradeManager:
+    """贸易管理器。
+
+    管理聚落间的资源交易。
+
+    Attributes:
+        completed_trades: 已完成的交易记录。
+        total_volume: 总交易量。
+    """
+
+    def __init__(self) -> None:
+        self.completed_trades: list[TradeRoute] = []
+        self.total_volume: float = 0.0
+        self._tick_trades: list[TradeRoute] = []
+
+    def find_opportunities(
+        self,
+        settlements: dict[int, Settlement],
+        diplomacy_relations: dict[tuple[int, int], int] | None = None,
+    ) -> list[TradeRoute]:
+        """寻找贸易机会，匹配供给过剩和需求不足的聚落。
+
+        Args:
+            settlements: 聚落字典。
+            diplomacy_relations: 外交关系整数值字典。
+
+        Returns:
+            可行的贸易路线列表。
+        """
+        opportunities: list[TradeRoute] = []
+        tradeable = [r for r in RESOURCE_NAMES if r != "gold"]
+        settlement_list = list(settlements.values())
+
+        for resource in tradeable:
+            sellers = _find_sellers(settlement_list, resource)
+            buyers = _find_buyers(settlement_list, resource)
+
+            for seller, surplus in sellers:
+                for buyer, need in buyers:
+                    if seller.id == buyer.id:
+                        continue
+                    if diplomacy_relations and _are_hostile(
+                        seller, buyer, diplomacy_relations,
+                    ):
+                        continue
+
+                    amount = min(surplus * 0.5, need)
+                    if amount < 0.5:
+                        continue
+
+                    distance = _compute_distance(
+                        seller.position, buyer.position,
+                    )
+                    price = (
+                        BASE_PRICES.get(resource, 1.0)
+                        * amount
+                        * (1.0 + distance * 0.01)
+                    )
+                    opportunities.append(TradeRoute(
+                        seller_id=seller.id,
+                        buyer_id=buyer.id,
+                        resource=resource,
+                        amount=amount,
+                        price_gold=price,
+                        distance=distance,
+                    ))
+
+        return opportunities
+
+    def execute_trade(
+        self,
+        route: TradeRoute,
+        settlements: dict[int, Settlement],
+    ) -> bool:
+        """执行一笔贸易。
+
+        Args:
+            route: 贸易路线。
+            settlements: 聚落字典。
+
+        Returns:
+            是否执行成功。
+        """
+        seller = settlements.get(route.seller_id)
+        buyer = settlements.get(route.buyer_id)
+
+        if seller is None or buyer is None:
+            return False
+
+        available = seller.stockpile.get(route.resource, 0.0)
+        if available < route.amount:
+            return False
+
+        buyer_gold = buyer.stockpile.get("gold", 0.0)
+        if buyer_gold < route.price_gold:
+            return False
+
+        seller.stockpile[route.resource] -= route.amount
+        buyer.stockpile[route.resource] = (
+            buyer.stockpile.get(route.resource, 0.0) + route.amount
+        )
+        seller.stockpile["gold"] = (
+            seller.stockpile.get("gold", 0.0) + route.price_gold
+        )
+        buyer.stockpile["gold"] -= route.price_gold
+
+        self.completed_trades.append(route)
+        self._tick_trades.append(route)
+        self.total_volume += route.amount
+        return True
+
+    def process_tick(
+        self,
+        settlements: dict[int, Settlement],
+        diplomacy_relations: dict[tuple[int, int], int] | None = None,
+    ) -> list[TradeRoute]:
+        """处理一个 tick 的贸易，返回本 tick 完成的贸易列表。"""
+        self._tick_trades = []
+        opportunities = self.find_opportunities(
+            settlements, diplomacy_relations,
+        )
+        opportunities.sort(
+            key=lambda r: r.price_gold / max(1.0, r.distance),
+            reverse=True,
+        )
+        for route in opportunities:
+            self.execute_trade(route, settlements)
+        return self._tick_trades
+
+    @property
+    def trade_count(self) -> int:
+        """总交易次数。"""
+        return len(self.completed_trades)
+
+
+def _find_sellers(
+    settlements: list[Settlement], resource: str,
+) -> list[tuple[Settlement, float]]:
+    """找出有盈余的聚落。"""
+    threshold = 5.0 if resource == "food" else 3.0
+    results = []
+    for s in settlements:
+        stock = s.stockpile.get(resource, 0.0)
+        per_cap = stock / max(1, s.population)
+        if per_cap > threshold:
+            surplus = stock - threshold * s.population * MIN_SURPLUS_RATIO
+            if surplus > 1.0:
+                results.append((s, surplus))
+    return results
+
+
+def _find_buyers(
+    settlements: list[Settlement], resource: str,
+) -> list[tuple[Settlement, float]]:
+    """找出有短缺的聚落。"""
+    deficit_threshold = 2.0 if resource == "food" else 1.0
+    results = []
+    for s in settlements:
+        stock = s.stockpile.get(resource, 0.0)
+        per_cap = stock / max(1, s.population)
+        if per_cap < deficit_threshold:
+            need = deficit_threshold * s.population - stock
+            if need > 1.0:
+                results.append((s, need))
+    return results
+
+
+def _compute_distance(
+    pos_a: tuple[int, int], pos_b: tuple[int, int],
+) -> float:
+    """计算两点间的欧氏距离。"""
+    dx = pos_a[0] - pos_b[0]
+    dy = pos_a[1] - pos_b[1]
+    return math.sqrt(dx * dx + dy * dy)
+
+
+def _are_hostile(
+    a: Settlement,
+    b: Settlement,
+    relations: dict[tuple[int, int], int],
+) -> bool:
+    """检查两个聚落所属阵营是否敌对。"""
+    if a.faction_id is None or b.faction_id is None:
+        return False
+    if a.faction_id == b.faction_id:
+        return False
+    key = (min(a.faction_id, b.faction_id), max(a.faction_id, b.faction_id))
+    status = relations.get(key, 2)  # 默认 NEUTRAL=2
+    return status <= 1  # WAR=0 or HOSTILE=1
