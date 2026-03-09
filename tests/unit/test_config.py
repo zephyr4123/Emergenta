@@ -161,20 +161,61 @@ class TestEnvVarExpansion:
 
     def test_env_var_expansion(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """验证 ${VAR} 格式的值被正确展开。"""
-        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-123")
-        data = {"llm": {"api_keys": {"anthropic": "${ANTHROPIC_API_KEY}"}}}
+        monkeypatch.setenv("MY_API_KEY", "test-key-123")
+        data = {"llm": {"default_api_key": "${MY_API_KEY}"}}
         config = CivSimConfig(**data)
-        assert config.llm.api_keys.anthropic == "test-key-123"
+        assert config.llm.default_api_key == "test-key-123"
 
     def test_missing_env_var_returns_empty(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """验证环境变量不存在时返回空字符串。"""
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-        data = {"llm": {"api_keys": {"anthropic": "${ANTHROPIC_API_KEY}"}}}
+        monkeypatch.delenv("MY_API_KEY", raising=False)
+        data = {"llm": {"default_api_key": "${MY_API_KEY}"}}
         config = CivSimConfig(**data)
-        assert config.llm.api_keys.anthropic == ""
+        assert config.llm.default_api_key == ""
 
     def test_literal_value_not_expanded(self) -> None:
         """验证非 ${} 格式的值不被处理。"""
-        data = {"llm": {"api_keys": {"anthropic": "sk-plain-key"}}}
+        data = {"llm": {"default_api_key": "sk-plain-key"}}
         config = CivSimConfig(**data)
-        assert config.llm.api_keys.anthropic == "sk-plain-key"
+        assert config.llm.default_api_key == "sk-plain-key"
+
+    def test_get_model_config_merges_defaults(self) -> None:
+        """验证 get_model_config 合并默认 api_key 和 base_url。"""
+        data = {
+            "llm": {
+                "default_api_key": "sk-default",
+                "default_base_url": "https://example.com/v1",
+                "models": {
+                    "governor": {
+                        "provider": "openai",
+                        "model": "test-model",
+                    }
+                },
+            }
+        }
+        config = CivSimConfig(**data)
+        model_cfg = config.llm.get_model_config("governor")
+        assert model_cfg.api_key == "sk-default"
+        assert model_cfg.base_url == "https://example.com/v1"
+        assert model_cfg.model == "test-model"
+
+    def test_get_model_config_per_model_override(self) -> None:
+        """验证单个模型可覆盖默认 api_key/base_url。"""
+        data = {
+            "llm": {
+                "default_api_key": "sk-default",
+                "default_base_url": "https://default.com/v1",
+                "models": {
+                    "governor": {
+                        "provider": "openai",
+                        "model": "test-model",
+                        "api_key": "sk-override",
+                        "base_url": "https://override.com/v1",
+                    }
+                },
+            }
+        }
+        config = CivSimConfig(**data)
+        model_cfg = config.llm.get_model_config("governor")
+        assert model_cfg.api_key == "sk-override"
+        assert model_cfg.base_url == "https://override.com/v1"

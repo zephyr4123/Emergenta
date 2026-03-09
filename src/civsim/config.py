@@ -25,10 +25,12 @@ class ProjectConfig(BaseModel):
 class LLMModelConfig(BaseModel):
     """单个 LLM 模型配置。"""
 
-    provider: str
-    model: str
+    provider: str = "openai"
+    model: str = ""
     max_tokens: int = 1024
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    api_key: str | None = None
+    base_url: str | None = None
 
 
 class LLMCacheConfig(BaseModel):
@@ -39,12 +41,16 @@ class LLMCacheConfig(BaseModel):
     max_cache_size: int = Field(default=10000, gt=0)
 
 
-class LLMApiKeysConfig(BaseModel):
-    """LLM API 密钥配置，支持环境变量展开。"""
+class LLMConfig(BaseModel):
+    """LLM 网关总配置。"""
 
-    anthropic: str = ""
+    gateway: str = "litellm"
+    default_api_key: str = ""
+    default_base_url: str = ""
+    models: dict[str, LLMModelConfig] = Field(default_factory=dict)
+    cache: LLMCacheConfig = Field(default_factory=LLMCacheConfig)
 
-    @field_validator("anthropic", mode="before")
+    @field_validator("default_api_key", "default_base_url", mode="before")
     @classmethod
     def expand_env_var(cls, v: str) -> str:
         """将 ${VAR_NAME} 格式的值展开为环境变量。"""
@@ -53,14 +59,27 @@ class LLMApiKeysConfig(BaseModel):
             return os.environ.get(env_key, "")
         return v
 
+    def get_model_config(self, role: str) -> LLMModelConfig:
+        """获取指定角色的模型配置，自动填充默认 api_key/base_url。
 
-class LLMConfig(BaseModel):
-    """LLM 网关总配置。"""
+        Args:
+            role: 角色名（governor / leader / leader_opus）。
 
-    gateway: str = "litellm"
-    models: dict[str, LLMModelConfig] = Field(default_factory=dict)
-    api_keys: LLMApiKeysConfig = Field(default_factory=LLMApiKeysConfig)
-    cache: LLMCacheConfig = Field(default_factory=LLMCacheConfig)
+        Returns:
+            合并了默认值的模型配置。
+        """
+        if role not in self.models:
+            msg = f"未找到角色 '{role}' 的 LLM 模型配置"
+            raise KeyError(msg)
+        cfg = self.models[role]
+        return LLMModelConfig(
+            provider=cfg.provider,
+            model=cfg.model,
+            max_tokens=cfg.max_tokens,
+            temperature=cfg.temperature,
+            api_key=cfg.api_key or self.default_api_key,
+            base_url=cfg.base_url or self.default_base_url or None,
+        )
 
 
 class GridConfig(BaseModel):
