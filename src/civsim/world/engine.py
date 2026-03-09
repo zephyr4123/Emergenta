@@ -4,12 +4,16 @@ Mesa Model 子类，实现每 tick 的核心循环：
 环境更新 → Agent 行动 → 聚落结算 → 数据采集。
 """
 
+from __future__ import annotations
+
+import logging
 
 import mesa
 import numpy as np
 
 from civsim.agents.behaviors.markov import Personality
 from civsim.agents.civilian import Civilian, Profession
+from civsim.agents.governor import Governor
 from civsim.config import CivSimConfig, load_config
 from civsim.data.collector import (
     avg_satisfaction,
@@ -18,6 +22,7 @@ from civsim.data.collector import (
 )
 from civsim.data.database import Database
 from civsim.economy.settlement import Settlement
+from civsim.llm.gateway import LLMGateway
 from civsim.world.clock import Clock
 from civsim.world.map_generator import (
     generate_elevation_moisture,
@@ -25,6 +30,8 @@ from civsim.world.map_generator import (
     place_settlements,
 )
 from civsim.world.tiles import TileType
+
+logger = logging.getLogger(__name__)
 
 # 随机事件定义
 RANDOM_EVENTS = [
@@ -53,6 +60,7 @@ class CivilizationEngine(mesa.Model):
         config_path: str | None = None,
         enable_db: bool = False,
         seed: int | None = None,
+        enable_governors: bool | None = None,
     ) -> None:
         super().__init__(seed=seed)
         self.config = config or load_config(config_path)
@@ -106,6 +114,17 @@ class CivilizationEngine(mesa.Model):
 
         # 创建平民 Agent
         self._spawn_civilians()
+
+        # LLM 网关（Phase 2+）
+        self.llm_gateway: LLMGateway | None = None
+
+        # 创建镇长 Agent（Phase 2+）
+        should_enable = enable_governors
+        if should_enable is None:
+            should_enable = self.config.agents.governor.initial_count > 0
+        if should_enable:
+            self._init_llm_gateway()
+            self._spawn_governors()
 
         # 数据采集器
         self.datacollector = create_datacollector()
@@ -168,6 +187,51 @@ class CivilizationEngine(mesa.Model):
 
             # 更新聚落人口
             settlement.population += 1
+
+    def _init_llm_gateway(self) -> None:
+        """初始化 LLM 网关并注册模型配置。"""
+        self.llm_gateway = LLMGateway(max_retries=2, timeout=30)
+        llm_cfg = self.config.llm
+
+        # 注册所有配置的角色模型
+        for role in llm_cfg.models:
+            try:
+                model_config = llm_cfg.get_model_config(role)
+                self.llm_gateway.register_model(role, model_config)
+                logger.info("注册 LLM 模型: %s → %s", role, model_config.model)
+            except KeyError:
+                logger.warning("角色 '%s' 的 LLM 模型配置缺失", role)
+
+    def _spawn_governors(self) -> None:
+        """为每个聚落创建镇长 Agent。"""
+        if not self.settlements:
+            return
+
+        cache_enabled = self.config.llm.cache.enabled
+        memory_limit = self.config.agents.governor.decision_context_window // 10
+
+        for sid, settlement in self.settlements.items():
+            governor = Governor(
+                model=self,
+                settlement_id=sid,
+                gateway=self.llm_gateway,
+                memory_limit=max(5, memory_limit),
+                cache_enabled=cache_enabled,
+            )
+            settlement.governor_id = governor.unique_id
+
+            # 放置到聚落中心
+            self.grid.place_agent(governor, settlement.position)
+
+        logger.info("已创建 %d 个镇长 Agent", len(self.settlements))
+
+    def get_governors(self) -> list[Governor]:
+        """获取所有镇长 Agent。
+
+        Returns:
+            镇长 Agent 列表。
+        """
+        return [a for a in self.agents if isinstance(a, Governor)]
 
     def step(self) -> None:
         """执行一个 tick 的核心循环。"""
