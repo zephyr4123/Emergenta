@@ -154,8 +154,13 @@ class CivilizationEngine(mesa.Model):
             personalities.append(Personality.NEUTRAL)
         self._rng.shuffle(personalities)
 
-        # 职业分布（均匀）
-        professions = list(Profession)
+        # 职业分布（农民占 40%，其余各 20%）
+        professions_weighted = (
+            [Profession.FARMER] * 4
+            + [Profession.WOODCUTTER] * 2
+            + [Profession.MINER] * 2
+            + [Profession.MERCHANT] * 2
+        )
 
         if not self.settlements:
             return
@@ -177,7 +182,7 @@ class CivilizationEngine(mesa.Model):
                 model=self,
                 home_settlement_id=sid,
                 personality=personalities[i],
-                profession=professions[i % len(professions)],
+                profession=professions_weighted[i % len(professions_weighted)],
                 revolt_threshold=threshold,
             )
 
@@ -325,16 +330,21 @@ class CivilizationEngine(mesa.Model):
         self._active_events = remaining
 
     def _settlement_reconcile(self) -> None:
-        """聚落结算：食物消耗、人口增减。"""
-        food_rate = self.config.resources.consumption.food_per_civilian_per_tick
-        food_rate *= self.clock.food_consumption_multiplier
+        """聚落结算：饥荒减员、人口增长。
+
+        注意：食物消耗已在 Civilian._update_needs() 中按个体扣除，
+        此处仅处理饥荒导致的人口死亡和自然增长。
+        """
+        from civsim.world.clock import Season
 
         for settlement in self.settlements.values():
-            # 消耗食物
-            settlement.consume_food_for_population(food_rate)
+            # 饥荒减员：scarcity_index 高时人口减少
+            if settlement.scarcity_index > 0.7 and settlement.population > 0:
+                death_rate = (settlement.scarcity_index - 0.7) * 0.1
+                deaths = max(1, int(settlement.population * death_rate))
+                settlement.population = max(0, settlement.population - deaths)
 
             # 自然增长（春季加成）
-            from civsim.world.clock import Season
             growth_rate = 0.002
             if self.clock.current_season == Season.SPRING:
                 growth_rate *= 1.5

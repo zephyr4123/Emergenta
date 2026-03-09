@@ -143,7 +143,7 @@ class Civilian(BaseAgent):
     def _do_work(self) -> None:
         """劳作：根据职业产出资源到聚落仓库。"""
         resource_key = _PROFESSION_OUTPUT.get(self.profession, "food")
-        base_output = 1.0
+        base_output = 2.5 if resource_key == "food" else 1.0
         # 季节倍率
         if hasattr(self.model, "clock"):
             if resource_key == "food":
@@ -191,18 +191,23 @@ class Civilian(BaseAgent):
             hunger_rate = self.model.config.agents.civilian.hunger_decay_per_tick
         self.hunger = min(1.0, self.hunger + hunger_rate)
 
-        # 休息时消耗食物降低饥饿
+        # 劳作或休息时消耗食物降低饥饿
         if self.state in (CivilianState.WORKING, CivilianState.RESTING) and hasattr(
             self.model, "settlements"
         ):
                 settlement = self.model.settlements.get(self.home_settlement_id)
                 if settlement:
-                    food_needed = 0.5
+                    food_needed = 0.3
+                    if hasattr(self.model, "config"):
+                        food_needed = (
+                            self.model.config.resources.consumption
+                            .food_per_civilian_per_tick
+                        )
                     if hasattr(self.model, "clock"):
                         food_needed *= self.model.clock.food_consumption_multiplier
                     eaten = settlement.withdraw_food(food_needed)
                     if eaten >= food_needed * 0.8:
-                        self.hunger = max(0.0, self.hunger - 0.03)
+                        self.hunger = max(0.0, self.hunger - 0.06)
 
         # 满意度更新
         self._update_satisfaction()
@@ -216,14 +221,13 @@ class Civilian(BaseAgent):
         if settlement is None:
             return
 
-        # 食物充足 → 满意度微增，匮乏 → 满意度下降
+        # 食物充足 → 满意度上升，匮乏 → 满意度下降
         if settlement.scarcity_index > 0.5:
-            self.satisfaction = max(0.0, self.satisfaction - 0.02)
+            self.satisfaction = max(0.0, self.satisfaction - 0.01)
         elif settlement.scarcity_index < 0.2:
-            self.satisfaction = min(1.0, self.satisfaction + 0.005)
+            self.satisfaction = min(1.0, self.satisfaction + 0.01)
 
-        # 高税率降低满意度
+        # 高税率降低满意度（税率越高惩罚越重）
         if settlement.tax_rate > 0.3:
-            self.satisfaction = max(
-                0.0, self.satisfaction - 0.01 * settlement.tax_rate
-            )
+            penalty = 0.02 * settlement.tax_rate
+            self.satisfaction = max(0.0, self.satisfaction - penalty)
