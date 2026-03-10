@@ -14,6 +14,7 @@ from dataclasses import dataclass
 import litellm
 
 from civsim.config import LLMModelConfig
+from civsim.config_params_ext import GatewayParamsConfig
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +82,18 @@ class LLMGateway:
         prompt_cache: Prompt 缓存管理器。
     """
 
-    def __init__(self, max_retries: int = 2, timeout: int = 30) -> None:
+    def __init__(
+        self,
+        max_retries: int = 2,
+        timeout: int = 30,
+        params: GatewayParamsConfig | None = None,
+    ) -> None:
+        if params is not None:
+            max_retries = params.max_retries
+            timeout = params.timeout
         self._max_retries = max_retries
         self._timeout = timeout
+        self._retry_backoff_base = params.retry_backoff_base if params else 1.0
         self.stats = LLMCallStats()
         self._model_configs: dict[str, LLMModelConfig] = {}
         self.cost_tracker: CostTracker | None = None
@@ -191,7 +201,7 @@ class LLMGateway:
                     e,
                 )
                 if attempt < self._max_retries:
-                    time.sleep(1.0 * (attempt + 1))
+                    time.sleep(self._retry_backoff_base * (attempt + 1))
 
         msg = f"LLM 调用失败，已重试 {self._max_retries} 次: {last_error}"
         raise RuntimeError(msg)
@@ -365,7 +375,7 @@ class LLMGateway:
                     e,
                 )
                 if attempt < self._max_retries:
-                    await asyncio.sleep(1.0 * (attempt + 1))
+                    await asyncio.sleep(self._retry_backoff_base * (attempt + 1))
 
         msg = f"LLM 异步调用失败，已重试 {self._max_retries} 次: {last_error}"
         raise RuntimeError(msg)

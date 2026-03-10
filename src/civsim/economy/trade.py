@@ -97,8 +97,12 @@ class TradeManager:
         settlement_list = list(settlements.values())
 
         for resource in tradeable:
-            sellers = _find_sellers(settlement_list, resource)
-            buyers = _find_buyers(settlement_list, resource)
+            sellers = _find_sellers(
+                settlement_list, resource, self.params,
+            )
+            buyers = _find_buyers(
+                settlement_list, resource, self.params,
+            )
 
             for seller, surplus in sellers:
                 for buyer, need in buyers:
@@ -117,16 +121,21 @@ class TradeManager:
                         continue
 
                     amount = min(surplus * self.params.surplus_trade_ratio, need)
-                    if amount < 0.5:
+                    if amount < self.params.min_trade_amount:
                         continue
 
                     distance = _compute_distance(
                         seller.position, buyer.position,
                     )
+                    base_prices = {
+                        "food": self.params.base_price_food,
+                        "wood": self.params.base_price_wood,
+                        "ore": self.params.base_price_ore,
+                    }
                     price = (
-                        BASE_PRICES.get(resource, 1.0)
+                        base_prices.get(resource, 1.0)
                         * amount
-                        * (1.0 + distance * 0.05)
+                        * (1.0 + distance * self.params.distance_cost_factor)
                     )
                     opportunities.append(TradeRoute(
                         seller_id=seller.id,
@@ -278,26 +287,42 @@ def _should_refuse_trade(
 
 
 def _find_sellers(
-    settlements: list[Settlement], resource: str,
+    settlements: list[Settlement],
+    resource: str,
+    params: TradeParamsConfig | None = None,
 ) -> list[tuple[Settlement, float]]:
     """找出有盈余的聚落。"""
-    threshold = 8.0 if resource == "food" else 3.0
+    if params is None:
+        params = TradeParamsConfig()
+    threshold = (
+        params.food_surplus_threshold
+        if resource == "food"
+        else params.other_surplus_threshold
+    )
     results = []
     for s in settlements:
         stock = s.stockpile.get(resource, 0.0)
         per_cap = stock / max(1, s.population)
         if per_cap > threshold:
-            surplus = stock - threshold * s.population * MIN_SURPLUS_RATIO
+            surplus = stock - threshold * s.population * params.min_surplus_ratio
             if surplus > 1.0:
                 results.append((s, surplus))
     return results
 
 
 def _find_buyers(
-    settlements: list[Settlement], resource: str,
+    settlements: list[Settlement],
+    resource: str,
+    params: TradeParamsConfig | None = None,
 ) -> list[tuple[Settlement, float]]:
     """找出有短缺的聚落。"""
-    deficit_threshold = 3.0 if resource == "food" else 1.0
+    if params is None:
+        params = TradeParamsConfig()
+    deficit_threshold = (
+        params.food_deficit_threshold
+        if resource == "food"
+        else params.other_deficit_threshold
+    )
     results = []
     for s in settlements:
         stock = s.stockpile.get(resource, 0.0)

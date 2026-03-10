@@ -6,6 +6,7 @@
 
 from dataclasses import dataclass, field
 
+from civsim.config_params_ext import SettlementParamsConfig
 from civsim.economy.resources import add_resources, create_stockpile
 
 
@@ -40,6 +41,9 @@ class Settlement:
     security_level: float = 0.5
     governor_id: int | None = None
     faction_id: int | None = None
+    _settlement_params: SettlementParamsConfig | None = field(
+        default=None, repr=False,
+    )
 
     @property
     def per_capita_food(self) -> float:
@@ -52,12 +56,15 @@ class Settlement:
     def scarcity_index(self) -> float:
         """食物稀缺指数 [0, 1]，越高越缺粮。
 
-        当人均食物 >= 5 时稀缺度为 0，人均食物为 0 时稀缺度为 1。
+        当人均食物 >= scarcity_full_threshold 时稀缺度为 0，
+        人均食物为 0 时稀缺度为 1。
         """
+        params = self._settlement_params or SettlementParamsConfig()
+        threshold = params.scarcity_full_threshold
         pf = self.per_capita_food
-        if pf >= 5.0:
+        if pf >= threshold:
             return 0.0
-        return max(0.0, 1.0 - pf / 5.0)
+        return max(0.0, 1.0 - pf / threshold)
 
     def deposit(self, resources: dict[str, float]) -> None:
         """向仓库存入资源。
@@ -99,7 +106,8 @@ class Settlement:
             return 0
         # 按未满足比例计算饿死人数（至少1人）
         unfed_ratio = 1.0 - feed_ratio
-        deaths = max(1, int(self.population * unfed_ratio * 0.05))
+        params = self._settlement_params or SettlementParamsConfig()
+        deaths = max(1, int(self.population * unfed_ratio * params.starvation_unfed_factor))
         self.population = max(0, self.population - deaths)
         return deaths
 

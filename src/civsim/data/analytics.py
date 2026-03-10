@@ -8,6 +8,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
+from civsim.config_params_ext import AnalyticsParamsConfig
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,7 +38,11 @@ class EmergenceDetector:
     追踪宏观系统变化，检测涌现行为。
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        params: AnalyticsParamsConfig | None = None,
+    ) -> None:
+        self._params = params or AnalyticsParamsConfig()
         self.events: list[EmergenceEvent] = []
         self._prev_alliance_count = 0
         self._prev_trade_volume = 0.0
@@ -126,7 +132,7 @@ class EmergenceDetector:
         current_volume = getattr(trade_manager, "total_volume", 0.0)
         growth = current_volume - self._prev_trade_volume
 
-        if growth > 50.0 and self._prev_trade_volume > 0:
+        if growth > self._params.trade_growth_threshold and self._prev_trade_volume > 0:
             results.append(EmergenceEvent(
                 tick=tick,
                 event_type="trade_network",
@@ -151,7 +157,7 @@ class EmergenceDetector:
         current_wars = sum(
             1 for s in relations.values() if int(s) == 0  # WAR
         )
-        if current_wars > self._prev_war_count and current_wars >= 2:
+        if current_wars > self._prev_war_count and current_wars >= self._params.war_cascade_min_wars:
             results.append(EmergenceEvent(
                 tick=tick,
                 event_type="war_cascade",

@@ -298,36 +298,44 @@ class Governor(BaseAgent):
         Returns:
             回退决策字典。
         """
+        # 获取回退参数配置
+        fb = None
+        if hasattr(self.model, "config"):
+            fb = self.model.config.governor_fallback
+        from civsim.config_params_ext import GovernorFallbackConfig
+        if fb is None:
+            fb = GovernorFallbackConfig()
+
         tax_change = 0.0
         sec_change = 0.0
         focus = "balanced"
         reasoning = "规则回退策略"
 
         # 食物紧缺时降税
-        if perception.scarcity_index > 0.5:
-            tax_change = -0.05
+        if perception.scarcity_index > fb.scarcity_threshold:
+            tax_change = fb.scarcity_tax_change
             focus = "food"
             reasoning = "食物紧缺，降低税率促进生产"
 
         # 抗议率高时增加治安
-        if perception.protest_ratio > 0.2:
-            sec_change = 0.1
-            if perception.protest_ratio > 0.4:
-                tax_change = min(tax_change, -0.03)
+        if perception.protest_ratio > fb.protest_threshold:
+            sec_change = fb.protest_security_change
+            if perception.protest_ratio > fb.high_protest_threshold:
+                tax_change = min(tax_change, fb.high_protest_tax_change)
             reasoning = "抗议率较高，加强治安并适度降税"
 
         # 满意度低时降税
-        if perception.satisfaction_avg < 0.3:
-            tax_change = max(tax_change, -0.05)
+        if perception.satisfaction_avg < fb.low_satisfaction_threshold:
+            tax_change = max(tax_change, fb.low_satisfaction_tax_change)
             reasoning = "民众满意度低，降税安抚"
 
         # 资源充裕时可加税
         if (
-            perception.scarcity_index < 0.2
-            and perception.protest_ratio < 0.1
-            and perception.satisfaction_avg > 0.6
+            perception.scarcity_index < fb.stable_scarcity_max
+            and perception.protest_ratio < fb.stable_protest_max
+            and perception.satisfaction_avg > fb.stable_satisfaction_min
         ):
-            tax_change = 0.03
+            tax_change = fb.stable_tax_change
             reasoning = "局势稳定资源充裕，适度加税积累储备"
 
         return validate_governor_decision({

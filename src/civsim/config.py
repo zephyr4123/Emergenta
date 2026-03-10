@@ -17,6 +17,22 @@ from civsim.config_params import (
     SatisfactionCoefficientsConfig,
     TradeParamsConfig,
 )
+from civsim.config_params_ext import (
+    AnalyticsParamsConfig,
+    CivilianBehaviorConfig,
+    DiplomacyParamsConfig,
+    EngineParamsConfig,
+    EventParamsConfig,
+    GatewayParamsConfig,
+    GovernanceParamsConfig,
+    GovernorFallbackConfig,
+    LeaderFallbackConfig,
+    MapSuitabilityConfig,
+    MemoryParamsConfig,
+    SeasonParamsConfig,
+    SettlementParamsConfig,
+    TileParamsConfig,
+)
 
 # ============================================================
 # 子配置模型
@@ -337,6 +353,40 @@ class CivSimConfig(BaseModel):
     )
     adaptive_controller: AdaptiveControllerConfig = Field(
         default_factory=AdaptiveControllerConfig,
+    )
+    tile_params: TileParamsConfig = Field(default_factory=TileParamsConfig)
+    season_params: SeasonParamsConfig = Field(default_factory=SeasonParamsConfig)
+    map_suitability: MapSuitabilityConfig = Field(
+        default_factory=MapSuitabilityConfig,
+    )
+    event_params: EventParamsConfig = Field(default_factory=EventParamsConfig)
+    engine_params: EngineParamsConfig = Field(default_factory=EngineParamsConfig)
+    civilian_behavior: CivilianBehaviorConfig = Field(
+        default_factory=CivilianBehaviorConfig,
+    )
+    governor_fallback: GovernorFallbackConfig = Field(
+        default_factory=GovernorFallbackConfig,
+    )
+    leader_fallback: LeaderFallbackConfig = Field(
+        default_factory=LeaderFallbackConfig,
+    )
+    governance_params: GovernanceParamsConfig = Field(
+        default_factory=GovernanceParamsConfig,
+    )
+    diplomacy_params: DiplomacyParamsConfig = Field(
+        default_factory=DiplomacyParamsConfig,
+    )
+    settlement_params: SettlementParamsConfig = Field(
+        default_factory=SettlementParamsConfig,
+    )
+    analytics_params: AnalyticsParamsConfig = Field(
+        default_factory=AnalyticsParamsConfig,
+    )
+    gateway_params: GatewayParamsConfig = Field(
+        default_factory=GatewayParamsConfig,
+    )
+    memory_params: MemoryParamsConfig = Field(
+        default_factory=MemoryParamsConfig,
     )
 
 

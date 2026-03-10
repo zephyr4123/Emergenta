@@ -261,16 +261,24 @@ class Leader(BaseAgent):
 
         增加攻击性决策：宣战、破约、转嫁矛盾。
         """
+        # 获取回退参数配置
+        fb = None
+        if hasattr(self.model, "config"):
+            fb = self.model.config.leader_fallback
+        from civsim.config_params_ext import LeaderFallbackConfig
+        if fb is None:
+            fb = LeaderFallbackConfig()
+
         directives = []
         for s_info in perception.settlements_info:
             tax_change = 0.0
             sec_change = 0.0
             focus = "balanced"
 
-            if s_info.get("protest_ratio", 0) > 0.3:
+            if s_info.get("protest_ratio", 0) > fb.protest_threshold:
                 tax_change = -0.05
                 sec_change = 0.1
-            if s_info.get("satisfaction", 0.5) < 0.3:
+            if s_info.get("satisfaction", 0.5) < fb.low_satisfaction_threshold:
                 tax_change = -0.05
                 focus = "food"
 
@@ -291,8 +299,11 @@ class Leader(BaseAgent):
             target_pop = self._estimate_target_strength(fid)
 
             if status == "NEUTRAL":
-                # 强于对手1.3倍时考虑宣战（30%概率）
-                if my_pop > target_pop * 1.3 and self._rng.random() < 0.3:
+                # 强于对手时考虑宣战
+                if (
+                    my_pop > target_pop * fb.war_strength_ratio
+                    and self._rng.random() < fb.war_probability
+                ):
                     diplo_actions.append({
                         "target_faction": fid,
                         "action": "declare_war",
@@ -306,24 +317,27 @@ class Leader(BaseAgent):
                     })
 
             elif status == "ALLIED":
-                # 盟友弱小时考虑背叛（20%概率）
+                # 盟友弱小时考虑背叛
                 trust = 0.5
                 if hasattr(self.model, "diplomacy"):
                     trust = self.model.diplomacy.get_trust(
                         self.faction_id, fid,
                     )
-                if trust < 0.3 and self._rng.random() < 0.2:
+                if (
+                    trust < fb.betrayal_trust_threshold
+                    and self._rng.random() < fb.betrayal_probability
+                ):
                     diplo_actions.append({
                         "target_faction": fid,
                         "action": "break_treaty",
                         "reasoning": "信任度低，背叛盟约以获取利益",
                     })
 
-            # 内部满意度低时对外宣战转嫁矛盾（20%概率）
+            # 内部满意度低时对外宣战转嫁矛盾
             if (
-                perception.avg_satisfaction < 0.4
+                perception.avg_satisfaction < fb.scapegoat_satisfaction_threshold
                 and status not in ("WAR", "ALLIED")
-                and self._rng.random() < 0.2
+                and self._rng.random() < fb.scapegoat_probability
             ):
                 diplo_actions.append({
                     "target_faction": fid,
@@ -381,6 +395,14 @@ class Leader(BaseAgent):
             TreatyType,
         )
 
+        # 获取首领回退参数
+        fb = None
+        if hasattr(self.model, "config"):
+            fb = self.model.config.leader_fallback
+        from civsim.config_params_ext import LeaderFallbackConfig
+        if fb is None:
+            fb = LeaderFallbackConfig()
+
         dm: DiplomacyManager = self.model.diplomacy
         tick = self.model.clock.tick
 
@@ -419,7 +441,7 @@ class Leader(BaseAgent):
                     self.faction_id, target,
                     DiplomaticStatus.WAR, tick,
                 )
-                dm.update_trust(self.faction_id, target, -0.2)
+                dm.update_trust(self.faction_id, target, fb.war_trust_penalty)
                 self.memory.add_event(
                     tick, f"向阵营{target}宣战", importance=1.0,
                 )
@@ -452,7 +474,7 @@ class Leader(BaseAgent):
                     self.faction_id, target,
                     DiplomaticStatus.HOSTILE, tick,
                 )
-                dm.update_trust(self.faction_id, target, -0.15)
+                dm.update_trust(self.faction_id, target, fb.embargo_trust_penalty)
                 self.memory.add_event(
                     tick, f"对阵营{target}实施贸易禁运", importance=0.7,
                 )
@@ -527,6 +549,13 @@ class Leader(BaseAgent):
 
     def _compute_strength(self) -> dict:
         """计算阵营实力。"""
+        fb = None
+        if hasattr(self.model, "config"):
+            fb = self.model.config.leader_fallback
+        from civsim.config_params_ext import LeaderFallbackConfig
+        if fb is None:
+            fb = LeaderFallbackConfig()
+
         pop = 0
         gold = 0.0
         if hasattr(self.model, "settlements"):
@@ -535,7 +564,10 @@ class Leader(BaseAgent):
                 if s:
                     pop += s.population
                     gold += s.stockpile.get("gold", 0)
-        return {"population": pop, "military": gold * 0.5 + pop * 0.1}
+        return {
+            "population": pop,
+            "military": gold * fb.military_gold_weight + pop * fb.military_pop_weight,
+        }
 
     def _estimate_target_strength(self, target_faction_id: int) -> int:
         """估算目标阵营的人口实力。"""

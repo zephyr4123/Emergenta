@@ -9,6 +9,7 @@ import random
 import numpy as np
 from noise import pnoise2
 
+from civsim.config_params_ext import MapSuitabilityConfig
 from civsim.economy.settlement import Settlement
 from civsim.world.tiles import Tile, TileType, classify_tile
 
@@ -118,6 +119,7 @@ def suitability_score(
     elevation: np.ndarray,
     tile_grid: list[list[Tile]],
     radius: int = 5,
+    suitability_config: MapSuitabilityConfig | None = None,
 ) -> float:
     """计算某坐标的聚落适宜度评分。
 
@@ -129,10 +131,14 @@ def suitability_score(
         elevation: 海拔数组。
         tile_grid: 地块网格。
         radius: 评估半径。
+        suitability_config: 适宜度评分参数配置，None 时使用默认值。
 
     Returns:
         适宜度评分 [0, 1]。
     """
+    suitability_config = suitability_config or MapSuitabilityConfig()
+    effective_radius = radius if radius != 5 else suitability_config.suitability_radius
+
     # 该位置本身不能是水域或山地
     center_tile = tile_grid[x][y]
     if center_tile.tile_type in (TileType.WATER, TileType.MOUNTAIN):
@@ -140,21 +146,24 @@ def suitability_score(
 
     score = 0.0
     count = 0
-    for dx in range(-radius, radius + 1):
-        for dy in range(-radius, radius + 1):
+    for dx in range(-effective_radius, effective_radius + 1):
+        for dy in range(-effective_radius, effective_radius + 1):
             nx, ny = x + dx, y + dy
             if 0 <= nx < width and 0 <= ny < height:
                 count += 1
                 tt = tile_grid[nx][ny].tile_type
                 if tt == TileType.FARMLAND:
-                    score += 0.3
+                    score += suitability_config.farmland_weight
                 elif tt == TileType.WATER:
-                    score += 0.4
+                    score += suitability_config.water_weight
                 elif tt == TileType.FOREST:
-                    score += 0.1
+                    score += suitability_config.forest_weight
 
     # 平坦加分
-    score += (1.0 - abs(elevation[x][y] - 0.3)) * 0.5
+    score += (
+        (1.0 - abs(elevation[x][y] - suitability_config.optimal_elevation))
+        * suitability_config.flatness_weight
+    )
 
     if count == 0:
         return 0.0
@@ -169,6 +178,7 @@ def place_settlements(
     count: int = 8,
     min_score: float = 0.6,
     min_distance: int = 10,
+    suitability_config: MapSuitabilityConfig | None = None,
 ) -> list[Settlement]:
     """在地图上放置聚落。
 
@@ -182,15 +192,25 @@ def place_settlements(
         count: 目标聚落数。
         min_score: 最低适宜度阈值。
         min_distance: 聚落间最小曼哈顿距离。
+        suitability_config: 适宜度评分参数配置，None 时使用默认值。
 
     Returns:
         生成的聚落列表。
     """
+    suitability_config = suitability_config or MapSuitabilityConfig()
+    effective_min_distance = (
+        min_distance if min_distance != 10 else suitability_config.min_settlement_distance
+    )
+    territory_radius = suitability_config.territory_radius
+
     # 计算所有位置的适宜度
     scores: list[tuple[float, int, int]] = []
     for x in range(width):
         for y in range(height):
-            s = suitability_score(x, y, width, height, elevation, tile_grid)
+            s = suitability_score(
+                x, y, width, height, elevation, tile_grid,
+                suitability_config=suitability_config,
+            )
             if s >= min_score:
                 scores.append((s, x, y))
 
@@ -205,7 +225,7 @@ def place_settlements(
         # 检查距离约束
         too_close = False
         for px, py in placed_positions:
-            if abs(x - px) + abs(y - py) < min_distance:
+            if abs(x - px) + abs(y - py) < effective_min_distance:
                 too_close = True
                 break
         if too_close:
@@ -225,8 +245,8 @@ def place_settlements(
         tile_grid[x][y].owner_settlement_id = sid
 
         # 分配周围领地
-        for dx in range(-3, 4):
-            for dy in range(-3, 4):
+        for dx in range(-territory_radius, territory_radius + 1):
+            for dy in range(-territory_radius, territory_radius + 1):
                 nx, ny = x + dx, y + dy
                 if (
                     0 <= nx < width

@@ -79,6 +79,7 @@ class CivilizationEngine(mesa.Model):
             ticks_per_day=self.config.clock.ticks_per_day,
             days_per_season=self.config.clock.days_per_season,
             seasons_per_year=self.config.clock.seasons_per_year,
+            season_params=self.config.season_params,
         )
 
         # 生成地图
@@ -111,6 +112,7 @@ class CivilizationEngine(mesa.Model):
         settlement_list = place_settlements(
             self.tile_grid, self.elevation, w, h,
             count=s_cfg.initial_count, min_score=s_cfg.min_suitability_score,
+            suitability_config=self.config.map_suitability,
         )
         self.settlements: dict[int, Settlement] = {
             s.id: s for s in settlement_list
@@ -125,7 +127,6 @@ class CivilizationEngine(mesa.Model):
         # 创建平民
         self._spawn_civilians()
 
-        # LLM 网关
         self.llm_gateway: LLMGateway | None = None
 
         # Phase 2: 镇长
@@ -195,8 +196,10 @@ class CivilizationEngine(mesa.Model):
         self._rng.shuffle(personalities)
 
         professions = (
-            [Profession.FARMER] * 4 + [Profession.WOODCUTTER] * 2
-            + [Profession.MINER] * 2 + [Profession.MERCHANT] * 2
+            [Profession.FARMER] * int(10 * self.config.engine_params.profession_farmer_ratio)
+            + [Profession.WOODCUTTER] * int(10 * self.config.engine_params.profession_woodcutter_ratio)
+            + [Profession.MINER] * int(10 * self.config.engine_params.profession_miner_ratio)
+            + [Profession.MERCHANT] * int(10 * self.config.engine_params.profession_merchant_ratio)
         )
         if not self.settlements:
             return
@@ -220,7 +223,7 @@ class CivilizationEngine(mesa.Model):
 
     def _init_llm_gateway(self) -> None:
         """初始化 LLM 网关并注册模型配置。"""
-        self.llm_gateway = LLMGateway(max_retries=2, timeout=30)
+        self.llm_gateway = LLMGateway(params=self.config.gateway_params)
         for role in self.config.llm.models:
             try:
                 cfg = self.config.llm.get_model_config(role)
@@ -255,14 +258,18 @@ class CivilizationEngine(mesa.Model):
         from civsim.politics.diplomacy import DiplomacyManager
         from civsim.politics.revolution import RevolutionTracker
 
-        self.diplomacy = DiplomacyManager()
+        self.diplomacy = DiplomacyManager(
+            params=self.config.diplomacy_params,
+        )
         self.trade_manager = TradeManager(
             params=self.config.trade_params,
         )
         self.revolution_tracker = RevolutionTracker(
             params=self.config.revolution_params,
         )
-        self.emergence_detector = EmergenceDetector()
+        self.emergence_detector = EmergenceDetector(
+            params=self.config.analytics_params,
+        )
 
         # 尝试连接 MQTT
         try:
@@ -487,6 +494,7 @@ class CivilizationEngine(mesa.Model):
             tile.regenerate(regen.farmland_per_tick, regen.forest_per_tick)
         self._active_events = process_active_events(
             self._active_events, self.settlements,
+            event_params=self.config.event_params,
         )
         event_mult = 1.0
         if self.adaptive_controller is not None:
@@ -497,6 +505,7 @@ class CivilizationEngine(mesa.Model):
             self.settlements, self.tile_grid,
             self._active_events, self._rng,
             event_multiplier=event_mult,
+            event_params=self.config.event_params,
         )
         if self.diplomacy:
             self.diplomacy.expire_treaties(self.clock.tick)
@@ -542,14 +551,19 @@ class CivilizationEngine(mesa.Model):
     def _settlement_reconcile(self) -> None:
         """聚落结算：饥荒减员、人口增长。"""
         from civsim.world.clock import Season
+        ep = self.config.engine_params
+        sp = self.config.season_params
         for s in self.settlements.values():
-            if s.scarcity_index > 0.7 and s.population > 0:
-                death_rate = (s.scarcity_index - 0.7) * 0.1
+            if s.scarcity_index > ep.starvation_scarcity_threshold and s.population > 0:
+                death_rate = (
+                    (s.scarcity_index - ep.starvation_scarcity_threshold)
+                    * ep.starvation_rate_factor
+                )
                 deaths = max(1, int(s.population * death_rate))
                 s.population = max(0, s.population - deaths)
-            growth_rate = 0.002
+            growth_rate = ep.natural_growth_rate
             if self.clock.current_season == Season.SPRING:
-                growth_rate *= 1.5
+                growth_rate *= sp.spring_growth_bonus
             s.natural_growth(growth_rate)
 
     def _apply_trade_trust_feedback(self) -> None:

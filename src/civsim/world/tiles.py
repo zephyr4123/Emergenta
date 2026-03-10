@@ -4,8 +4,10 @@
 每个 Tile 是世界网格中的一个单元格。
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
+
+from civsim.config_params_ext import TileParamsConfig
 
 
 class TileType(Enum):
@@ -57,17 +59,19 @@ class Tile:
     reserve: float = 0.0
     passability: float = 0.8
     owner_settlement_id: int | None = None
+    _tile_params: TileParamsConfig | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         """根据地块类型设置默认属性值。"""
+        params = self._tile_params or TileParamsConfig()
         if self.passability == 0.8:
             self.passability = _DEFAULT_PASSABILITY.get(self.tile_type, 0.8)
         if self.tile_type == TileType.FARMLAND and self.fertility == 0.0:
-            self.fertility = 0.8
+            self.fertility = params.default_fertility
         if self.tile_type == TileType.FOREST and self.density == 0.0:
-            self.density = 0.8
+            self.density = params.default_density
         if self.tile_type == TileType.MINE and self.reserve == 0.0:
-            self.reserve = 100.0
+            self.reserve = params.default_reserve
 
     def produce(self, season_multiplier: float = 1.0) -> dict[str, float]:
         """根据地块类型产出资源。
@@ -79,15 +83,18 @@ class Tile:
             资源产出字典，如 {"food": 2.0}。
         """
         if self.tile_type == TileType.FARMLAND:
-            output = 2.0 * self.fertility * season_multiplier
+            params = self._tile_params or TileParamsConfig()
+            output = params.farmland_base_output * self.fertility * season_multiplier
             return {"food": max(output, 0.0)}
         if self.tile_type == TileType.FOREST:
-            output = 0.5 * self.density * season_multiplier
+            params = self._tile_params or TileParamsConfig()
+            output = params.forest_base_output * self.density * season_multiplier
             return {"wood": max(output, 0.0)}
         if self.tile_type == TileType.MINE:
             if self.reserve <= 0:
                 return {"ore": 0.0}
-            output = min(1.0, self.reserve)
+            params = self._tile_params or TileParamsConfig()
+            output = min(params.mine_max_output, self.reserve)
             return {"ore": output}
         return {}
 
@@ -101,12 +108,14 @@ class Tile:
             实际采集到的量。
         """
         if self.tile_type == TileType.FARMLAND:
-            actual = min(amount, self.fertility * 2.0)
-            self.fertility = max(0.0, self.fertility - amount * 0.01)
+            params = self._tile_params or TileParamsConfig()
+            actual = min(amount, self.fertility * params.farmland_base_output)
+            self.fertility = max(0.0, self.fertility - amount * params.consume_fertility_decay)
             return actual
         if self.tile_type == TileType.FOREST:
+            params = self._tile_params or TileParamsConfig()
             actual = min(amount, self.density)
-            self.density = max(0.0, self.density - amount * 0.02)
+            self.density = max(0.0, self.density - amount * params.consume_density_decay)
             return actual
         if self.tile_type == TileType.MINE:
             actual = min(amount, self.reserve)
@@ -122,9 +131,11 @@ class Tile:
             forest_rate: 森林密度恢复速率。
         """
         if self.tile_type == TileType.FARMLAND:
-            self.fertility = min(1.0, self.fertility + farmland_rate * 0.001)
+            params = self._tile_params or TileParamsConfig()
+            self.fertility = min(1.0, self.fertility + farmland_rate * params.fertility_regen_factor)
         elif self.tile_type == TileType.FOREST:
-            self.density = min(1.0, self.density + forest_rate * 0.001)
+            params = self._tile_params or TileParamsConfig()
+            self.density = min(1.0, self.density + forest_rate * params.density_regen_factor)
 
 
 def classify_tile(elevation: float, moisture: float, thresholds: dict[str, float]) -> TileType:

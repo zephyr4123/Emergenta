@@ -9,6 +9,8 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 
+from civsim.config_params_ext import DiplomacyParamsConfig
+
 logger = logging.getLogger(__name__)
 
 
@@ -65,12 +67,17 @@ class DiplomacyManager:
     追踪阵营间的外交状态、条约和信任度。
     """
 
-    def __init__(self, initial_trust: float = 0.5) -> None:
+    def __init__(
+        self,
+        initial_trust: float = 0.5,
+        params: DiplomacyParamsConfig | None = None,
+    ) -> None:
+        self._params = params or DiplomacyParamsConfig()
         self._relations: dict[tuple[int, int], DiplomaticStatus] = {}
         self._treaties: list[Treaty] = []
         self._trust: dict[tuple[int, int], float] = {}
-        self._initial_trust = initial_trust
-        self._randomize_trust = True
+        self._initial_trust = self._params.initial_trust
+        self._randomize_trust = self._params.randomize_trust
         self._event_log: list[dict] = []
         self._rng = __import__("random").Random()
 
@@ -104,7 +111,10 @@ class DiplomacyManager:
         key = self._key(a, b)
         if key not in self._trust:
             if self._randomize_trust:
-                self._trust[key] = self._rng.uniform(0.2, 0.6)
+                self._trust[key] = self._rng.uniform(
+                    self._params.trust_random_min,
+                    self._params.trust_random_max,
+                )
             else:
                 self._trust[key] = self._initial_trust
         return self._trust[key]
@@ -133,7 +143,7 @@ class DiplomacyManager:
     def sign_treaty(self, treaty: Treaty) -> None:
         """签署条约。"""
         self._treaties.append(treaty)
-        self.update_trust(treaty.faction_a, treaty.faction_b, 0.1)
+        self.update_trust(treaty.faction_a, treaty.faction_b, self._params.treaty_trust_boost)
 
         if treaty.treaty_type == TreatyType.MILITARY_ALLIANCE:
             self.set_relation(
@@ -162,7 +172,7 @@ class DiplomacyManager:
             treaty.faction_b if breaker_id == treaty.faction_a
             else treaty.faction_a
         )
-        self.update_trust(breaker_id, other, -0.3)
+        self.update_trust(breaker_id, other, self._params.break_treaty_penalty)
 
         current = self.get_relation(breaker_id, other)
         if current > DiplomaticStatus.WAR:
@@ -236,12 +246,14 @@ class DiplomacyManager:
         """返回所有信任度数据字典（用于贸易摩擦）。"""
         return dict(self._trust)
 
-    def decay_trust(self, amount: float = 0.001) -> None:
+    def decay_trust(self, amount: float | None = None) -> None:
         """全局信任自然衰减，需要主动维护关系。
 
         Args:
-            amount: 每次衰减量。
+            amount: 每次衰减量。为 None 时使用配置值。
         """
+        if amount is None:
+            amount = self._params.trust_decay_per_tick
         for key in list(self._trust.keys()):
             self._trust[key] = max(0.0, self._trust[key] - amount)
 
@@ -252,7 +264,7 @@ class DiplomacyManager:
             tick: 当前 tick。
         """
         for key, trust in list(self._trust.items()):
-            if trust < 0.2:
+            if trust < self._params.downgrade_trust_threshold:
                 current = self._relations.get(key, DiplomaticStatus.NEUTRAL)
                 if current > DiplomaticStatus.HOSTILE:
                     a, b = key

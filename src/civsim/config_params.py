@@ -53,6 +53,17 @@ class TradeParamsConfig(BaseModel):
     refuse_prob_trust_factor: float = Field(default=0.2, ge=0.0)
     trust_boost_per_trade: float = Field(default=0.01, ge=0.0)
     surplus_trade_ratio: float = Field(default=0.3, ge=0.0, le=1.0)
+    # 扩展贸易参数
+    base_price_food: float = Field(default=1.0, ge=0.0)
+    base_price_wood: float = Field(default=1.5, ge=0.0)
+    base_price_ore: float = Field(default=3.0, ge=0.0)
+    min_surplus_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
+    distance_cost_factor: float = Field(default=0.05, ge=0.0)
+    min_trade_amount: float = Field(default=0.5, ge=0.0)
+    food_surplus_threshold: float = Field(default=8.0, ge=0.0)
+    other_surplus_threshold: float = Field(default=3.0, ge=0.0)
+    food_deficit_threshold: float = Field(default=3.0, ge=0.0)
+    other_deficit_threshold: float = Field(default=1.0, ge=0.0)
 
 
 class MarkovCoefficientsConfig(BaseModel):

@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 
+from civsim.config_params_ext import MemoryParamsConfig
+
 
 @dataclass
 class MemoryEntry:
@@ -67,10 +69,14 @@ class AgentMemory:
         short_term_limit: int = 10,
         long_term_limit: int = 50,
         importance_threshold: float = 0.7,
+        params: MemoryParamsConfig | None = None,
     ) -> None:
+        if params is not None:
+            importance_threshold = params.importance_threshold
         self.short_term_limit = short_term_limit
         self.long_term_limit = long_term_limit
         self._importance_threshold = importance_threshold
+        self._decision_importance = params.decision_importance if params else 0.8
         self._short_term: list[MemoryEntry] = []
         self._long_term: list[MemoryEntry] = []
 
@@ -115,7 +121,7 @@ class AgentMemory:
             tick=tick,
             category="decision",
             content=content,
-            importance=0.8,
+            importance=self._decision_importance,
             metadata={"decision": decision},
         ))
 

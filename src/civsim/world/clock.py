@@ -4,7 +4,13 @@
 提供季节判断与决策间隔检测。
 """
 
+from __future__ import annotations
+
 from enum import IntEnum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from civsim.config_params_ext import SeasonParamsConfig
 
 
 class Season(IntEnum):
@@ -56,11 +62,13 @@ class Clock:
         ticks_per_day: int = 4,
         days_per_season: int = 30,
         seasons_per_year: int = 4,
+        season_params: SeasonParamsConfig | None = None,
     ) -> None:
         self.tick: int = 0
         self.ticks_per_day = ticks_per_day
         self.days_per_season = days_per_season
         self.seasons_per_year = seasons_per_year
+        self._season_params = season_params
 
     @property
     def ticks_per_season(self) -> int:
@@ -91,16 +99,43 @@ class Clock:
     @property
     def farm_multiplier(self) -> float:
         """当前季节的农田产出倍率。"""
+        if self._season_params is not None:
+            sp = self._season_params
+            mapping = {
+                Season.SPRING: sp.farm_spring,
+                Season.SUMMER: sp.farm_summer,
+                Season.AUTUMN: sp.farm_autumn,
+                Season.WINTER: sp.farm_winter,
+            }
+            return mapping[self.current_season]
         return SEASON_FARM_MULTIPLIER[self.current_season]
 
     @property
     def forest_multiplier(self) -> float:
         """当前季节的森林产出倍率。"""
+        if self._season_params is not None:
+            sp = self._season_params
+            mapping = {
+                Season.SPRING: sp.forest_spring,
+                Season.SUMMER: sp.forest_summer,
+                Season.AUTUMN: sp.forest_autumn,
+                Season.WINTER: sp.forest_winter,
+            }
+            return mapping[self.current_season]
         return SEASON_FOREST_MULTIPLIER[self.current_season]
 
     @property
     def food_consumption_multiplier(self) -> float:
         """当前季节的食物消耗倍率。"""
+        if self._season_params is not None:
+            sp = self._season_params
+            mapping = {
+                Season.SPRING: 1.0,
+                Season.SUMMER: 1.0,
+                Season.AUTUMN: 1.0,
+                Season.WINTER: sp.food_consumption_winter,
+            }
+            return mapping[self.current_season]
         return SEASON_FOOD_CONSUMPTION_MULTIPLIER[self.current_season]
 
     def advance(self) -> None:

@@ -65,6 +65,8 @@ class Civilian(BaseAgent):
         self.state = CivilianState.WORKING
         self.hunger: float = 0.0
         self.satisfaction: float = 0.7
+        if hasattr(model, "config"):
+            self.satisfaction = model.config.civilian_behavior.initial_satisfaction
         self.tick_in_current_state: int = 0
         self._rng = np.random.default_rng(self.unique_id)
 
@@ -129,8 +131,11 @@ class Civilian(BaseAgent):
         # 获取邻居状态
         neighbor_states = []
         if hasattr(engine, "grid") and self.pos is not None:
+            radius = 3
+            if hasattr(engine, "config"):
+                radius = engine.config.engine_params.neighbor_radius
             neighbors = engine.grid.iter_neighbors(
-                self.pos, moore=True, include_center=False, radius=3
+                self.pos, moore=True, include_center=False, radius=radius
             )
             neighbor_states = [
                 n.state for n in neighbors
@@ -160,7 +165,11 @@ class Civilian(BaseAgent):
     def _do_work(self) -> None:
         """劳作：根据职业产出资源到聚落仓库。"""
         resource_key = _PROFESSION_OUTPUT.get(self.profession, "food")
-        base_output = 2.5 if resource_key == "food" else 1.0
+        if hasattr(self.model, "config"):
+            cb = self.model.config.civilian_behavior
+            base_output = cb.work_output_food if resource_key == "food" else cb.work_output_other
+        else:
+            base_output = 2.5 if resource_key == "food" else 1.0
         # 季节倍率
         if hasattr(self.model, "clock"):
             if resource_key == "food":
@@ -175,19 +184,29 @@ class Civilian(BaseAgent):
 
     def _do_rest(self) -> None:
         """休息：恢复饥饿度。"""
-        self.hunger = max(0.0, self.hunger - 0.05)
+        recovery = 0.05
+        if hasattr(self.model, "config"):
+            recovery = self.model.config.civilian_behavior.rest_hunger_recovery
+        self.hunger = max(0.0, self.hunger - recovery)
 
     def _do_trade(self) -> None:
         """交易：产出少量金币。"""
         if hasattr(self.model, "settlements"):
             settlement = self.model.settlements.get(self.home_settlement_id)
             if settlement:
+                gold_output = 0.3
+                if hasattr(self.model, "config"):
+                    gold_output = self.model.config.civilian_behavior.trade_gold_output
                 trade_multiplier = 1.0
                 if hasattr(self.model, "clock"):
                     from civsim.world.clock import Season
                     if self.model.clock.current_season == Season.AUTUMN:
                         trade_multiplier = 1.3
-                settlement.deposit({"gold": 0.3 * trade_multiplier})
+                        if hasattr(self.model, "config"):
+                            trade_multiplier = (
+                                self.model.config.season_params.autumn_trade_bonus
+                            )
+                settlement.deposit({"gold": gold_output * trade_multiplier})
 
     def _do_migrate(self) -> None:
         """迁徙：在网格上移动。"""
@@ -223,8 +242,14 @@ class Civilian(BaseAgent):
                     if hasattr(self.model, "clock"):
                         food_needed *= self.model.clock.food_consumption_multiplier
                     eaten = settlement.withdraw_food(food_needed)
-                    if eaten >= food_needed * 0.8:
-                        self.hunger = max(0.0, self.hunger - 0.06)
+                    food_sat_ratio = 0.8
+                    food_recovery = 0.06
+                    if hasattr(self.model, "config"):
+                        cb = self.model.config.civilian_behavior
+                        food_sat_ratio = cb.food_satisfaction_ratio
+                        food_recovery = cb.food_satiation_recovery
+                    if eaten >= food_needed * food_sat_ratio:
+                        self.hunger = max(0.0, self.hunger - food_recovery)
 
         # 满意度更新
         self._update_satisfaction()
