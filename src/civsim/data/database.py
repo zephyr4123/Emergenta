@@ -126,6 +126,72 @@ class Database:
             return result[0]
         return -1
 
+    def batch_insert_world_states(self, records: list[dict]) -> int:
+        """批量插入世界状态快照。
+
+        Args:
+            records: 字典列表，每个字典包含 world_state 表的各字段。
+
+        Returns:
+            插入的记录数。
+        """
+        if not records:
+            return 0
+
+        values = []
+        for r in records:
+            values.append([
+                r["tick"], r["settlement_id"], r.get("population", 0),
+                r.get("food", 0.0), r.get("wood", 0.0),
+                r.get("ore", 0.0), r.get("gold", 0.0),
+                r.get("tax_rate", 0.0), r.get("security_level", 0.0),
+                r.get("satisfaction_avg", 0.0), r.get("protest_ratio", 0.0),
+            ])
+
+        self._conn.executemany(
+            "INSERT OR REPLACE INTO world_state VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            values,
+        )
+        return len(values)
+
+    def archive_old_data(self, before_tick: int) -> int:
+        """归档指定 tick 之前的历史数据。
+
+        将旧数据删除以控制数据库大小。
+
+        Args:
+            before_tick: 在此 tick 之前的数据将被删除。
+
+        Returns:
+            删除的记录数。
+        """
+        result = self._conn.execute(
+            "SELECT COUNT(*) FROM world_state WHERE tick < ?",
+            [before_tick],
+        ).fetchone()
+        count = result[0] if result else 0
+
+        if count > 0:
+            self._conn.execute(
+                "DELETE FROM world_state WHERE tick < ?",
+                [before_tick],
+            )
+        return count
+
+    def get_table_stats(self) -> dict[str, int]:
+        """获取各表的记录数统计。
+
+        Returns:
+            表名→记录数字典。
+        """
+        stats = {}
+        for table in ["world_state", "agent_events"]:
+            result = self._conn.execute(
+                f"SELECT COUNT(*) FROM {table}"  # noqa: S608
+            ).fetchone()
+            stats[table] = result[0] if result else 0
+        return stats
+
     def close(self) -> None:
         """关闭数据库连接。"""
         self._conn.close()

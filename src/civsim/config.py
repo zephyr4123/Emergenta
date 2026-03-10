@@ -281,6 +281,22 @@ class VisualizationConfig(BaseModel):
     export_format: str = "png"
 
 
+class RayConfig(BaseModel):
+    """Ray 分布式执行配置。"""
+
+    enabled: bool = False
+    num_workers: int = Field(default=4, gt=0)
+    batch_size: int = Field(default=100, gt=0)
+    object_store_memory_mb: int = Field(default=200, gt=0)
+
+
+class PerformanceConfig(BaseModel):
+    """性能优化配置。"""
+
+    parallel_threshold: int = Field(default=200, ge=0)
+    profiling_enabled: bool = False
+
+
 # ============================================================
 # 顶层配置模型
 # ============================================================
@@ -299,6 +315,8 @@ class CivSimConfig(BaseModel):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     testing: TestingConfig = Field(default_factory=TestingConfig)
     visualization: VisualizationConfig = Field(default_factory=VisualizationConfig)
+    ray: RayConfig = Field(default_factory=RayConfig)
+    performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
 
 
 # ============================================================

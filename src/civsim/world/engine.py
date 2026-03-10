@@ -34,6 +34,13 @@ from civsim.world.tiles import TileType
 
 logger = logging.getLogger(__name__)
 
+# Phase 4 并行模块（延迟导入避免循环依赖）
+_PARALLEL_AVAILABLE = True
+try:
+    from civsim.parallel.coordinator import ParallelCoordinator
+except ImportError:
+    _PARALLEL_AVAILABLE = False
+
 RANDOM_EVENTS = [
     {"name": "旱灾", "prob": 0.002, "scope": "settlement"},
     {"name": "瘟疫", "prob": 0.001, "scope": "settlement"},
@@ -82,6 +89,14 @@ class CivilizationEngine(mesa.Model):
             w, h, self.elevation, self.moisture, thresholds,
         )
         self.grid = mesa.space.MultiGrid(w, h, torus=False)
+
+        # 预构建可再生地块索引（跳过 WATER/MOUNTAIN/BARREN/MINE/SETTLEMENT）
+        self._regenerable_tiles: list = []
+        for x in range(w):
+            for y in range(h):
+                tt = self.tile_grid[x][y].tile_type
+                if tt in (TileType.FARMLAND, TileType.FOREST):
+                    self._regenerable_tiles.append(self.tile_grid[x][y])
 
         # 放置聚落
         s_cfg = self.config.world.settlement
@@ -133,6 +148,18 @@ class CivilizationEngine(mesa.Model):
         if enable_db:
             self.db = Database(self.config.database.path)
         self._active_events: list[dict] = []
+
+        # Phase 4: 并行协调器
+        self._coordinator: ParallelCoordinator | None = None
+        self._parallel_threshold = self.config.performance.parallel_threshold
+        if _PARALLEL_AVAILABLE and self.config.ray.enabled:
+            ray_cfg = self.config.ray
+            self._coordinator = ParallelCoordinator(
+                num_workers=ray_cfg.num_workers,
+                batch_size=ray_cfg.batch_size,
+                enable_ray=True,
+                object_store_mb=ray_cfg.object_store_memory_mb,
+            )
 
     def _spawn_civilians(self) -> None:
         """生成初始平民 Agent 并放置到聚落附近。"""
@@ -279,7 +306,7 @@ class CivilizationEngine(mesa.Model):
         """执行一个 tick 的核心循环。"""
         self.clock.advance()
         self._environment_update()
-        self.agents.shuffle_do("step")
+        self._agents_act()
         if self.trade_manager:
             self._trade_update()
         self._settlement_reconcile()
@@ -294,16 +321,84 @@ class CivilizationEngine(mesa.Model):
         ):
             self._write_snapshot()
 
+    def _agents_act(self) -> None:
+        """执行所有 Agent 的行动。
+
+        当平民数量超过并行阈值且协调器可用时，使用并行执行；
+        否则使用 Mesa 原生的 shuffle_do。
+        """
+        civilians = [a for a in self.agents if isinstance(a, Civilian)]
+        non_civilians = [a for a in self.agents if not isinstance(a, Civilian)]
+
+        use_parallel = (
+            self._coordinator is not None
+            and len(civilians) >= self._parallel_threshold
+        )
+
+        if use_parallel:
+            self._parallel_civilian_step(civilians)
+            # 非平民 Agent（镇长、首领）仍串行执行
+            for agent in non_civilians:
+                agent.step()
+        else:
+            self.agents.shuffle_do("step")
+
+    def _parallel_civilian_step(self, civilians: list[Civilian]) -> None:
+        """使用并行协调器执行平民 step 并应用结果。"""
+        from civsim.agents.behaviors.fsm import CivilianState
+
+        results = self._coordinator.execute_parallel_step(self, civilians)
+
+        # 构建 ID → Agent 映射
+        agent_map = {c.unique_id: c for c in civilians}
+
+        # Apply: 将结果写回
+        for result in results:
+            agent = agent_map.get(result.agent_id)
+            if agent is None:
+                continue
+
+            old_state = agent.state
+            agent.state = CivilianState(result.new_state)
+            agent.hunger = result.new_hunger
+            agent.satisfaction = result.new_satisfaction
+            agent.tick_in_current_state = result.tick_in_current_state
+
+            # 应用资源产出到聚落
+            if result.resource_deposit:
+                settlement = self.settlements.get(agent.home_settlement_id)
+                if settlement:
+                    settlement.deposit(result.resource_deposit)
+
+            # 应用食物消耗
+            if result.food_consumed > 0:
+                settlement = self.settlements.get(agent.home_settlement_id)
+                if settlement:
+                    settlement.withdraw_food(result.food_consumed)
+
+    def _build_civilian_index(self) -> dict[int, list[Civilian]]:
+        """构建 settlement_id → civilians 索引。
+
+        一次 O(N) 遍历替代多次 O(S*N) 过滤。
+
+        Returns:
+            聚落 ID 到平民列表的映射。
+        """
+        index: dict[int, list[Civilian]] = {sid: [] for sid in self.settlements}
+        for a in self.agents:
+            if isinstance(a, Civilian) and a.home_settlement_id in index:
+                index[a.home_settlement_id].append(a)
+        return index
+
     def _environment_update(self) -> None:
         """环境更新：资源再生 + 事件处理。"""
         regen = self.config.resources.regeneration
-        w, h = self.config.world.grid.width, self.config.world.grid.height
-        for x in range(w):
-            for y in range(h):
-                self.tile_grid[x][y].regenerate(regen.farmland_per_tick, regen.forest_per_tick)
+        for tile in self._regenerable_tiles:
+            tile.regenerate(regen.farmland_per_tick, regen.forest_per_tick)
         self._process_active_events()
         self._trigger_random_events()
-        if self.diplomacy: self.diplomacy.expire_treaties(self.clock.tick)
+        if self.diplomacy:
+            self.diplomacy.expire_treaties(self.clock.tick)
 
     def _trigger_random_events(self) -> None:
         """按概率触发随机事件。"""
@@ -350,14 +445,18 @@ class CivilizationEngine(mesa.Model):
 
     def _check_revolutions(self) -> None:
         """检测并处理革命。"""
+        civ_index = self._build_civilian_index()
         for sid, s in self.settlements.items():
-            civs = [a for a in self.agents if isinstance(a, Civilian) and a.home_settlement_id == sid]
-            if not civs: continue
+            civs = civ_index.get(sid, [])
+            if not civs:
+                continue
             pr = sum(1 for c in civs if c.state == CivilianState.PROTESTING) / len(civs)
             sat = float(np.mean([c.satisfaction for c in civs]))
             if self.revolution_tracker.update(sid, pr, sat):
                 ev = self.revolution_tracker.trigger_revolution(
-                    sid, self.clock.tick, old_faction_id=s.faction_id, old_governor_id=s.governor_id,
+                    sid, self.clock.tick,
+                    old_faction_id=s.faction_id,
+                    old_governor_id=s.governor_id,
                 )
                 self.revolution_tracker.apply_revolution(ev, s)
 
