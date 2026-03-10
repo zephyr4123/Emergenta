@@ -46,6 +46,8 @@ def build_governor_perception_prompt(
     season: str,
     recent_events: list[str] | None = None,
     memory_context: str = "",
+    global_context: dict | None = None,
+    decision_outcomes: str = "",
 ) -> str:
     """构建镇长的感知数据 Prompt。
 
@@ -65,6 +67,8 @@ def build_governor_perception_prompt(
         season: 当前季节名称。
         recent_events: 近期事件列表。
         memory_context: 历史决策记忆上下文。
+        global_context: 全局态势信息（来自自适应控制器）。
+        decision_outcomes: 上季决策效果描述。
 
     Returns:
         格式化的感知 Prompt 文本。
@@ -76,6 +80,22 @@ def build_governor_perception_prompt(
     memory_text = ""
     if memory_context:
         memory_text = f"\n历史决策参考：\n{memory_context}\n"
+
+    global_text = ""
+    if global_context:
+        global_text = (
+            "\n全局态势：\n"
+            f"- 系统波动指数：{global_context.get('system_temperature', 0)}\n"
+            f"- 全局抗议率：{global_context.get('global_protest_ratio', 0):.1%}\n"
+            f"- 累计革命次数：{global_context.get('revolution_count', 0)}"
+            f" | 近期：{global_context.get('revolutions_recent', 0)}\n"
+            f"- 当前战争数：{global_context.get('active_wars', 0)}"
+            f" | 近期贸易量：{global_context.get('trade_volume', 0)}\n"
+        )
+
+    outcomes_text = ""
+    if decision_outcomes:
+        outcomes_text = f"\n你的历史决策效果：\n{decision_outcomes}\n"
 
     return (
         f"当前季节：{season}\n"
@@ -90,6 +110,8 @@ def build_governor_perception_prompt(
         f"- 平均满意度：{satisfaction_avg:.2f}\n"
         f"- 抗议率：{protest_ratio:.2%}\n"
         f"{events_text}"
+        f"{global_text}"
+        f"{outcomes_text}"
         f"{memory_text}\n"
         "请根据以上信息做出本季度的治理决策。\n"
         "你必须严格以 JSON 格式回复，不要包含其他文字。JSON 格式如下：\n"
@@ -211,6 +233,7 @@ def build_leader_perception_prompt(
     diplomatic_status: dict[int, str],
     active_treaties: list[str],
     memory_context: str = "",
+    global_context: dict | None = None,
 ) -> str:
     """构建首领的感知数据 Prompt。
 
@@ -225,6 +248,7 @@ def build_leader_perception_prompt(
         diplomatic_status: 与其他阵营的外交状态。
         active_treaties: 活跃条约描述列表。
         memory_context: 历史决策记忆。
+        global_context: 全局态势信息（来自自适应控制器）。
 
     Returns:
         格式化的感知 Prompt 文本。
@@ -251,6 +275,18 @@ def build_leader_perception_prompt(
     if memory_context:
         memory_text = f"\n历史决策参考：\n{memory_context}\n"
 
+    global_text = ""
+    if global_context:
+        global_text = (
+            "\n全局态势：\n"
+            f"- 系统波动指数：{global_context.get('system_temperature', 0)}\n"
+            f"- 全局抗议率：{global_context.get('global_protest_ratio', 0):.1%}\n"
+            f"- 累计革命次数：{global_context.get('revolution_count', 0)}"
+            f" | 近期：{global_context.get('revolutions_recent', 0)}\n"
+            f"- 当前战争数：{global_context.get('active_wars', 0)}"
+            f" | 近期贸易量：{global_context.get('trade_volume', 0)}\n"
+        )
+
     return (
         f"第{year}年 {season}季 | 阵营{faction_id} 战略报告\n\n"
         f"总人口：{total_population}\n"
@@ -262,6 +298,7 @@ def build_leader_perception_prompt(
         f"下属聚落：\n{settlements_text}\n"
         f"外交关系：\n{diplo_text}"
         f"{treaties_text}"
+        f"{global_text}"
         f"{memory_text}\n"
         "请做出本年度的战略决策。严格以 JSON 格式回复：\n"
         '{\n'

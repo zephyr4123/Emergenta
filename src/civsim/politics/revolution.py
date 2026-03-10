@@ -1,6 +1,7 @@
 """革命/政权更替机制。
 
 检测革命触发条件、执行政权更替和聚落状态重置。
+含恢复阶段机制：革命后蜜月期满意度提升 + 公民阈值调整。
 """
 
 from __future__ import annotations
@@ -8,13 +9,15 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
+from civsim.config_params import RevolutionParamsConfig
+
 logger = logging.getLogger(__name__)
 
-# 革命触发条件阈值（放宽以促进涌现）
+# 后向兼容的模块级常量（供未迁移代码引用）
 REVOLUTION_PROTEST_THRESHOLD = 0.20
 REVOLUTION_SATISFACTION_THRESHOLD = 0.40
 REVOLUTION_DURATION_TICKS = 8
-REVOLUTION_COOLDOWN_TICKS = 30  # 革命后冷却期
+REVOLUTION_COOLDOWN_TICKS = 30
 
 
 @dataclass
@@ -38,16 +41,41 @@ class RevolutionEvent:
     cause: str = ""
 
 
+@dataclass
+class RecoveryPhase:
+    """革命后恢复阶段。
+
+    Attributes:
+        settlement_id: 聚落 ID。
+        remaining_ticks: 剩余蜜月期 tick 数。
+        satisfaction_boost: 每 tick 满意度提升。
+        vigilance_reduction: 公民阈值降低量。
+        trigger_tick: 开始 tick。
+    """
+
+    settlement_id: int
+    remaining_ticks: int
+    satisfaction_boost: float
+    vigilance_reduction: float
+    trigger_tick: int = 0
+
+
 class RevolutionTracker:
     """革命状态追踪器。
 
     追踪各聚落的抗议持续时间，判断是否触发革命。
+    支持恢复阶段机制。
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        params: RevolutionParamsConfig | None = None,
+    ) -> None:
+        self._params = params or RevolutionParamsConfig()
         self._protest_duration: dict[int, int] = {}
         self._cooldown: dict[int, int] = {}
         self._events: list[RevolutionEvent] = []
+        self._recovery: dict[int, RecoveryPhase] = {}
 
     def update(
         self,
@@ -71,8 +99,8 @@ class RevolutionTracker:
             return False
 
         if (
-            protest_ratio >= REVOLUTION_PROTEST_THRESHOLD
-            and avg_satisfaction <= REVOLUTION_SATISFACTION_THRESHOLD
+            protest_ratio >= self._params.protest_threshold
+            and avg_satisfaction <= self._params.satisfaction_threshold
         ):
             self._protest_duration[settlement_id] = (
                 self._protest_duration.get(settlement_id, 0) + 1
@@ -83,7 +111,7 @@ class RevolutionTracker:
                     "聚落 %d 革命累积: %d/%d ticks "
                     "(抗议率=%.3f, 满意度=%.3f)",
                     settlement_id, current_duration,
-                    REVOLUTION_DURATION_TICKS,
+                    self._params.duration_ticks,
                     protest_ratio, avg_satisfaction,
                 )
         else:
@@ -94,7 +122,7 @@ class RevolutionTracker:
 
         return (
             self._protest_duration.get(settlement_id, 0)
-            >= REVOLUTION_DURATION_TICKS
+            >= self._params.duration_ticks
         )
 
     def trigger_revolution(
@@ -126,7 +154,7 @@ class RevolutionTracker:
         )
         self._events.append(event)
         self._protest_duration[settlement_id] = 0
-        self._cooldown[settlement_id] = REVOLUTION_COOLDOWN_TICKS
+        self._cooldown[settlement_id] = self._params.cooldown_ticks
         logger.warning(
             "革命爆发: 聚落 %d (tick %d) - %s",
             settlement_id, tick, cause,
@@ -134,29 +162,94 @@ class RevolutionTracker:
         return event
 
     def apply_revolution(
-        self, event: RevolutionEvent, settlement: object,
+        self,
+        event: RevolutionEvent,
+        settlement: object,
+        penalty_multiplier: float = 1.0,
     ) -> None:
-        """应用革命后果到聚落。
+        """应用革命后果到聚落并启动恢复阶段。
 
         Args:
             event: 革命事件。
             settlement: 聚落对象。
+            penalty_multiplier: 惩罚乘数（来自自适应控制器）。
         """
+        gold_ratio = self._params.resource_penalty_gold
+        food_ratio = self._params.resource_penalty_food
+        sec_penalty = self._params.security_penalty * penalty_multiplier
+
         if hasattr(settlement, "stockpile"):
-            settlement.stockpile["gold"] *= 0.5
-            settlement.stockpile["food"] *= 0.8
+            settlement.stockpile["gold"] *= gold_ratio
+            settlement.stockpile["food"] *= food_ratio
         if hasattr(settlement, "security_level"):
             settlement.security_level = max(
-                0.0, settlement.security_level - 0.4,
+                0.0, settlement.security_level - sec_penalty,
             )
         if hasattr(settlement, "tax_rate"):
-            settlement.tax_rate = 0.15
+            settlement.tax_rate = self._params.post_revolution_tax
         if hasattr(settlement, "faction_id"):
             event.old_faction_id = settlement.faction_id
             settlement.faction_id = None
         if hasattr(settlement, "governor_id"):
             event.old_governor_id = settlement.governor_id
             settlement.governor_id = None
+
+        # 启动恢复阶段
+        self.start_recovery(
+            event.settlement_id, event.trigger_tick,
+        )
+
+    def start_recovery(
+        self, settlement_id: int, tick: int,
+    ) -> None:
+        """启动革命后恢复阶段。
+
+        Args:
+            settlement_id: 聚落 ID。
+            tick: 当前 tick。
+        """
+        self._recovery[settlement_id] = RecoveryPhase(
+            settlement_id=settlement_id,
+            remaining_ticks=self._params.honeymoon_ticks,
+            satisfaction_boost=self._params.honeymoon_satisfaction_boost,
+            vigilance_reduction=self._params.honeymoon_vigilance_reduction,
+            trigger_tick=tick,
+        )
+        logger.info(
+            "聚落 %d 进入革命后蜜月期 (%d ticks)",
+            settlement_id, self._params.honeymoon_ticks,
+        )
+
+    def update_recovery(self) -> list[int]:
+        """更新所有恢复阶段，返回已结束恢复的聚落 ID。
+
+        Returns:
+            本 tick 结束恢复阶段的聚落 ID 列表。
+        """
+        finished: list[int] = []
+        to_remove: list[int] = []
+        for sid, phase in self._recovery.items():
+            phase.remaining_ticks -= 1
+            if phase.remaining_ticks <= 0:
+                to_remove.append(sid)
+                finished.append(sid)
+        for sid in to_remove:
+            del self._recovery[sid]
+            logger.info("聚落 %d 蜜月期结束", sid)
+        return finished
+
+    def get_recovery(
+        self, settlement_id: int,
+    ) -> RecoveryPhase | None:
+        """获取聚落当前的恢复阶段。
+
+        Args:
+            settlement_id: 聚落 ID。
+
+        Returns:
+            恢复阶段对象，不在恢复期则返回 None。
+        """
+        return self._recovery.get(settlement_id)
 
     def get_protest_duration(self, settlement_id: int) -> int:
         """获取聚落的连续抗议持续 tick 数。"""
@@ -171,3 +264,26 @@ class RevolutionTracker:
     def revolution_count(self) -> int:
         """返回总革命次数。"""
         return len(self._events)
+
+    def recent_revolution_count(
+        self, current_tick: int, lookback: int = 200,
+    ) -> int:
+        """返回近期革命次数。
+
+        Args:
+            current_tick: 当前 tick。
+            lookback: 回溯 tick 数。
+
+        Returns:
+            近 lookback tick 内的革命次数。
+        """
+        cutoff = current_tick - lookback
+        return sum(
+            1 for e in self._events if e.trigger_tick >= cutoff
+        )
+
+    @property
+    def active_recoveries(self) -> dict[int, RecoveryPhase]:
+        """返回所有活跃的恢复阶段。"""
+        return dict(self._recovery)
+

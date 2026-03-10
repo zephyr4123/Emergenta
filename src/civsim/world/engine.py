@@ -32,6 +32,10 @@ from civsim.world.map_generator import (
     generate_tile_grid,
     place_settlements,
 )
+from civsim.world.events import (
+    process_active_events,
+    trigger_random_events,
+)
 from civsim.world.tiles import TileType
 
 logger = logging.getLogger(__name__)
@@ -43,13 +47,15 @@ try:
 except ImportError:
     _PARALLEL_AVAILABLE = False
 
-RANDOM_EVENTS = [
-    {"name": "旱灾", "prob": 0.002, "scope": "settlement"},
-    {"name": "瘟疫", "prob": 0.001, "scope": "settlement"},
-    {"name": "矿脉发现", "prob": 0.003, "scope": "tile"},
-    {"name": "丰收", "prob": 0.005, "scope": "settlement"},
-    {"name": "流寇", "prob": 0.002, "scope": "settlement"},
-]
+# 自适应控制器（延迟导入）
+try:
+    from civsim.world.adaptive import (
+        AdaptiveParameterController,
+        SystemMetrics,
+    )
+    _ADAPTIVE_AVAILABLE = True
+except ImportError:
+    _ADAPTIVE_AVAILABLE = False
 
 
 class CivilizationEngine(mesa.Model):
@@ -163,6 +169,16 @@ class CivilizationEngine(mesa.Model):
                 object_store_mb=ray_cfg.object_store_memory_mb,
             )
 
+        # 自适应参数控制器
+        self.adaptive_controller: AdaptiveParameterController | None = None
+        if (
+            _ADAPTIVE_AVAILABLE
+            and self.config.adaptive_controller.enabled
+        ):
+            self.adaptive_controller = AdaptiveParameterController(
+                config=self.config.adaptive_controller,
+            )
+
     def _spawn_civilians(self) -> None:
         """生成初始平民 Agent 并放置到聚落附近。"""
         n = self.config.agents.civilian.initial_count
@@ -240,8 +256,12 @@ class CivilizationEngine(mesa.Model):
         from civsim.politics.revolution import RevolutionTracker
 
         self.diplomacy = DiplomacyManager()
-        self.trade_manager = TradeManager()
-        self.revolution_tracker = RevolutionTracker()
+        self.trade_manager = TradeManager(
+            params=self.config.trade_params,
+        )
+        self.revolution_tracker = RevolutionTracker(
+            params=self.config.revolution_params,
+        )
         self.emergence_detector = EmergenceDetector()
 
         # 尝试连接 MQTT
@@ -311,11 +331,14 @@ class CivilizationEngine(mesa.Model):
         self._agents_act()
         if self.trade_manager:
             self._trade_update()
+            self._apply_trade_trust_feedback()
         self._settlement_reconcile()
         if self.revolution_tracker:
             self._check_revolutions()
+            self._update_recovery_phases()
         if self.emergence_detector:
             self._detect_emergence()
+        self._update_adaptive_controller()
         self.datacollector.collect(self)
         if (
             self.db is not None
@@ -462,48 +485,23 @@ class CivilizationEngine(mesa.Model):
         regen = self.config.resources.regeneration
         for tile in self._regenerable_tiles:
             tile.regenerate(regen.farmland_per_tick, regen.forest_per_tick)
-        self._process_active_events()
-        self._trigger_random_events()
+        self._active_events = process_active_events(
+            self._active_events, self.settlements,
+        )
+        event_mult = 1.0
+        if self.adaptive_controller is not None:
+            event_mult = (
+                self.adaptive_controller.coefficients.random_event_multiplier
+            )
+        trigger_random_events(
+            self.settlements, self.tile_grid,
+            self._active_events, self._rng,
+            event_multiplier=event_mult,
+        )
         if self.diplomacy:
             self.diplomacy.expire_treaties(self.clock.tick)
             self.diplomacy.decay_trust()
             self.diplomacy.auto_downgrade_relations(self.clock.tick)
-
-    def _trigger_random_events(self) -> None:
-        """按概率触发随机事件。"""
-        if not self.settlements:
-            return
-        for ev in RANDOM_EVENTS:
-            if self._rng.random() < ev["prob"]:
-                sid = self._rng.choice(list(self.settlements.keys()))
-                self._apply_event(ev["name"], self.settlements[sid])
-
-    def _apply_event(self, name: str, s: Settlement) -> None:
-        """应用随机事件效果。"""
-        if name == "旱灾":
-            for tx, ty in s.territory_tiles:
-                if self.tile_grid[tx][ty].tile_type == TileType.FARMLAND:
-                    self.tile_grid[tx][ty].fertility *= 0.3
-            self._active_events.append({"name": "旱灾", "settlement_id": s.id, "remaining_ticks": 30})
-        elif name == "瘟疫":
-            s.population = max(0, s.population - max(1, int(s.population * 0.10)))
-        elif name == "丰收":
-            self._active_events.append({"name": "丰收", "settlement_id": s.id, "remaining_ticks": 15})
-        elif name == "流寇":
-            s.stockpile["gold"] *= 0.7
-            s.security_level = max(0.0, s.security_level - 0.2)
-
-    def _process_active_events(self) -> None:
-        """处理持续中的事件。"""
-        remaining = []
-        for ev in self._active_events:
-            ev["remaining_ticks"] -= 1
-            if ev["remaining_ticks"] > 0:
-                if ev["name"] == "丰收":
-                    s = self.settlements.get(ev["settlement_id"])
-                    if s: s.deposit({"food": 5.0})
-                remaining.append(ev)
-        self._active_events = remaining
 
     def _trade_update(self) -> None:
         """处理聚落间贸易。"""
@@ -553,6 +551,85 @@ class CivilizationEngine(mesa.Model):
             if self.clock.current_season == Season.SPRING:
                 growth_rate *= 1.5
             s.natural_growth(growth_rate)
+
+    def _apply_trade_trust_feedback(self) -> None:
+        """将贸易产生的信任增量应用到外交系统。"""
+        if self.diplomacy is None or self.trade_manager is None:
+            return
+        deltas = self.trade_manager.compute_trust_deltas()
+        for (fid_a, fid_b), delta in deltas.items():
+            self.diplomacy.adjust_trust(fid_a, fid_b, delta)
+
+    def _update_recovery_phases(self) -> None:
+        """更新革命后恢复阶段。"""
+        if self.revolution_tracker is None:
+            return
+        self.revolution_tracker.update_recovery()
+
+    def _update_adaptive_controller(self) -> None:
+        """更新自适应参数控制器。"""
+        if self.adaptive_controller is None:
+            return
+        if not self.adaptive_controller.should_update(self.clock.tick):
+            return
+
+        metrics = self._compute_system_metrics()
+        self.adaptive_controller.update(metrics)
+
+    def _compute_system_metrics(self) -> SystemMetrics:
+        """计算系统状态指标供自适应控制器使用。
+
+        Returns:
+            系统状态快照。
+        """
+        civilians = [
+            a for a in self.agents if isinstance(a, Civilian)
+        ]
+
+        protest_count = sum(
+            1 for c in civilians
+            if c.state == CivilianState.PROTESTING
+        )
+        total_civ = max(1, len(civilians))
+        global_pr = protest_count / total_civ
+        avg_sat = float(
+            np.mean([c.satisfaction for c in civilians])
+        ) if civilians else 0.5
+
+        rev_count = 0
+        rev_recent = 0
+        if self.revolution_tracker:
+            rev_count = self.revolution_tracker.revolution_count
+            lookback = self.config.adaptive_controller.lookback_ticks
+            rev_recent = self.revolution_tracker.recent_revolution_count(
+                self.clock.tick, lookback,
+            )
+
+        active_wars = 0
+        if self.diplomacy:
+            active_wars = self.diplomacy.count_wars()
+
+        collapsed = sum(
+            1 for s in self.settlements.values() if s.population <= 0
+        )
+        total_pop = sum(s.population for s in self.settlements.values())
+
+        trade_vol = 0.0
+        if self.trade_manager:
+            trade_vol = self.trade_manager.total_volume
+
+        return SystemMetrics(
+            tick=self.clock.tick,
+            global_protest_ratio=global_pr,
+            avg_satisfaction=avg_sat,
+            revolution_count=rev_count,
+            revolutions_recent=rev_recent,
+            active_wars=active_wars,
+            collapsed_settlements=collapsed,
+            total_settlements=len(self.settlements),
+            total_population=total_pop,
+            trade_volume_recent=trade_vol,
+        )
 
     def _write_snapshot(self) -> None:
         """将当前状态写入数据库。"""

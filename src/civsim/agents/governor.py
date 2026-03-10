@@ -129,6 +129,7 @@ class Governor(BaseAgent):
         self.cache = BehaviorCache() if cache_enabled else None
         self.last_decision: dict | None = None
         self.decision_count: int = 0
+        self._prev_perception: GovernorPerception | None = None
 
     def step(self) -> None:
         """每 tick 执行。仅在季度开始时进行决策。"""
@@ -181,6 +182,7 @@ class Governor(BaseAgent):
             decision=decision,
         )
         self.last_decision = decision
+        self._prev_perception = perception
         self.decision_count += 1
 
     def perceive(self) -> GovernorPerception | None:
@@ -247,6 +249,11 @@ class Governor(BaseAgent):
 
         memory_context = self.memory.build_context(max_entries=5)
 
+        # 构建全局上下文
+        global_context = self._build_global_context()
+        # 构建上季决策效果
+        decision_outcomes = self._compute_decision_outcomes(perception)
+
         system_msg = build_governor_system_prompt()
         user_msg = build_governor_perception_prompt(
             settlement_name=perception.settlement_name,
@@ -264,6 +271,8 @@ class Governor(BaseAgent):
             season=perception.season,
             recent_events=perception.recent_events,
             memory_context=memory_context,
+            global_context=global_context,
+            decision_outcomes=decision_outcomes,
         )
 
         messages = [
@@ -378,6 +387,83 @@ class Governor(BaseAgent):
             and a.home_settlement_id == self.settlement_id
         ]
 
+    def _build_global_context(self) -> dict | None:
+        """构建全局上下文供 LLM 注入。
+
+        Returns:
+            全局态势字典，无控制器时返回 None。
+        """
+        if not hasattr(self.model, "adaptive_controller"):
+            return None
+        ctrl = self.model.adaptive_controller
+        if ctrl is None:
+            return None
+
+        ctx = ctrl.get_global_context()
+
+        # 补充额外统计
+        if hasattr(self.model, "revolution_tracker") and self.model.revolution_tracker:
+            rt = self.model.revolution_tracker
+            ctx["revolution_count"] = rt.revolution_count
+            ctx["revolutions_recent"] = rt.recent_revolution_count(
+                self.model.clock.tick,
+            )
+
+        if hasattr(self.model, "trade_manager") and self.model.trade_manager:
+            stats = self.model.trade_manager.get_tick_stats()
+            ctx["trade_volume"] = stats.get("total_volume", 0)
+
+        if hasattr(self.model, "diplomacy") and self.model.diplomacy:
+            ctx["active_wars"] = self.model.diplomacy.count_wars()
+
+        return ctx
+
+    def _compute_decision_outcomes(
+        self, current: GovernorPerception,
+    ) -> str:
+        """对比前后 perception 生成上季决策效果描述。
+
+        Args:
+            current: 当前感知数据。
+
+        Returns:
+            决策效果描述字符串，无前次感知时返回空串。
+        """
+        prev = self._prev_perception
+        if prev is None or self.last_decision is None:
+            return ""
+
+        lines = []
+        d = self.last_decision
+
+        # 税率变化
+        tax_change = d.get("tax_rate_change", 0)
+        if abs(tax_change) > 0.001:
+            action = f"{'加' if tax_change > 0 else '降'}税{abs(tax_change):.2f}"
+            sat_delta = current.satisfaction_avg - prev.satisfaction_avg
+            pr_delta = current.protest_ratio - prev.protest_ratio
+            lines.append(
+                f"- 上季「{action}」→ "
+                f"满意度 {prev.satisfaction_avg:.2f}→"
+                f"{current.satisfaction_avg:.2f}"
+                f"({sat_delta:+.2f}), "
+                f"抗议率 {prev.protest_ratio:.0%}→"
+                f"{current.protest_ratio:.0%}"
+            )
+
+        # 治安变化
+        sec_change = d.get("security_change", 0)
+        if abs(sec_change) > 0.001:
+            action = f"{'增' if sec_change > 0 else '减'}安{abs(sec_change):.2f}"
+            pr_delta = current.protest_ratio - prev.protest_ratio
+            lines.append(
+                f"- 上季「{action}」→ "
+                f"抗议率 {prev.protest_ratio:.0%}→"
+                f"{current.protest_ratio:.0%}"
+            )
+
+        return "\n".join(lines)
+
     async def decide_async(
         self, perception: GovernorPerception,
     ) -> dict | None:
@@ -393,6 +479,8 @@ class Governor(BaseAgent):
             return self._fallback_decision(perception)
 
         memory_context = self.memory.build_context(max_entries=5)
+        global_context = self._build_global_context()
+        decision_outcomes = self._compute_decision_outcomes(perception)
 
         system_msg = build_governor_system_prompt()
         user_msg = build_governor_perception_prompt(
@@ -411,6 +499,8 @@ class Governor(BaseAgent):
             season=perception.season,
             recent_events=perception.recent_events,
             memory_context=memory_context,
+            global_context=global_context,
+            decision_outcomes=decision_outcomes,
         )
 
         messages = [
@@ -461,4 +551,5 @@ class Governor(BaseAgent):
             decision=decision,
         )
         self.last_decision = decision
+        self._prev_perception = perception
         self.decision_count += 1

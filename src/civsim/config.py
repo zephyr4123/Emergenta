@@ -10,6 +10,14 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
+from civsim.config_params import (
+    AdaptiveControllerConfig,
+    MarkovCoefficientsConfig,
+    RevolutionParamsConfig,
+    SatisfactionCoefficientsConfig,
+    TradeParamsConfig,
+)
+
 # ============================================================
 # 子配置模型
 # ============================================================
@@ -317,6 +325,19 @@ class CivSimConfig(BaseModel):
     visualization: VisualizationConfig = Field(default_factory=VisualizationConfig)
     ray: RayConfig = Field(default_factory=RayConfig)
     performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
+    revolution_params: RevolutionParamsConfig = Field(
+        default_factory=RevolutionParamsConfig,
+    )
+    trade_params: TradeParamsConfig = Field(default_factory=TradeParamsConfig)
+    markov_coefficients: MarkovCoefficientsConfig = Field(
+        default_factory=MarkovCoefficientsConfig,
+    )
+    satisfaction_coefficients: SatisfactionCoefficientsConfig = Field(
+        default_factory=SatisfactionCoefficientsConfig,
+    )
+    adaptive_controller: AdaptiveControllerConfig = Field(
+        default_factory=AdaptiveControllerConfig,
+    )
 
 
 # ============================================================

@@ -117,6 +117,19 @@ class DiplomacyManager:
         self._trust[key] = new_trust
         return new_trust
 
+    def adjust_trust(self, a: int, b: int, delta: float) -> float:
+        """调节信任度（update_trust 的别名）。
+
+        Args:
+            a: 阵营 A ID。
+            b: 阵营 B ID。
+            delta: 信任增量。
+
+        Returns:
+            更新后的信任度。
+        """
+        return self.update_trust(a, b, delta)
+
     def sign_treaty(self, treaty: Treaty) -> None:
         """签署条约。"""
         self._treaties.append(treaty)
@@ -203,6 +216,17 @@ class DiplomacyManager:
                 elif b == faction_id:
                     enemies.append(a)
         return enemies
+
+    def count_wars(self) -> int:
+        """统计当前活跃战争数。
+
+        Returns:
+            处于 WAR 状态的阵营对数量。
+        """
+        return sum(
+            1 for status in self._relations.values()
+            if status == DiplomaticStatus.WAR
+        )
 
     def get_relations_dict(self) -> dict[tuple[int, int], int]:
         """返回所有外交关系的整数值字典（用于贸易过滤）。"""

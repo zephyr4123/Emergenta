@@ -73,7 +73,21 @@ class Civilian(BaseAgent):
         # 1. 获取环境参数
         env = self._get_environment_params()
 
-        # 2. 计算动态转移矩阵
+        # 2. 获取自适应乘数
+        protest_mult = 1.0
+        granovetter_mult = 1.0
+        coefficients = None
+        if hasattr(self.model, "adaptive_controller"):
+            ctrl = self.model.adaptive_controller
+            if ctrl is not None:
+                protest_mult = ctrl.coefficients.markov_protest_multiplier
+                granovetter_mult = (
+                    ctrl.coefficients.granovetter_burst_multiplier
+                )
+        if hasattr(self.model, "config"):
+            coefficients = self.model.config.markov_coefficients
+
+        # 3. 计算动态转移矩阵
         matrix = compute_transition_matrix(
             personality=self.personality,
             hunger=self.hunger,
@@ -81,9 +95,12 @@ class Civilian(BaseAgent):
             security=env["security"],
             protest_ratio=env["protest_ratio"],
             revolt_threshold=self.revolt_threshold,
+            coefficients=coefficients,
+            protest_multiplier=protest_mult,
+            granovetter_multiplier=granovetter_mult,
         )
 
-        # 3. 状态转移
+        # 4. 状态转移
         new_state = sample_next_state(self.state, matrix, self._rng)
         if new_state != self.state:
             self.state = new_state
@@ -91,10 +108,10 @@ class Civilian(BaseAgent):
         else:
             self.tick_in_current_state += 1
 
-        # 4. 执行对应行为
+        # 5. 执行对应行为
         self._execute_behavior()
 
-        # 5. 更新饥饿与满意度
+        # 6. 更新饥饿与满意度
         self._update_needs()
 
     def _get_environment_params(self) -> dict[str, float]:
@@ -213,7 +230,10 @@ class Civilian(BaseAgent):
         self._update_satisfaction()
 
     def _update_satisfaction(self) -> None:
-        """根据环境更新满意度。"""
+        """根据环境更新满意度。
+
+        使用配置系数（如可用），支持蜜月期恢复和自适应乘数。
+        """
         settlement = None
         if hasattr(self.model, "settlements"):
             settlement = self.model.settlements.get(self.home_settlement_id)
@@ -221,24 +241,63 @@ class Civilian(BaseAgent):
         if settlement is None:
             return
 
-        # 食物充足 → 满意度上升，匮乏 → 满意度下降
-        if settlement.scarcity_index > 0.5:
-            self.satisfaction = max(0.0, self.satisfaction - 0.10)
-        elif settlement.scarcity_index > 0.3:
-            self.satisfaction = max(0.0, self.satisfaction - 0.04)
-        elif settlement.scarcity_index < 0.2:
-            self.satisfaction = min(1.0, self.satisfaction + 0.01)
+        # 获取满意度系数配置
+        sc = None
+        if hasattr(self.model, "config"):
+            sc = self.model.config.satisfaction_coefficients
 
-        # 高税率降低满意度（税率越高惩罚越重，系数加倍）
-        if settlement.tax_rate > 0.3:
-            penalty = 0.15 * settlement.tax_rate
+        # 获取自适应恢复乘数
+        recovery_mult = 1.0
+        if hasattr(self.model, "adaptive_controller"):
+            ctrl = self.model.adaptive_controller
+            if ctrl is not None:
+                recovery_mult = (
+                    ctrl.coefficients.satisfaction_recovery_multiplier
+                )
+
+        # 食物充足/匮乏效应
+        scarcity_high = sc.scarcity_high_penalty if sc else 0.10
+        scarcity_mid = sc.scarcity_mid_penalty if sc else 0.04
+        scarcity_low_rec = sc.scarcity_low_recovery if sc else 0.01
+
+        if settlement.scarcity_index > 0.5:
+            self.satisfaction = max(0.0, self.satisfaction - scarcity_high)
+        elif settlement.scarcity_index > 0.3:
+            self.satisfaction = max(0.0, self.satisfaction - scarcity_mid)
+        elif settlement.scarcity_index < 0.2:
+            self.satisfaction = min(
+                1.0,
+                self.satisfaction + scarcity_low_rec * recovery_mult,
+            )
+
+        # 高税率降低满意度
+        tax_threshold = sc.tax_penalty_threshold if sc else 0.3
+        tax_factor = sc.tax_penalty_factor if sc else 0.15
+        if settlement.tax_rate > tax_threshold:
+            penalty = tax_factor * settlement.tax_rate
             self.satisfaction = max(0.0, self.satisfaction - penalty)
 
-        # 饥饿直接影响满意度（加倍惩罚）
-        if self.hunger > 0.6:
-            self.satisfaction = max(0.0, self.satisfaction - 0.08)
+        # 饥饿直接影响满意度
+        hunger_threshold = sc.hunger_penalty_threshold if sc else 0.6
+        hunger_pen = sc.hunger_penalty if sc else 0.08
+        if self.hunger > hunger_threshold:
+            self.satisfaction = max(0.0, self.satisfaction - hunger_pen)
 
         # 治安过高引发反感（警察国家效应）
-        if settlement.security_level > 0.8:
-            oppression = 0.03 * (settlement.security_level - 0.8) / 0.2
+        oppression_threshold = sc.oppression_threshold if sc else 0.8
+        oppression_factor = sc.oppression_factor if sc else 0.03
+        if settlement.security_level > oppression_threshold:
+            oppression = (
+                oppression_factor
+                * (settlement.security_level - oppression_threshold) / 0.2
+            )
             self.satisfaction = max(0.0, self.satisfaction - oppression)
+
+        # 革命后蜜月期恢复
+        if hasattr(self.model, "revolution_tracker"):
+            tracker = self.model.revolution_tracker
+            if tracker is not None:
+                recovery = tracker.get_recovery(self.home_settlement_id)
+                if recovery is not None:
+                    boost = recovery.satisfaction_boost * recovery_mult
+                    self.satisfaction = min(1.0, self.satisfaction + boost)

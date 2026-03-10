@@ -1,13 +1,17 @@
 """动态马尔可夫转移矩阵。
 
 定义三种性格的基础转移矩阵，以及动态调节公式。
+支持通过配置参数和自适应乘数进行动态系数调节。
 """
+
+from __future__ import annotations
 
 from enum import Enum
 
 import numpy as np
 
 from civsim.agents.behaviors.fsm import NUM_STATES, CivilianState
+from civsim.config_params import MarkovCoefficientsConfig
 
 # 状态索引简写
 _W = CivilianState.WORKING
@@ -90,6 +94,9 @@ def compute_transition_matrix(
     security: float,
     protest_ratio: float,
     revolt_threshold: float,
+    coefficients: MarkovCoefficientsConfig | None = None,
+    protest_multiplier: float = 1.0,
+    granovetter_multiplier: float = 1.0,
 ) -> np.ndarray:
     """计算动态调节后的转移概率矩阵。
 
@@ -100,38 +107,44 @@ def compute_transition_matrix(
         security: 当前治安水平 [0, 1]。
         protest_ratio: 邻居抗议比例 [0, 1]。
         revolt_threshold: Agent 的 Granovetter 阈值。
+        coefficients: 马尔可夫系数配置（可选，默认使用硬编码值）。
+        protest_multiplier: 抗议系数乘数（来自自适应控制器）。
+        granovetter_multiplier: Granovetter 突变量乘数（来自自适应控制器）。
 
     Returns:
         归一化后的 7x7 转移概率矩阵。
     """
     base = PERSONALITY_MATRICES[personality].copy()
     safety = 1.0 - security  # 不安全度
+    c = coefficients or MarkovCoefficientsConfig()
+    pm = protest_multiplier
 
-    # --- 饥饿效应（强化：系数进一步提升）---
-    base[_W][_P] += 0.60 * hunger
-    base[_W][_M] += 0.15 * hunger
-    base[_R][_P] += 0.45 * hunger
-    base[_R][_W] += 0.20 * hunger
-    base[_S][_P] += 0.50 * hunger
-    base[_T][_P] += 0.30 * hunger
+    # --- 饥饿效应 ---
+    base[_W][_P] += c.hunger_to_protest_working * hunger * pm
+    base[_W][_M] += c.hunger_to_migrate_working * hunger
+    base[_R][_P] += c.hunger_to_protest_resting * hunger * pm
+    base[_R][_W] += c.hunger_to_work_resting * hunger
+    base[_S][_P] += c.hunger_to_protest_social * hunger * pm
+    base[_T][_P] += c.hunger_to_protest_trading * hunger * pm
 
-    # --- 税率效应（强化：系数进一步提升）---
-    base[_W][_P] += 0.45 * tax_rate
-    base[_R][_P] += 0.30 * tax_rate
-    base[_T][_P] += 0.30 * tax_rate
-    base[_S][_P] += 0.25 * tax_rate
+    # --- 税率效应 ---
+    base[_W][_P] += c.tax_to_protest_working * tax_rate * pm
+    base[_R][_P] += c.tax_to_protest_resting * tax_rate * pm
+    base[_T][_P] += c.tax_to_protest_trading * tax_rate * pm
+    base[_S][_P] += c.tax_to_protest_social * tax_rate * pm
 
     # --- 安全效应 ---
-    base[_S][_F] += 0.10 * safety
-    base[_P][_F] += 0.30 * safety
+    base[_S][_F] += c.safety_to_fight_social * safety
+    base[_P][_F] += c.safety_to_fight_protest * safety
 
-    # --- Granovetter 邻居传染（大幅增强）---
+    # --- Granovetter 邻居传染 ---
+    gm = granovetter_multiplier
     if protest_ratio >= revolt_threshold:
-        base[_W][_P] += 0.80
-        base[_R][_P] += 0.70
-        base[_S][_P] += 0.85
-        base[_T][_P] += 0.60
-        base[_M][_P] += 0.50
+        base[_W][_P] += c.granovetter_burst_working * gm
+        base[_R][_P] += c.granovetter_burst_resting * gm
+        base[_S][_P] += c.granovetter_burst_social * gm
+        base[_T][_P] += c.granovetter_burst_trading * gm
+        base[_M][_P] += c.granovetter_burst_migrating * gm
 
     return normalize_rows(base)
 

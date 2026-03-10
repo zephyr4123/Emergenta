@@ -118,6 +118,22 @@ def get_global_stats(engine) -> dict:
     )
     leader_decisions = sum(l.decision_count for l in engine.leaders)
 
+    # 自适应控制器统计
+    adaptive_info = {}
+    ctrl = getattr(engine, "adaptive_controller", None)
+    if ctrl is not None:
+        adaptive_info["temperature"] = ctrl.temperature_history[-1][1] if ctrl.temperature_history else 0.0
+        adaptive_info["protest_mult"] = ctrl.coefficients.markov_protest_multiplier
+        adaptive_info["granovetter_mult"] = ctrl.coefficients.granovetter_burst_multiplier
+        adaptive_info["cooldown_mult"] = ctrl.coefficients.revolution_cooldown_multiplier
+        adaptive_info["recovery_mult"] = ctrl.coefficients.satisfaction_recovery_multiplier
+        adaptive_info["event_mult"] = ctrl.coefficients.random_event_multiplier
+
+    # 恢复阶段统计
+    active_recoveries = 0
+    if engine.revolution_tracker:
+        active_recoveries = len(engine.revolution_tracker.active_recoveries)
+
     return {
         "total_civilians": len(civs),
         "avg_satisfaction": float(np.mean(sats)),
@@ -128,6 +144,8 @@ def get_global_stats(engine) -> dict:
         "war_count": war_cnt,
         "governor_decisions": gov_decisions,
         "leader_decisions": leader_decisions,
+        "adaptive": adaptive_info,
+        "active_recoveries": active_recoveries,
     }
 
 
@@ -145,6 +163,7 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
 
     sim.log("=" * 70)
     sim.log("  荷兰病(资源诅咒) — 5000 Agent 全系统真实 LLM 模拟")
+    sim.log("  [V3 自适应参数系统]")
     sim.log("=" * 70)
     sim.log(f"  平民: {n_agents}")
     sim.log(f"  聚落: {n_settlements}")
@@ -190,6 +209,12 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
         sim.log(f"  贸易系统: {'启用' if engine.trade_manager else '关闭'}")
         sim.log(f"  外交系统: {'启用' if engine.diplomacy else '关闭'}")
         sim.log(f"  革命系统: {'启用' if engine.revolution_tracker else '关闭'}")
+        sim.log(f"  自适应控制器: {'启用' if engine.adaptive_controller else '关闭'}")
+        if engine.adaptive_controller:
+            ac = config.adaptive_controller
+            sim.log(f"    目标温度: {ac.target_temperature}")
+            sim.log(f"    调节速率: {ac.adjustment_rate}")
+            sim.log(f"    更新间隔: {ac.update_interval} ticks")
 
         # 验证 LLM 网关
         has_llm = engine.llm_gateway is not None
@@ -307,6 +332,16 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
                 global_stats = get_global_stats(engine)
                 elapsed = time.time() - t_total_start
 
+                adaptive_str = ""
+                ai = global_stats.get("adaptive", {})
+                if ai:
+                    adaptive_str = (
+                        f" | 温度={ai['temperature']:.2f} "
+                        f"P×={ai['protest_mult']:.2f} "
+                        f"G×={ai['granovetter_mult']:.2f} "
+                        f"R恢={ai['recovery_mult']:.2f}"
+                    )
+
                 sim.log(
                     f"  [Tick {tick:3d}] "
                     f"首富: 人口={rich_pop} 食物={rich_food:.0f} "
@@ -315,7 +350,8 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
                     f"全局: 贸易={global_stats['trade_count']} "
                     f"革命={global_stats['revolution_count']} "
                     f"联盟={global_stats['alliance_count']} "
-                    f"战争={global_stats['war_count']} | "
+                    f"战争={global_stats['war_count']}"
+                    f"{adaptive_str} | "
                     f"tick={tick_time:.2f}s 累计={elapsed:.0f}s"
                 )
 
@@ -391,6 +427,24 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
         sim.log(f"    首领总决策: {final_stats['leader_decisions']}")
         sim.log("")
 
+        # 自适应控制器分析
+        ai = final_stats.get("adaptive", {})
+        if ai:
+            sim.log("  [自适应控制器]")
+            sim.log(f"    最终温度: {ai['temperature']:.3f}")
+            sim.log(f"    抗议系数乘数: {ai['protest_mult']:.3f}")
+            sim.log(f"    Granovetter乘数: {ai['granovetter_mult']:.3f}")
+            sim.log(f"    冷却期乘数: {ai['cooldown_mult']:.3f}")
+            sim.log(f"    恢复速度乘数: {ai['recovery_mult']:.3f}")
+            sim.log(f"    随机事件乘数: {ai['event_mult']:.3f}")
+            sim.log(f"    活跃恢复阶段: {final_stats['active_recoveries']}")
+            # 温度历史
+            ctrl = engine.adaptive_controller
+            if ctrl and ctrl.temperature_history:
+                temps = [t for _, t in ctrl.temperature_history]
+                sim.log(f"    温度历史: min={min(temps):.3f} max={max(temps):.3f} avg={np.mean(temps):.3f}")
+            sim.log("")
+
         # 其他聚落是否因此富裕
         sim.log("  [穷聚落变化]")
         gold_gained = []
@@ -463,7 +517,7 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
 def generate_report(sim: SimLog, success: bool) -> str:
     """生成 Markdown 报告。"""
     lines = [
-        "# 荷兰病(资源诅咒) — 5000 Agent 全系统真实 LLM 模拟报告",
+        "# 荷兰病(资源诅咒) — 5000 Agent 全系统真实 LLM 模拟报告 [V3 自适应参数]",
         "",
         f"> 生成时间: {time.strftime('%Y-%m-%d %H:%M:%S')}",
         f"> 状态: {'成功' if success else '失败'}",

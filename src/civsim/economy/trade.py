@@ -2,6 +2,7 @@
 
 实现供需匹配、贸易路线和利润计算。
 含贸易摩擦机制：信任度门槛、随机拒绝、距离惩罚。
+含信任反馈：成功跨阵营贸易增加双边信任。
 """
 
 from __future__ import annotations
@@ -11,12 +12,13 @@ import math
 import random
 from dataclasses import dataclass
 
+from civsim.config_params import TradeParamsConfig
 from civsim.economy.resources import RESOURCE_NAMES
 from civsim.economy.settlement import Settlement
 
 logger = logging.getLogger(__name__)
 
-# 贸易信任度门槛：trust 低于此值时拒绝交易
+# 后向兼容的模块级常量
 TRADE_TRUST_THRESHOLD = 0.4
 
 
@@ -60,12 +62,19 @@ class TradeManager:
     Attributes:
         completed_trades: 已完成的交易记录。
         total_volume: 总交易量。
+        params: 贸易参数配置。
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        params: TradeParamsConfig | None = None,
+    ) -> None:
+        self.params = params or TradeParamsConfig()
         self.completed_trades: list[TradeRoute] = []
         self.total_volume: float = 0.0
         self._tick_trades: list[TradeRoute] = []
+        self._tick_trust_deltas: dict[tuple[int, int], float] = {}
+        self._tick_volume: float = 0.0
 
     def find_opportunities(
         self,
@@ -103,10 +112,11 @@ class TradeManager:
                     # 信任度门槛：trust 过低时拒绝交易
                     if _should_refuse_trade(
                         seller, buyer, trust_data,
+                        self.params,
                     ):
                         continue
 
-                    amount = min(surplus * 0.3, need)
+                    amount = min(surplus * self.params.surplus_trade_ratio, need)
                     if amount < 0.5:
                         continue
 
@@ -169,6 +179,22 @@ class TradeManager:
         self.completed_trades.append(route)
         self._tick_trades.append(route)
         self.total_volume += route.amount
+        self._tick_volume += route.amount
+
+        # 跨阵营成功贸易 → 记录信任增量
+        seller_fid = seller.faction_id
+        buyer_fid = buyer.faction_id
+        if (
+            seller_fid is not None
+            and buyer_fid is not None
+            and seller_fid != buyer_fid
+        ):
+            key = (min(seller_fid, buyer_fid), max(seller_fid, buyer_fid))
+            self._tick_trust_deltas[key] = (
+                self._tick_trust_deltas.get(key, 0.0)
+                + self.params.trust_boost_per_trade
+            )
+
         return True
 
     def process_tick(
@@ -179,6 +205,8 @@ class TradeManager:
     ) -> list[TradeRoute]:
         """处理一个 tick 的贸易，返回本 tick 完成的贸易列表。"""
         self._tick_trades = []
+        self._tick_trust_deltas = {}
+        self._tick_volume = 0.0
         opportunities = self.find_opportunities(
             settlements, diplomacy_relations, trust_data,
         )
@@ -190,6 +218,27 @@ class TradeManager:
             self.execute_trade(route, settlements)
         return self._tick_trades
 
+    def compute_trust_deltas(self) -> dict[tuple[int, int], float]:
+        """返回本 tick 跨阵营贸易产生的信任增量。
+
+        Returns:
+            阵营对 → 信任增量的字典。
+        """
+        return dict(self._tick_trust_deltas)
+
+    def get_tick_stats(self) -> dict:
+        """返回本 tick 贸易统计，供 LLM 上下文注入。
+
+        Returns:
+            包含贸易数、交易量等的统计字典。
+        """
+        return {
+            "tick_trade_count": len(self._tick_trades),
+            "tick_volume": round(self._tick_volume, 1),
+            "total_trade_count": self.trade_count,
+            "total_volume": round(self.total_volume, 1),
+        }
+
     @property
     def trade_count(self) -> int:
         """总交易次数。"""
@@ -200,12 +249,16 @@ def _should_refuse_trade(
     seller: Settlement,
     buyer: Settlement,
     trust_data: dict[tuple[int, int], float] | None,
+    params: TradeParamsConfig | None = None,
 ) -> bool:
     """基于信任度和随机摩擦判断是否拒绝交易。"""
     if seller.faction_id is None or buyer.faction_id is None:
         return False
     if seller.faction_id == buyer.faction_id:
         return False
+
+    if params is None:
+        params = TradeParamsConfig()
 
     trust = 0.5
     if trust_data is not None:
@@ -216,11 +269,11 @@ def _should_refuse_trade(
         trust = trust_data.get(key, 0.5)
 
     # 信任度低于门槛直接拒绝
-    if trust < TRADE_TRUST_THRESHOLD:
+    if trust < params.trust_threshold:
         return True
 
-    # 随机摩擦：信任越低拒绝概率越高（10%-30%）
-    refuse_prob = 0.3 - 0.2 * trust
+    # 随机摩擦：信任越低拒绝概率越高
+    refuse_prob = params.refuse_prob_base - params.refuse_prob_trust_factor * trust
     return random.random() < refuse_prob
 
 
