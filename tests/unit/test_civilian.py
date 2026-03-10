@@ -52,7 +52,7 @@ def _create_civilian(
     model: MockModel,
     personality: Personality = Personality.NEUTRAL,
     profession: Profession = Profession.FARMER,
-    revolt_threshold: float = 0.4,
+    revolt_threshold: float = 0.25,
     pos: tuple[int, int] = (10, 10),
 ) -> Civilian:
     """创建一个平民并放置到网格上。
@@ -88,7 +88,7 @@ class TestCivilianInit:
 
         assert civ.personality == Personality.NEUTRAL
         assert civ.profession == Profession.FARMER
-        assert civ.revolt_threshold == 0.4
+        assert civ.revolt_threshold == 0.25
         assert civ.state == CivilianState.WORKING
         assert civ.hunger == 0.0
         assert civ.satisfaction == 0.7

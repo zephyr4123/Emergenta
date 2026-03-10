@@ -223,11 +223,17 @@ class Civilian(BaseAgent):
 
         # 食物充足 → 满意度上升，匮乏 → 满意度下降
         if settlement.scarcity_index > 0.5:
-            self.satisfaction = max(0.0, self.satisfaction - 0.01)
+            self.satisfaction = max(0.0, self.satisfaction - 0.05)
+        elif settlement.scarcity_index > 0.3:
+            self.satisfaction = max(0.0, self.satisfaction - 0.02)
         elif settlement.scarcity_index < 0.2:
             self.satisfaction = min(1.0, self.satisfaction + 0.01)
 
         # 高税率降低满意度（税率越高惩罚越重）
         if settlement.tax_rate > 0.3:
-            penalty = 0.02 * settlement.tax_rate
+            penalty = 0.08 * settlement.tax_rate
             self.satisfaction = max(0.0, self.satisfaction - penalty)
+
+        # 饥饿直接影响满意度
+        if self.hunger > 0.6:
+            self.satisfaction = max(0.0, self.satisfaction - 0.03)

@@ -162,9 +162,13 @@ class MQTTManager:
         """断开连接回调。"""
         self.connected = False
         # paho-mqtt v2 传入 DisconnectFlags 对象，v1 传入 int
+        # 正常断开（客户端主动）不记录警告
         try:
-            rc_val = rc.value if hasattr(rc, "value") else rc
-            if rc_val != 0:
-                logger.warning("MQTT 异常断开: rc=%s", rc_val)
+            if hasattr(rc, "is_disconnect_packet_from_server"):
+                # paho-mqtt v2: DisconnectFlags 对象
+                if rc.is_disconnect_packet_from_server:
+                    logger.warning("MQTT 被服务器断开")
+            elif isinstance(rc, int) and rc != 0:
+                logger.warning("MQTT 异常断开: rc=%d", rc)
         except Exception:
             pass

@@ -41,6 +41,7 @@ class EmergenceDetector:
         self._prev_alliance_count = 0
         self._prev_trade_volume = 0.0
         self._prev_war_count = 0
+        self._prev_revolution_count = 0
 
     def detect_all(
         self,
@@ -71,11 +72,14 @@ class EmergenceDetector:
     def _detect_revolution(
         self, tick: int, revolution_events: list | None,
     ) -> list[EmergenceEvent]:
-        """检测革命涌现。"""
+        """检测革命涌现（仅处理新增的革命事件）。"""
         if not revolution_events:
             return []
+        # 只处理自上次检测以来新增的革命事件
+        new_events = revolution_events[self._prev_revolution_count:]
+        self._prev_revolution_count = len(revolution_events)
         results = []
-        for rev in revolution_events:
+        for rev in new_events:
             sid = getattr(rev, "settlement_id", -1)
             results.append(EmergenceEvent(
                 tick=tick,

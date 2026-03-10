@@ -149,18 +149,18 @@ class ClockConfig(BaseModel):
 class RevoltThresholdConfig(BaseModel):
     """Granovetter 阈值分布参数。"""
 
-    mean: float = Field(default=0.40, ge=0.0, le=1.0)
-    std: float = Field(default=0.15, ge=0.0)
+    mean: float = Field(default=0.25, ge=0.0, le=1.0)
+    std: float = Field(default=0.12, ge=0.0)
     min: float = Field(default=0.05, ge=0.0, le=1.0)
-    max: float = Field(default=0.95, ge=0.0, le=1.0)
+    max: float = Field(default=0.80, ge=0.0, le=1.0)
 
 
 class PersonalityDistributionConfig(BaseModel):
     """性格类型分布比例。"""
 
-    compliant: float = Field(default=0.5, ge=0.0, le=1.0)
+    compliant: float = Field(default=0.40, ge=0.0, le=1.0)
     neutral: float = Field(default=0.35, ge=0.0, le=1.0)
-    rebellious: float = Field(default=0.15, ge=0.0, le=1.0)
+    rebellious: float = Field(default=0.25, ge=0.0, le=1.0)
 
     @field_validator("rebellious", mode="after")
     @classmethod
@@ -210,8 +210,8 @@ class AgentsConfig(BaseModel):
 class ResourceRegenerationConfig(BaseModel):
     """资源再生速率。"""
 
-    farmland_per_tick: float = Field(default=2.0, ge=0.0)
-    forest_per_tick: float = Field(default=0.5, ge=0.0)
+    farmland_per_tick: float = Field(default=0.8, ge=0.0)
+    forest_per_tick: float = Field(default=0.3, ge=0.0)
     mine_per_tick: float = Field(default=0.0, ge=0.0)
 
 

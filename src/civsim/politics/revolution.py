@@ -11,9 +11,10 @@ from dataclasses import dataclass, field
 logger = logging.getLogger(__name__)
 
 # 革命触发条件阈值
-REVOLUTION_PROTEST_THRESHOLD = 0.4
-REVOLUTION_SATISFACTION_THRESHOLD = 0.25
-REVOLUTION_DURATION_TICKS = 20
+REVOLUTION_PROTEST_THRESHOLD = 0.30
+REVOLUTION_SATISFACTION_THRESHOLD = 0.30
+REVOLUTION_DURATION_TICKS = 15
+REVOLUTION_COOLDOWN_TICKS = 60  # 革命后冷却期
 
 
 @dataclass
@@ -45,6 +46,7 @@ class RevolutionTracker:
 
     def __init__(self) -> None:
         self._protest_duration: dict[int, int] = {}
+        self._cooldown: dict[int, int] = {}
         self._events: list[RevolutionEvent] = []
 
     def update(
@@ -63,6 +65,11 @@ class RevolutionTracker:
         Returns:
             是否达到革命触发条件。
         """
+        # 冷却期内不累积
+        if self._cooldown.get(settlement_id, 0) > 0:
+            self._cooldown[settlement_id] -= 1
+            return False
+
         if (
             protest_ratio >= REVOLUTION_PROTEST_THRESHOLD
             and avg_satisfaction <= REVOLUTION_SATISFACTION_THRESHOLD
@@ -70,9 +77,20 @@ class RevolutionTracker:
             self._protest_duration[settlement_id] = (
                 self._protest_duration.get(settlement_id, 0) + 1
             )
+            current_duration = self._protest_duration[settlement_id]
+            if current_duration % 5 == 0:
+                logger.info(
+                    "聚落 %d 革命累积: %d/%d ticks "
+                    "(抗议率=%.3f, 满意度=%.3f)",
+                    settlement_id, current_duration,
+                    REVOLUTION_DURATION_TICKS,
+                    protest_ratio, avg_satisfaction,
+                )
         else:
             current = self._protest_duration.get(settlement_id, 0)
-            self._protest_duration[settlement_id] = max(0, current - 2)
+            self._protest_duration[settlement_id] = max(
+                0, current - 2,
+            )
 
         return (
             self._protest_duration.get(settlement_id, 0)
@@ -108,6 +126,7 @@ class RevolutionTracker:
         )
         self._events.append(event)
         self._protest_duration[settlement_id] = 0
+        self._cooldown[settlement_id] = REVOLUTION_COOLDOWN_TICKS
         logger.warning(
             "革命爆发: 聚落 %d (tick %d) - %s",
             settlement_id, tick, cause,
