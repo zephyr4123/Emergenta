@@ -1,196 +1,383 @@
-# Emergenta: A Hybrid LLM-Driven Civilization Simulator
+<div align="center">
 
-> A cost-efficient framework for macroscopic social emergence.
+# Emergenta
 
-告别全量大模型昂贵的 Token 消耗！本项目创新性地采用了 **"底层有限状态机 (FSM) + 中层聚合数据 + 顶层 LLM 战略决策"** 的三层金字塔架构。单次模拟并发 1000+ 智能体，完美推演通货膨胀、信息茧房与地缘博弈等极端社会场景。
+### A Hybrid LLM-Driven Civilization Simulator
 
-> **项目状态：积极开发中 (Active Development)**
-> 当前已完成 Phase 1-3 核心功能，Phase 4（万人规模并行）和 Phase 5（上帝模式可视化）正在规划中。
+<p>
+  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/LLM-Claude_Opus/Sonnet/Haiku-D97757?style=for-the-badge&logo=anthropic&logoColor=white" />
+  <img src="https://img.shields.io/badge/Framework-Mesa_3.x-2ECC71?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Status-Active_Development-FF6B35?style=for-the-badge" />
+</p>
+
+<p><i>A cost-efficient framework for macroscopic social emergence.</i></p>
+
+<p>
+告别全量大模型昂贵的 Token 消耗！本项目创新性地采用了<br/>
+<b>"底层有限状态机 (FSM) + 中层聚合数据 + 顶层 LLM 战略决策"</b> 的三层金字塔架构。<br/>
+单次模拟并发 <b>1000+</b> 智能体，完美推演通货膨胀、信息茧房与地缘博弈等极端社会场景。
+</p>
+
+<br/>
+
+</div>
 
 ---
 
-## 核心架构
+## Architecture
+
+<table>
+<tr>
+<td width="60%">
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│  首领层 (3-8个)   │  Opus/Sonnet  │  外交 / 战争 / 科技路线决策      │
-├──────────────────────────────────────────────────────────────────────┤
-│  镇长层 (20-50个) │  Haiku/Sonnet │  税率 / 治安 / 资源分配决策       │
-├──────────────────────────────────────────────────────────────────────┤
-│  平民层 (1000+)   │  FSM+Markov   │  劳作 / 社交 / 抗议 / 战斗行为   │
-└──────────────────────────────────────────────────────────────────────┘
+         ┌─────────────────────────────┐
+         │     Leader Layer (3-8)      │
+         │    Claude Opus / Sonnet     │
+         │  Diplomacy · War · Strategy │
+         ├─────────────────────────────┤
+        ╱│    Governor Layer (20-50)   │╲
+       ╱ │    Claude Haiku / Sonnet    │ ╲
+      ╱  │   Tax · Security · Policy  │  ╲
+     ├───┴─────────────────────────────┴───┤
+     │       Civilian Layer (1000+)        │
+     │       FSM + Markov Chains           │
+     │  Work · Trade · Protest · Fight     │
+     └─────────────────────────────────────┘
 ```
 
-**为什么这么设计？** 传统的 LLM Agent 模拟器让每个 Agent 都调用大模型，1000 个 Agent 意味着每 tick 消耗数千次 API 调用。我们的方案：
+</td>
+<td>
 
-- **底层 1000+ 平民**：纯马尔可夫链 + 有限状态机，零 LLM 开销
-- **中层 20-50 个镇长**：使用 Haiku/Sonnet，每季度决策一次
-- **顶层 3-8 个首领**：使用 Opus/Sonnet，每年度决策一次
+**Why this design?**
 
-成本降低 99%+，同时保留了宏观涌现行为。
+Traditional LLM agent simulators call an LLM for every agent per tick — 1000 agents = thousands of API calls.
+
+Our approach:
+
+| Layer | Agents | LLM Cost |
+|-------|--------|----------|
+| Civilians | 1000+ | **Zero** (FSM) |
+| Governors | 20-50 | Haiku, per season |
+| Leaders | 3-8 | Opus, per year |
+
+**Result: 99%+ cost reduction** while preserving macroscopic emergence.
+
+</td>
+</tr>
+</table>
 
 ---
 
-## 技术栈
+## Tech Stack
 
-| 组件 | 技术 | 说明 |
-|------|------|------|
-| ABM 框架 | Mesa 3.x | 网格世界、调度器、数据收集 |
-| 通信层 | MQTT (paho-mqtt) | Agent 间异步消息通信 |
-| 存储层 | DuckDB | 列式存储，高效聚合分析 |
-| LLM 网关 | LiteLLM | 统一多模型调用接口 |
-| 地图生成 | Perlin Noise | 程序化地形生成 |
-| 配置管理 | Pydantic + PyYAML | 类型安全的配置系统 |
+<table>
+<tr>
+  <td align="center" width="120"><b>Mesa 3.x</b><br/><sub>ABM Framework</sub></td>
+  <td align="center" width="120"><b>LiteLLM</b><br/><sub>LLM Gateway</sub></td>
+  <td align="center" width="120"><b>DuckDB</b><br/><sub>Analytics DB</sub></td>
+  <td align="center" width="120"><b>MQTT</b><br/><sub>Agent Comms</sub></td>
+  <td align="center" width="120"><b>Perlin Noise</b><br/><sub>Map Generation</sub></td>
+  <td align="center" width="120"><b>Pydantic</b><br/><sub>Config System</sub></td>
+</tr>
+</table>
 
 ---
 
-## 快速开始
+## Quick Start
 
 ```bash
-# 1. 创建 Conda 环境
+# 1. Create Conda environment
 conda create -n civilization_simulator python=3.11 -y
 conda activate civilization_simulator
 
-# 2. 安装依赖
+# 2. Install dependencies
 pip install -e ".[dev]"
 
-# 3. 配置 API Key
+# 3. Configure API Key
 cp .env.example .env
-# 编辑 .env，填入 ANTHROPIC_API_KEY
+# Edit .env and fill in ANTHROPIC_API_KEY
 
-# 4. 运行模拟
+# 4. Run simulation
 python scripts/run_simulation.py --ticks 200 --civilians 100
 
-# 5. 运行极端场景压力测试
+# 5. Run extreme scenario stress tests
 python scripts/run_extreme_scenarios.py
 ```
 
 ---
 
-## 已验证的极端场景 (9/9 通过)
+## Stress Test Results: 9 Extreme Scenarios
 
-我们设计了 9 个极端社会场景来压力测试系统的涌现行为：
+<div align="center">
+<table>
+<tr><th colspan="3">All 9/9 Scenarios Passed</th></tr>
+<tr>
+  <th>Scenario</th>
+  <th>Ticks</th>
+  <th>Key Outcome</th>
+</tr>
+<tr><td>Famine Crisis</td><td>300</td><td>3 revolutions triggered</td></tr>
+<tr><td>Resource Inequality</td><td>200</td><td>Trade network emerged</td></tr>
+<tr><td>Tyranny</td><td>400</td><td>4 revolutions, self-correction</td></tr>
+<tr><td>Forced War</td><td>600</td><td>War → Peace via LLM diplomacy</td></tr>
+<tr><td>Apocalypse</td><td>200</td><td>75% population recovered</td></tr>
+<tr><td>Resource Curse</td><td>300</td><td>Wealthy settlement survived via trade</td></tr>
+<tr><td>Information Cocoon</td><td>250</td><td>Revolution despite "perfect" reports</td></tr>
+<tr><td>Proxy War</td><td>400</td><td>Neutral faction profited from war</td></tr>
+<tr><td>Hyperinflation</td><td>300</td><td>7 trade network emergences</td></tr>
+</table>
+</div>
 
-### 1. 饥荒危机
-> 极低食物 + 高税率 + 低治安 → 大规模抗议 → 革命
+<br/>
 
-- **设定**：200 平民，初始食物仅 50，税率 0.6，治安 0.15
-- **结果**：满意度迅速降至 0，抗议率峰值 34%，**触发 3 次革命**（tick 33 / 109 / 187）
-- **涌现**：革命后税率自动降至 0.15，社会逐步恢复稳定
+<details>
+<summary><h3>1. Famine Crisis — 饥荒危机</h3></summary>
 
-### 2. 资源极度不均
-> 3 个富裕聚落 vs 3 个贫困聚落 → 贸易涌现
+> **Extreme starvation + high taxes + low security → mass protests → revolution**
 
-- **设定**：6 个聚落，富裕方食物 3000，贫困方食物仅 10
-- **结果**：贸易网络自发形成，贸易量稳定增长至 384
-- **涌现**：资源通过贸易重新分配，贫困聚落存活
+| Parameter | Value |
+|-----------|-------|
+| Civilians | 200 |
+| Initial Food | 50 (near zero) |
+| Tax Rate | 0.6 |
+| Security | 0.15 |
 
-### 3. 高压统治
-> 税率 0.8 + 治安 0.9 → 观察镇压与反抗的博弈
+**Results:**
+- Satisfaction dropped to **0** within 30 ticks
+- Peak protest rate: **34%**
+- **3 revolutions** triggered at ticks 33, 109, 187
+- Post-revolution: tax rate auto-reset to 0.15, society gradually stabilized
 
-- **设定**：200 平民，极端高压政策
-- **结果**：触发 **4 次革命**，每次革命后治安下降 0.4，税率重置
-- **涌现**：最终满意度恢复至 0.711，系统通过革命自我纠正
+</details>
 
-### 4. 强制战争
-> 手动宣战 → 贸易封锁 → 经济衰退 → 求和
+<details>
+<summary><h3>2. Resource Inequality — 资源极度不均</h3></summary>
 
-- **设定**：6 个聚落分 2 个阵营，tick 10 宣战
-- **结果**：战争持续 490 ticks 后转为友好关系，期间触发 1 次革命
-- **涌现**：LLM 首领在年度决策时主动推动外交缓和
+> **3 wealthy settlements vs 3 impoverished settlements → trade emergence**
 
-### 5. 末日生存
-> 全资源归零 → 系统崩溃 → 观察恢复过程
+| Parameter | Value |
+|-----------|-------|
+| Settlements | 6 (3 rich, 3 poor) |
+| Rich Food | 3,000 |
+| Poor Food | 10 |
 
-- **设定**：300 平民，所有聚落食物仅 5
-- **结果**：人口先跌至 226（损失 25%），随后恢复至 781
-- **涌现**：聚落 0 在 tick 76 触发革命，推翻高税政策后经济复苏
+**Results:**
+- Trade network spontaneously formed
+- Trade volume grew steadily to **384**
+- Resources redistributed through trade; poor settlements survived
 
-### 6. 资源诅咒（荷兰病）
-> 1 个聚落坐拥 50000 金币但粮食为 0 → 会被饿死吗？
+</details>
 
-- **设定**：首富聚落金币 50000 但农田全部退化，其他聚落有粮缺钱
-- **结果**：首富聚落存活！通过贸易购买粮食，贸易量增长至 3030
-- **涌现**：贸易网络涌现 10 次，财富通过贸易向粮食产区转移
+<details>
+<summary><h3>3. Tyranny — 高压统治</h3></summary>
 
-### 7. 信息茧房（粉饰太平）
-> 镇长被设定为"永远汇报抗议率 0%"→ 首领被蒙蔽后果如何？
+> **Tax 0.8 + Security 0.9 → can suppression hold?**
 
-- **设定**：粉饰聚落食物 10，税率 0.6，镇长注入谎报指令
-- **结果**：真实抗议率峰值 50.8%，tick 37 触发革命
-- **涌现**：首领因信息失真未能及时干预，验证了信息茧房效应
+| Parameter | Value |
+|-----------|-------|
+| Civilians | 200 |
+| Tax Rate | 0.8 |
+| Security Level | 0.9 |
 
-### 8. 代理人战争（地缘政治）
-> 阵营 A vs B 开战，阵营 C 坐收渔翁之利？
+**Results:**
+- **4 revolutions** triggered, each reducing security by 0.4
+- Final satisfaction recovered to **0.711**
+- System self-corrected through revolutionary cycles
 
-- **设定**：3 阵营，A 和 B 开战，C 是超级富裕的中立方
-- **结果**：阵营 C 金币从 20508 增长至 20987，始终保持中立
-- **涌现**：C 未主动介入战争，但通过贸易持续获利
+</details>
 
-### 9. 技术性破产（通货膨胀）
-> 所有聚落获得 50000 金币，但粮食产出减半 → 滞胀危机
+<details>
+<summary><h3>4. Forced War — 强制战争</h3></summary>
 
-- **设定**：300 平民，海量金币 + 食物产出减半
-- **结果**：抗议率均值 30.1%，但未触发革命（食物仍够吃）
-- **涌现**：贸易网络涌现 7 次，金币过剩推动了贸易活跃
+> **Manual war declaration → trade blockade → economic decline → peace**
+
+| Parameter | Value |
+|-----------|-------|
+| Settlements | 6 across 2 factions |
+| War Start | Tick 10 |
+
+**Results:**
+- War lasted **490 ticks**, then shifted to **FRIENDLY** status
+- 1 revolution during wartime
+- LLM leaders actively pushed for diplomatic resolution
+
+</details>
+
+<details>
+<summary><h3>5. Apocalypse — 末日生存</h3></summary>
+
+> **All resources zeroed → system collapse → recovery observation**
+
+| Parameter | Value |
+|-----------|-------|
+| Civilians | 300 |
+| All Food | 5 per settlement |
+
+**Results:**
+- Population dropped to **226** (25% loss), then recovered to **781**
+- Revolution at tick 76 overthrew high-tax policy
+- Post-revolution economic recovery
+
+</details>
+
+<details>
+<summary><h3>6. Resource Curse (Dutch Disease) — 资源诅咒</h3></summary>
+
+> **50,000 gold but zero farmland — will the richest settlement starve?**
+
+| Parameter | Value |
+|-----------|-------|
+| Rich Settlement Gold | 50,000 |
+| Rich Settlement Food | 0 |
+| Farmland Fertility | 0 (destroyed) |
+
+**Results:**
+- Rich settlement **survived** by purchasing food through trade
+- Trade volume grew to **3,030**
+- **10 trade network emergence events** detected
+- Wealth flowed to food-producing regions
+
+</details>
+
+<details>
+<summary><h3>7. Information Cocoon — 信息茧房</h3></summary>
+
+> **Governor always reports "0% protests, 100% satisfaction" — leader is blind**
+
+| Parameter | Value |
+|-----------|-------|
+| Lying Settlement Food | 10 |
+| Tax Rate | 0.6 |
+| Governor Prompt | "Always report perfect conditions" |
+
+**Results:**
+- Real protest rate peaked at **50.8%**
+- Revolution triggered at **tick 37**
+- Leader failed to intervene due to falsified reports
+- Validated the information cocoon effect
+
+</details>
+
+<details>
+<summary><h3>8. Proxy War — 代理人战争</h3></summary>
+
+> **Faction A vs B at war, Faction C is a wealthy neutral — will C profit?**
+
+| Parameter | Value |
+|-----------|-------|
+| Factions | 3 (A fights B, C neutral) |
+| Faction C Gold | 20,000+ |
+
+**Results:**
+- Faction C gold: 20,508 → **20,987** (+479)
+- C remained neutral throughout
+- C profited through continued trade during the conflict
+
+</details>
+
+<details>
+<summary><h3>9. Hyperinflation — 通货膨胀</h3></summary>
+
+> **50,000 gold injected + food production halved → stagflation**
+
+| Parameter | Value |
+|-----------|-------|
+| Gold per Settlement | 50,000 |
+| Food Production | 50% of normal |
+
+**Results:**
+- Average protest rate: **30.1%**
+- No revolution (food was still sufficient)
+- **7 trade network emergences** — excess gold drove trade activity
+
+</details>
 
 ---
 
-## 项目结构
+## Core Algorithms
+
+<table>
+<tr>
+<td width="50%">
+
+### Markov State Transition
+
+Each civilian has **7 states** with personality-based transition matrices (Compliant / Neutral / Rebellious), dynamically adjusted by:
+
+```python
+# Hunger effect
+P(work→protest) += 0.15 * hunger
+
+# Tax effect
+P(work→protest) += 0.12 * tax_rate
+
+# Security effect
+P(protest→fight) += 0.15 * insecurity
+
+# Granovetter threshold contagion
+if neighbors_protesting >= threshold:
+    P(any→protest) += 0.40  # mass revolt
+```
+
+</td>
+<td>
+
+### Revolution Mechanism
+
+**Trigger conditions** (sustained for 15 ticks):
+- Protest rate >= 30%
+- Avg satisfaction <= 30%
+
+**Consequences:**
+- Tax rate → 0.15
+- Security level −0.4
+- Gold reserves halved
+- Governor dismissed
+- 60-tick cooldown
+
+**Self-correction loop:**
+> High tax → Protests → Revolution → Tax reset → Recovery → Stability
+
+</td>
+</tr>
+</table>
+
+---
+
+## Project Structure
 
 ```
 src/civsim/
-├── world/          # 世界引擎 (地图生成、时钟、地块)
-├── agents/         # 智能体 (平民FSM、镇长LLM、首领Opus)
-│   └── behaviors/  # 马尔可夫链、Granovetter阈值模型
-├── economy/        # 经济系统 (资源、聚落、贸易)
-├── politics/       # 政治系统 (治理、外交、革命)
-├── llm/            # LLM集成 (网关、提示词、记忆、缓存)
-├── communication/  # 通信层 (MQTT)
-├── data/           # 数据采集 (收集器、DuckDB、涌现检测)
-└── visualization/  # 可视化 (地图渲染、仪表盘)
+├── world/            # World engine (map gen, clock, tiles)
+├── agents/           # Agents (Civilian FSM, Governor LLM, Leader Opus)
+│   └── behaviors/    # Markov chains, Granovetter threshold model
+├── economy/          # Economy (resources, settlements, trade)
+├── politics/         # Politics (governance, diplomacy, revolution)
+├── llm/              # LLM integration (gateway, prompts, memory, cache)
+├── communication/    # Communication (MQTT broker)
+├── data/             # Data (collector, DuckDB, emergence detection)
+└── visualization/    # Visualization (map renderer, dashboard)
 ```
 
 ---
 
-## 开发路线图
+## Roadmap
 
-- [x] **Phase 0** — 环境搭建与项目架构
-- [x] **Phase 1** — 世界引擎 MVP（地图 + 资源 + 马尔可夫平民）
-- [x] **Phase 2** — LLM 镇长层（Haiku/Sonnet 驱动的治理决策）
-- [x] **Phase 3** — 首领层与涌现系统（外交 / 贸易 / 革命 / 战争）
-- [ ] **Phase 4** — 万人规模并行（Ray 分布式执行 + LLM 成本优化）
-- [ ] **Phase 5** — 上帝模式与可视化（实时注入事件 + Plotly 仪表盘）
-
----
-
-## 核心算法
-
-### 马尔可夫状态转移
-
-每个平民拥有 7 种状态（劳作/休息/交易/社交/迁徙/抗议/战斗），基于性格（顺从/中立/叛逆）使用不同的转移概率矩阵，并受饥饿度、税率、治安和邻居状态动态调节：
-
-```python
-# 动态调节因子
-base[WORKING][PROTESTING] += 0.15 * hunger   # 饥饿 → 抗议
-base[WORKING][PROTESTING] += 0.12 * tax       # 高税 → 抗议
-base[PROTESTING][FIGHTING] += 0.15 * safety   # 低治安 → 战斗
-
-# Granovetter 阈值传染
-if protest_ratio >= agent.revolt_threshold:
-    base[WORKING][PROTESTING] += 0.40         # 集体暴动
-```
-
-### 革命触发机制
-
-当聚落满足以下条件持续 15 ticks 时触发革命：
-- 抗议率 >= 30%
-- 平均满意度 <= 30%
-
-革命后果：税率重置为 0.15、治安下降 0.4、金币减半、镇长免职。60 ticks 冷却期防止连续触发。
+<table>
+<tr><td>&#9745;</td><td><b>Phase 0</b></td><td>Environment setup & project architecture</td></tr>
+<tr><td>&#9745;</td><td><b>Phase 1</b></td><td>World engine MVP — map + resources + Markov civilians</td></tr>
+<tr><td>&#9745;</td><td><b>Phase 2</b></td><td>LLM Governor layer — Haiku/Sonnet governance decisions</td></tr>
+<tr><td>&#9745;</td><td><b>Phase 3</b></td><td>Leader layer & emergence — diplomacy / trade / revolution / war</td></tr>
+<tr><td>&#9744;</td><td><b>Phase 4</b></td><td>10K-scale parallelism — Ray distributed execution + LLM cost optimization</td></tr>
+<tr><td>&#9744;</td><td><b>Phase 5</b></td><td>God Mode & visualization — real-time event injection + Plotly dashboard</td></tr>
+</table>
 
 ---
 
-## License
+<div align="center">
 
-MIT
+**MIT License**
+
+</div>
