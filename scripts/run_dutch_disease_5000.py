@@ -282,11 +282,22 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
         sim.log(">>> 开始模拟运行...")
         sim.log("")
 
-        rich_pop_history = []
-        rich_food_history = []
-        rich_gold_history = []
+        # Tick 0: 记录初始状态（模拟运行前）
+        rich_pop_history = [rich.population]
+        rich_food_history = [rich.stockpile.get("food", 0)]
+        rich_gold_history = [rich.stockpile.get("gold", 0)]
         tick_times = []
-        llm_call_log = []
+        # 每 tick 采集的时间序列数据
+        ts_revolution = [0]       # 累计革命次数
+        ts_trade = [0]            # 累计贸易次数
+        ts_satisfaction = [0.5]   # 全局平均满意度（初始默认）
+        ts_temperature = [0.0]    # 控制器温度
+        ts_protest_mult = [1.0]   # 抗议乘数
+        ts_granov_mult = [1.0]    # Granovetter乘数
+        ts_recovery_mult = [1.0]  # 恢复乘数
+        ts_cooldown_mult = [1.0]  # 冷却乘数
+        ts_event_mult = [1.0]     # 事件乘数
+        ts_war_count = [0]        # 战争数
 
         t_total_start = time.time()
 
@@ -303,6 +314,56 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
             rich_pop_history.append(rich_pop)
             rich_food_history.append(rich_food)
             rich_gold_history.append(rich_gold)
+
+            # 每 tick 采集轻量统计
+            rev_cnt = (
+                engine.revolution_tracker.revolution_count
+                if engine.revolution_tracker else 0
+            )
+            trade_cnt = (
+                engine.trade_manager.trade_count
+                if engine.trade_manager else 0
+            )
+            ts_revolution.append(rev_cnt)
+            ts_trade.append(trade_cnt)
+
+            # 满意度 (每 5 tick 采样一次, 其余插值)
+            if tick % 5 == 1 or tick <= 5:
+                civs_all = [
+                    a for a in engine.agents if isinstance(a, Civilian)
+                ]
+                _last_sat = float(np.mean(
+                    [c.satisfaction for c in civs_all],
+                )) if civs_all else 0.5
+            ts_satisfaction.append(_last_sat)
+
+            # 自适应控制器
+            ctrl = getattr(engine, "adaptive_controller", None)
+            if ctrl is not None:
+                ts_temperature.append(ctrl.temperature)
+                c = ctrl.coefficients
+                ts_protest_mult.append(c.markov_protest_multiplier)
+                ts_granov_mult.append(c.granovetter_burst_multiplier)
+                ts_recovery_mult.append(c.satisfaction_recovery_multiplier)
+                ts_cooldown_mult.append(c.revolution_cooldown_multiplier)
+                ts_event_mult.append(c.random_event_multiplier)
+            else:
+                ts_temperature.append(0.0)
+                ts_protest_mult.append(1.0)
+                ts_granov_mult.append(1.0)
+                ts_recovery_mult.append(1.0)
+                ts_cooldown_mult.append(1.0)
+                ts_event_mult.append(1.0)
+
+            # 战争数
+            war_cnt = 0
+            if engine.diplomacy:
+                for status in getattr(
+                    engine.diplomacy, "_relations", {},
+                ).values():
+                    if int(status) == 0:
+                        war_cnt += 1
+            ts_war_count.append(war_cnt)
 
             # 关键 tick 输出详细日志
             is_governor_tick = (tick % 120 == 0)
@@ -505,13 +566,38 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
                 )
         sim.log("")
 
-        return sim, True
+        # 打包时间序列数据
+        ts_data = {
+            "ticks": list(range(0, n_ticks + 1)),
+            "rich_pop": rich_pop_history,
+            "rich_food": rich_food_history,
+            "rich_gold": rich_gold_history,
+            "revolution": ts_revolution,
+            "trade": ts_trade,
+            "satisfaction": ts_satisfaction,
+            "temperature": ts_temperature,
+            "protest_mult": ts_protest_mult,
+            "granov_mult": ts_granov_mult,
+            "recovery_mult": ts_recovery_mult,
+            "cooldown_mult": ts_cooldown_mult,
+            "event_mult": ts_event_mult,
+            "war_count": ts_war_count,
+            "tick_times": tick_times,
+            "rev_event_ticks": [
+                e.trigger_tick for e in (
+                    engine.revolution_tracker.events
+                    if engine.revolution_tracker else []
+                )
+            ],
+        }
+
+        return sim, True, ts_data
 
     except Exception as e:
         import traceback
         sim.log(f"\n  !!! 模拟失败: {e}")
         sim.log(traceback.format_exc())
-        return sim, False
+        return sim, False, {}
 
 
 def generate_report(sim: SimLog, success: bool) -> str:
@@ -562,20 +648,313 @@ def generate_report(sim: SimLog, success: bool) -> str:
     return "\n".join(lines)
 
 
+def generate_charts(ts: dict, out_dir: str) -> list[str]:
+    """生成可视化图表并保存。
+
+    Args:
+        ts: 时间序列数据字典。
+        out_dir: 输出目录。
+
+    Returns:
+        生成的图片路径列表。
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import MaxNLocator
+    from collections import Counter
+
+    # 中文字体
+    plt.rcParams["font.sans-serif"] = [
+        "Arial Unicode MS", "PingFang SC", "Heiti SC", "SimHei",
+    ]
+    plt.rcParams["axes.unicode_minus"] = False
+
+    ticks = ts["ticks"]
+    paths = []
+
+    # V2 基准线
+    V2_REVOLUTION = 105
+    V2_SATISFACTION = 0.407
+
+    # ================================================================
+    # 图1: 首富聚落演化 (3行: 人口, 金币含暴跌, 食物)
+    # ================================================================
+    fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=False)
+    fig.suptitle(
+        "首富聚落演化 — 荷兰病 5000 Agent 模拟",
+        fontsize=16, fontweight="bold",
+    )
+
+    # 人口
+    ax1 = axes[0]
+    ax1.plot(ticks, ts["rich_pop"], color="#2563eb", linewidth=2)
+    ax1.fill_between(ticks, ts["rich_pop"], alpha=0.15, color="#2563eb")
+    ax1.set_ylabel("人口", fontsize=12)
+    ax1.set_title("人口变化", fontsize=13)
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xlim(ticks[0], ticks[-1])
+
+    # 金币 — 完整范围，能看到 50000→1200 的暴跌
+    ax2 = axes[1]
+    ax2.plot(ticks, ts["rich_gold"], color="#eab308", linewidth=2.5)
+    ax2.fill_between(ticks, ts["rich_gold"], alpha=0.15, color="#eab308")
+    ax2.set_ylabel("金币", fontsize=12, color="#996600")
+    ax2.set_title(
+        "金币储备 (初始50000金 → Tick1暴跌至~1200 → 缓慢回升)",
+        fontsize=13,
+    )
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlim(ticks[0], ticks[-1])
+    # 标注暴跌
+    ax2.annotate(
+        f"50,000 → {ts['rich_gold'][1]:.0f}\n(首轮贸易花光)",
+        xy=(1, ts["rich_gold"][1]),
+        xytext=(60, 35000),
+        fontsize=10,
+        arrowprops=dict(arrowstyle="->", color="#996600", lw=1.5),
+        color="#996600",
+        fontweight="bold",
+    )
+
+    # 食物 — 从 0 开始获得
+    ax3 = axes[2]
+    ax3.plot(ticks, ts["rich_food"], color="#16a34a", linewidth=2)
+    ax3.fill_between(ticks, ts["rich_food"], alpha=0.15, color="#16a34a")
+    ax3.set_ylabel("食物", fontsize=12, color="#16a34a")
+    ax3.set_xlabel("Tick", fontsize=12)
+    ax3.set_title(
+        "食物储备 (初始0 → 用金币购入6500+ → 持续积累)",
+        fontsize=13,
+    )
+    ax3.grid(True, alpha=0.3)
+    ax3.set_xlim(ticks[0], ticks[-1])
+    # 标注获得食物
+    ax3.annotate(
+        f"0 → {ts['rich_food'][1]:.0f}\n(用金币买粮)",
+        xy=(1, ts["rich_food"][1]),
+        xytext=(60, 2000),
+        fontsize=10,
+        arrowprops=dict(arrowstyle="->", color="#16a34a", lw=1.5),
+        color="#16a34a",
+        fontweight="bold",
+    )
+
+    plt.tight_layout()
+    p = f"{out_dir}/chart1_rich_settlement.png"
+    fig.savefig(p, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    paths.append(p)
+
+    # ================================================================
+    # 图2: 全局系统动力学
+    # ================================================================
+    fig, axes = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+    fig.suptitle(
+        "全局系统动力学 — V3 自适应 vs V2 基准",
+        fontsize=16, fontweight="bold",
+    )
+
+    ax1 = axes[0]
+    ax1.plot(
+        ticks, ts["revolution"], color="#dc2626",
+        linewidth=2.5, label="V3 累计革命",
+    )
+    ax1.axhline(
+        y=V2_REVOLUTION, color="#dc2626", linestyle=":",
+        alpha=0.6, linewidth=1.5, label=f"V2 基准 ({V2_REVOLUTION}次)",
+    )
+    ax1.fill_between(ticks, ts["revolution"], alpha=0.12, color="#dc2626")
+    ax1.set_ylabel("累计革命次数", fontsize=12)
+    ax1.legend(fontsize=11, loc="upper left")
+    ax1.set_title("革命累计曲线", fontsize=13)
+    ax1.grid(True, alpha=0.3)
+
+    ax2 = axes[1]
+    ax2.plot(
+        ticks, ts["satisfaction"], color="#2563eb",
+        linewidth=2, label="V3 平均满意度",
+    )
+    ax2.axhline(
+        y=V2_SATISFACTION, color="#2563eb", linestyle=":",
+        alpha=0.6, linewidth=1.5,
+        label=f"V2 基准 ({V2_SATISFACTION})",
+    )
+    ax2.fill_between(
+        ticks, ts["satisfaction"], V2_SATISFACTION,
+        where=[s > V2_SATISFACTION for s in ts["satisfaction"]],
+        alpha=0.15, color="#16a34a", label="优于V2",
+    )
+    ax2.fill_between(
+        ticks, ts["satisfaction"], V2_SATISFACTION,
+        where=[s <= V2_SATISFACTION for s in ts["satisfaction"]],
+        alpha=0.15, color="#dc2626", label="劣于V2",
+    )
+    ax2.set_ylabel("满意度", fontsize=12)
+    ax2.set_xlabel("Tick", fontsize=12)
+    ax2.set_ylim(0.0, 1.0)
+    ax2.legend(fontsize=10, loc="lower left")
+    ax2.set_title("全局平均满意度", fontsize=13)
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    p = f"{out_dir}/chart2_global_dynamics.png"
+    fig.savefig(p, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    paths.append(p)
+
+    # ================================================================
+    # 图3: 自适应控制器
+    # ================================================================
+    fig, axes = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+    fig.suptitle(
+        "自适应 P-Controller 恒温器",
+        fontsize=16, fontweight="bold",
+    )
+
+    ax1 = axes[0]
+    ax1.plot(
+        ticks, ts["temperature"], color="#f97316",
+        linewidth=2.5, label="系统温度",
+    )
+    ax1.axhline(
+        y=0.3, color="#6b7280", linestyle="--",
+        alpha=0.7, linewidth=1.5, label="目标温度 (0.30)",
+    )
+    ax1.fill_between(
+        ticks, ts["temperature"], 0.3,
+        where=[t > 0.3 for t in ts["temperature"]],
+        alpha=0.2, color="#ef4444", label="过热",
+    )
+    ax1.fill_between(
+        ticks, ts["temperature"], 0.3,
+        where=[t <= 0.3 for t in ts["temperature"]],
+        alpha=0.2, color="#3b82f6", label="过冷",
+    )
+    ax1.set_ylabel("温度", fontsize=12)
+    ax1.set_ylim(0.0, 0.8)
+    ax1.legend(fontsize=10, loc="upper left")
+    ax1.set_title("系统温度轨迹", fontsize=13)
+    ax1.grid(True, alpha=0.3)
+
+    ax2 = axes[1]
+    ax2.plot(
+        ticks, ts["protest_mult"], color="#dc2626",
+        linewidth=2, label="抗议乘数",
+    )
+    ax2.plot(
+        ticks, ts["granov_mult"], color="#f97316",
+        linewidth=2, label="Granovetter乘数",
+    )
+    ax2.plot(
+        ticks, ts["recovery_mult"], color="#16a34a",
+        linewidth=2, label="恢复速度乘数",
+    )
+    ax2.plot(
+        ticks, ts["cooldown_mult"], color="#8b5cf6",
+        linewidth=2, label="冷却期乘数", linestyle="--",
+    )
+    ax2.axhline(
+        y=1.0, color="#6b7280", linestyle=":",
+        alpha=0.5, linewidth=1, label="基准 (1.0)",
+    )
+    ax2.set_ylabel("系数乘数", fontsize=12)
+    ax2.set_xlabel("Tick", fontsize=12)
+    ax2.set_ylim(0.0, 2.0)
+    ax2.legend(fontsize=9, loc="upper right", ncol=2)
+    ax2.set_title("自适应系数调节", fontsize=13)
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    p = f"{out_dir}/chart3_adaptive_controller.png"
+    fig.savefig(p, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    paths.append(p)
+
+    # ================================================================
+    # 图4: 革命事件时间线 + 贸易/战争
+    # ================================================================
+    fig, axes = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+    fig.suptitle(
+        "涌现事件时间线",
+        fontsize=16, fontweight="bold",
+    )
+
+    # 革命事件直方图
+    ax1 = axes[0]
+    rev_ticks = ts.get("rev_event_ticks", [])
+    if rev_ticks:
+        counts = Counter(rev_ticks)
+        all_t = sorted(counts.keys())
+        vals = [counts[t] for t in all_t]
+        ax1.bar(
+            all_t, vals, width=1.5, color="#dc2626", alpha=0.8,
+            label=f"革命事件 (共{len(rev_ticks)}次)",
+        )
+    ax1.set_ylabel("单 tick 革命数", fontsize=12)
+    ax1.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax1.legend(fontsize=11, loc="upper left")
+    ax1.set_title("革命爆发时间分布", fontsize=13)
+    ax1.grid(True, alpha=0.3, axis="y")
+
+    # 贸易 + 战争
+    ax2 = axes[1]
+    ax2.plot(
+        ticks, ts["trade"], color="#16a34a",
+        linewidth=2, label="累计贸易",
+    )
+    ax2.set_ylabel("累计贸易次数", fontsize=12, color="#16a34a")
+    ax2.tick_params(axis="y", labelcolor="#16a34a")
+    ax2.fill_between(ticks, ts["trade"], alpha=0.1, color="#16a34a")
+
+    ax2b = ax2.twinx()
+    ax2b.plot(
+        ticks, ts["war_count"], color="#7c3aed",
+        linewidth=2, label="活跃战争数",
+    )
+    ax2b.set_ylabel("战争数", fontsize=12, color="#7c3aed")
+    ax2b.tick_params(axis="y", labelcolor="#7c3aed")
+    ax2b.yaxis.set_major_locator(MaxNLocator(integer=True))
+
+    lns = ax2.get_lines() + ax2b.get_lines()
+    labs = [l.get_label() for l in lns]
+    ax2.legend(lns, labs, loc="upper left", fontsize=11)
+    ax2.set_xlabel("Tick", fontsize=12)
+    ax2.set_title("贸易与战争", fontsize=13)
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    p = f"{out_dir}/chart4_events_timeline.png"
+    fig.savefig(p, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    paths.append(p)
+
+    return paths
+
+
 def main() -> None:
     """入口函数。"""
-    sim, success = run_dutch_disease_5000()
-
-    report = generate_report(sim, success)
+    sim, success, ts_data = run_dutch_disease_5000()
 
     import os
-    os.makedirs("data/exports", exist_ok=True)
-    report_path = "data/exports/dutch_disease_5000_report.md"
+    scenario_dir = "data/scenarios/dutch_disease_5000"
+    os.makedirs(scenario_dir, exist_ok=True)
+
+    report = generate_report(sim, success)
+    report_path = f"{scenario_dir}/report.md"
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(report)
 
     print(f"\n{'='*70}")
     print(f"报告已保存至: {report_path}")
+
+    # 生成可视化图表
+    if ts_data:
+        chart_paths = generate_charts(ts_data, scenario_dir)
+        print(f"\n可视化图表:")
+        for cp in chart_paths:
+            print(f"  {cp}")
+
     print(f"{'='*70}")
 
     gc.collect()

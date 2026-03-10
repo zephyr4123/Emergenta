@@ -1,7 +1,7 @@
 """极端场景压力测试。
 
 设计 5 个极端场景，压测贸易/革命/战争/饥荒/级联效应。
-结果输出到 data/exports/extreme_scenarios_report.md
+结果输出到 data/scenarios/extreme_scenarios/report.md
 """
 
 import sys
@@ -1037,8 +1037,9 @@ def main() -> None:
     report = generate_report(results)
 
     import os
-    os.makedirs("data/exports", exist_ok=True)
-    report_path = "data/exports/extreme_scenarios_report.md"
+    scenario_dir = "data/scenarios/extreme_scenarios"
+    os.makedirs(scenario_dir, exist_ok=True)
+    report_path = f"{scenario_dir}/report.md"
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(report)
 

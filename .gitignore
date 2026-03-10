@@ -43,6 +43,12 @@ data/exports/*
 *.duckdb
 *.duckdb.wal
 
+# === 场景输出 (保留目录结构，忽略报告/图表) ===
+data/scenarios/**/report.md
+data/scenarios/**/*.png
+data/scenarios/**/*.log
+data/scenarios/**/*.json
+
 # === Ruff ===
 .ruff_cache/
 
