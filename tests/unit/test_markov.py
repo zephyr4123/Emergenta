@@ -235,7 +235,7 @@ class TestComputeTransitionMatrix:
         )
 
     def test_hunger_increases_working_from_resting(self) -> None:
-        """高饥饿度应增加从休息到劳作的转移概率。"""
+        """高饥饿度应增加从休息到抗议的转移概率。"""
         m_low = compute_transition_matrix(
             Personality.NEUTRAL, 0.0, 0.0, 1.0, 0.0, 0.5
         )
@@ -243,8 +243,8 @@ class TestComputeTransitionMatrix:
             Personality.NEUTRAL, 1.0, 0.0, 1.0, 0.0, 0.5
         )
         assert (
-            m_high[CivilianState.RESTING][CivilianState.WORKING]
-            > m_low[CivilianState.RESTING][CivilianState.WORKING]
+            m_high[CivilianState.RESTING][CivilianState.PROTESTING]
+            > m_low[CivilianState.RESTING][CivilianState.PROTESTING]
         )
 
     def test_tax_increases_protest_from_working(self) -> None:

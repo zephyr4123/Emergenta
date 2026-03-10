@@ -2,10 +2,12 @@
 
 Mesa Model 子类，实现每 tick 的核心循环：
 环境更新 → Agent 行动 → 贸易结算 → 聚落结算 → 革命检测 → 数据采集。
+支持 LLM 异步并行决策调度。
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import mesa
@@ -324,8 +326,8 @@ class CivilizationEngine(mesa.Model):
     def _agents_act(self) -> None:
         """执行所有 Agent 的行动。
 
-        当平民数量超过并行阈值且协调器可用时，使用并行执行；
-        否则使用 Mesa 原生的 shuffle_do。
+        平民使用并行/串行执行；
+        镇长和首领在决策 tick 时使用 asyncio.gather 并行 LLM 调用。
         """
         civilians = [a for a in self.agents if isinstance(a, Civilian)]
         non_civilians = [a for a in self.agents if not isinstance(a, Civilian)]
@@ -337,11 +339,76 @@ class CivilizationEngine(mesa.Model):
 
         if use_parallel:
             self._parallel_civilian_step(civilians)
-            # 非平民 Agent（镇长、首领）仍串行执行
+        else:
+            # 只执行平民的 step
+            for agent in civilians:
+                agent.step()
+
+        # 镇长/首领决策：尝试异步并行
+        if self._should_async_llm_decisions():
+            self._async_llm_decisions()
+        else:
             for agent in non_civilians:
                 agent.step()
-        else:
-            self.agents.shuffle_do("step")
+
+    def _should_async_llm_decisions(self) -> bool:
+        """判断是否应使用异步并行 LLM 决策。"""
+        if self.llm_gateway is None:
+            return False
+        is_gov_tick = self.clock.is_governor_decision_tick() and self.clock.tick > 0
+        is_leader_tick = (
+            self.clock.is_leader_decision_tick()
+            and self.clock.tick > 0
+            and self.leaders
+        )
+        return is_gov_tick or is_leader_tick
+
+    def _async_llm_decisions(self) -> None:
+        """使用 asyncio 批量并行执行 LLM 决策。"""
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    future = pool.submit(
+                        asyncio.run,
+                        self._batch_decisions(),
+                    )
+                    future.result()
+            else:
+                loop.run_until_complete(self._batch_decisions())
+        except RuntimeError:
+            asyncio.run(self._batch_decisions())
+
+    async def _batch_decisions(self) -> None:
+        """批量执行镇长和首领的异步决策。"""
+        tasks = []
+
+        if (
+            self.clock.is_governor_decision_tick()
+            and self.clock.tick > 0
+        ):
+            governors = self.get_governors()
+            for gov in governors:
+                tasks.append(gov.decision_cycle_async())
+
+        if (
+            self.clock.is_leader_decision_tick()
+            and self.clock.tick > 0
+            and self.leaders
+        ):
+            for leader in self.leaders:
+                tasks.append(leader.decision_cycle_async())
+
+        if tasks:
+            results = await asyncio.gather(
+                *tasks, return_exceptions=True,
+            )
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    logger.warning(
+                        "异步决策 #%d 失败: %s", i, result,
+                    )
 
     def _parallel_civilian_step(self, civilians: list[Civilian]) -> None:
         """使用并行协调器执行平民 step 并应用结果。"""
@@ -391,7 +458,7 @@ class CivilizationEngine(mesa.Model):
         return index
 
     def _environment_update(self) -> None:
-        """环境更新：资源再生 + 事件处理。"""
+        """环境更新：资源再生 + 事件处理 + 信任衰减。"""
         regen = self.config.resources.regeneration
         for tile in self._regenerable_tiles:
             tile.regenerate(regen.farmland_per_tick, regen.forest_per_tick)
@@ -399,6 +466,8 @@ class CivilizationEngine(mesa.Model):
         self._trigger_random_events()
         if self.diplomacy:
             self.diplomacy.expire_treaties(self.clock.tick)
+            self.diplomacy.decay_trust()
+            self.diplomacy.auto_downgrade_relations(self.clock.tick)
 
     def _trigger_random_events(self) -> None:
         """按概率触发随机事件。"""
@@ -439,9 +508,13 @@ class CivilizationEngine(mesa.Model):
     def _trade_update(self) -> None:
         """处理聚落间贸易。"""
         diplo_rels = None
+        trust_data = None
         if self.diplomacy:
             diplo_rels = self.diplomacy.get_relations_dict()
-        self.trade_manager.process_tick(self.settlements, diplo_rels)
+            trust_data = self.diplomacy.get_trust_data()
+        self.trade_manager.process_tick(
+            self.settlements, diplo_rels, trust_data,
+        )
 
     def _check_revolutions(self) -> None:
         """检测并处理革命。"""

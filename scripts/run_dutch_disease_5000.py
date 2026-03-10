@@ -446,8 +446,8 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
             sim.log(f"\n  [革命事件] ({len(rev_events)}个)")
             for e in rev_events[:20]:
                 sim.log(
-                    f"    [Tick {e.get('tick', '?')}] "
-                    f"聚落{e.get('settlement_id', '?')}: {e}"
+                    f"    [Tick {e.trigger_tick}] "
+                    f"聚落{e.settlement_id}: {e.cause}"
                 )
         sim.log("")
 

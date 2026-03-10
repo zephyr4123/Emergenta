@@ -377,3 +377,88 @@ class Governor(BaseAgent):
             if isinstance(a, Civilian)
             and a.home_settlement_id == self.settlement_id
         ]
+
+    async def decide_async(
+        self, perception: GovernorPerception,
+    ) -> dict | None:
+        """异步调用 LLM 生成结构化决策。
+
+        Args:
+            perception: 感知数据。
+
+        Returns:
+            验证后的决策字典，失败时返回 None。
+        """
+        if self._gateway is None:
+            return self._fallback_decision(perception)
+
+        memory_context = self.memory.build_context(max_entries=5)
+
+        system_msg = build_governor_system_prompt()
+        user_msg = build_governor_perception_prompt(
+            settlement_name=perception.settlement_name,
+            population=perception.population,
+            food=perception.food,
+            wood=perception.wood,
+            ore=perception.ore,
+            gold=perception.gold,
+            tax_rate=perception.tax_rate,
+            security_level=perception.security_level,
+            satisfaction_avg=perception.satisfaction_avg,
+            protest_ratio=perception.protest_ratio,
+            scarcity_index=perception.scarcity_index,
+            per_capita_food=perception.per_capita_food,
+            season=perception.season,
+            recent_events=perception.recent_events,
+            memory_context=memory_context,
+        )
+
+        messages = [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_msg},
+        ]
+
+        try:
+            raw = await self._gateway.acall_json("governor", messages)
+            return validate_governor_decision(raw)
+        except Exception as e:
+            logger.warning(
+                "镇长 %d 异步LLM决策失败: %s，使用回退策略",
+                self.unique_id, e,
+            )
+            return self._fallback_decision(perception)
+
+    async def decision_cycle_async(self) -> None:
+        """异步版完整感知→决策→应用循环。"""
+        perception = self.perceive()
+        if perception is None:
+            return
+
+        decision = None
+        cache_hit = False
+        if self.cache is not None:
+            features = perception.to_features()
+            cached = self.cache.query(features)
+            if cached is not None:
+                decision = cached
+                cache_hit = True
+                logger.info(
+                    "镇长 %d 缓存命中，复用历史决策", self.unique_id,
+                )
+
+        if decision is None:
+            decision = await self.decide_async(perception)
+
+        if decision is None:
+            return
+
+        if self.cache is not None and not cache_hit:
+            self.cache.store(perception.to_features(), decision)
+
+        self.apply_decision(decision)
+        self.memory.add_decision(
+            tick=self.model.clock.tick,
+            decision=decision,
+        )
+        self.last_decision = decision
+        self.decision_count += 1

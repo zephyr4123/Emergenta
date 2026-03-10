@@ -107,31 +107,31 @@ def compute_transition_matrix(
     base = PERSONALITY_MATRICES[personality].copy()
     safety = 1.0 - security  # 不安全度
 
-    # --- 饥饿效应（强化：系数 x3）---
-    base[_W][_P] += 0.45 * hunger
+    # --- 饥饿效应（强化：系数进一步提升）---
+    base[_W][_P] += 0.60 * hunger
     base[_W][_M] += 0.15 * hunger
-    base[_R][_P] += 0.30 * hunger
+    base[_R][_P] += 0.45 * hunger
     base[_R][_W] += 0.20 * hunger
-    base[_S][_P] += 0.35 * hunger
-    base[_T][_P] += 0.20 * hunger
+    base[_S][_P] += 0.50 * hunger
+    base[_T][_P] += 0.30 * hunger
 
-    # --- 税率效应（强化：系数 x2.5）---
-    base[_W][_P] += 0.30 * tax_rate
-    base[_R][_P] += 0.20 * tax_rate
-    base[_T][_P] += 0.20 * tax_rate
-    base[_S][_P] += 0.15 * tax_rate
+    # --- 税率效应（强化：系数进一步提升）---
+    base[_W][_P] += 0.45 * tax_rate
+    base[_R][_P] += 0.30 * tax_rate
+    base[_T][_P] += 0.30 * tax_rate
+    base[_S][_P] += 0.25 * tax_rate
 
     # --- 安全效应 ---
     base[_S][_F] += 0.10 * safety
-    base[_P][_F] += 0.15 * safety
+    base[_P][_F] += 0.30 * safety
 
-    # --- Granovetter 邻居传染 ---
+    # --- Granovetter 邻居传染（大幅增强）---
     if protest_ratio >= revolt_threshold:
-        base[_W][_P] += 0.50
-        base[_R][_P] += 0.45
-        base[_S][_P] += 0.55
-        base[_T][_P] += 0.40
-        base[_M][_P] += 0.30
+        base[_W][_P] += 0.80
+        base[_R][_P] += 0.70
+        base[_S][_P] += 0.85
+        base[_T][_P] += 0.60
+        base[_M][_P] += 0.50
 
     return normalize_rows(base)
 

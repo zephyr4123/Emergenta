@@ -257,7 +257,10 @@ class Leader(BaseAgent):
             return self._fallback_decision(perception)
 
     def _fallback_decision(self, perception: LeaderPerception) -> dict:
-        """LLM 不可用时的规则回退策略。"""
+        """LLM 不可用时的规则回退策略。
+
+        增加攻击性决策：宣战、破约、转嫁矛盾。
+        """
         directives = []
         for s_info in perception.settlements_info:
             tax_change = 0.0
@@ -279,19 +282,60 @@ class Leader(BaseAgent):
             })
 
         diplo_actions = []
+        my_strength = self._compute_strength()
+        my_pop = my_strength.get("population", 0)
+        my_mil = my_strength.get("military", 0)
+
         for fid, status in perception.diplomatic_status.items():
-            if status == "NEUTRAL" and perception.avg_satisfaction > 0.5:
+            # 计算对方实力
+            target_pop = self._estimate_target_strength(fid)
+
+            if status == "NEUTRAL":
+                # 强于对手1.3倍时考虑宣战（30%概率）
+                if my_pop > target_pop * 1.3 and self._rng.random() < 0.3:
+                    diplo_actions.append({
+                        "target_faction": fid,
+                        "action": "declare_war",
+                        "reasoning": "实力优势，发动掠夺战争",
+                    })
+                elif perception.avg_satisfaction > 0.5:
+                    diplo_actions.append({
+                        "target_faction": fid,
+                        "action": "propose_trade",
+                        "reasoning": "局势稳定，寻求贸易合作",
+                    })
+
+            elif status == "ALLIED":
+                # 盟友弱小时考虑背叛（20%概率）
+                trust = 0.5
+                if hasattr(self.model, "diplomacy"):
+                    trust = self.model.diplomacy.get_trust(
+                        self.faction_id, fid,
+                    )
+                if trust < 0.3 and self._rng.random() < 0.2:
+                    diplo_actions.append({
+                        "target_faction": fid,
+                        "action": "break_treaty",
+                        "reasoning": "信任度低，背叛盟约以获取利益",
+                    })
+
+            # 内部满意度低时对外宣战转嫁矛盾（20%概率）
+            if (
+                perception.avg_satisfaction < 0.4
+                and status not in ("WAR", "ALLIED")
+                and self._rng.random() < 0.2
+            ):
                 diplo_actions.append({
                     "target_faction": fid,
-                    "action": "propose_trade",
-                    "reasoning": "局势稳定，寻求贸易合作",
+                    "action": "declare_war",
+                    "reasoning": "内部矛盾严重，对外转嫁矛盾",
                 })
 
         return validate_leader_decision({
             "diplomatic_actions": diplo_actions,
             "policy_directives": directives,
-            "overall_strategy": "维持稳定，发展经济",
-            "reasoning": "规则回退策略",
+            "overall_strategy": "实力扩张，机会主义外交",
+            "reasoning": "规则回退策略（攻击性）",
         })
 
     def apply_decision(self, decision: dict) -> None:
@@ -375,6 +419,7 @@ class Leader(BaseAgent):
                     self.faction_id, target,
                     DiplomaticStatus.WAR, tick,
                 )
+                dm.update_trust(self.faction_id, target, -0.2)
                 self.memory.add_event(
                     tick, f"向阵营{target}宣战", importance=1.0,
                 )
@@ -389,6 +434,28 @@ class Leader(BaseAgent):
                     self.memory.add_event(
                         tick, f"与阵营{target}议和", importance=0.8,
                     )
+
+            elif act == "break_treaty":
+                treaties = dm.get_active_treaties(self.faction_id)
+                for t in treaties:
+                    if target in (t.faction_a, t.faction_b):
+                        dm.break_treaty(t, self.faction_id, tick)
+                        self.memory.add_event(
+                            tick,
+                            f"背叛阵营{target}，撕毁{t.treaty_type.value}",
+                            importance=1.0,
+                        )
+                        break
+
+            elif act == "trade_embargo":
+                dm.set_relation(
+                    self.faction_id, target,
+                    DiplomaticStatus.HOSTILE, tick,
+                )
+                dm.update_trust(self.faction_id, target, -0.15)
+                self.memory.add_event(
+                    tick, f"对阵营{target}实施贸易禁运", importance=0.7,
+                )
 
     def negotiate(
         self,
@@ -470,6 +537,16 @@ class Leader(BaseAgent):
                     gold += s.stockpile.get("gold", 0)
         return {"population": pop, "military": gold * 0.5 + pop * 0.1}
 
+    def _estimate_target_strength(self, target_faction_id: int) -> int:
+        """估算目标阵营的人口实力。"""
+        if not hasattr(self.model, "leaders"):
+            return 0
+        for leader in self.model.leaders:
+            if leader.faction_id == target_faction_id:
+                strength = leader._compute_strength()
+                return strength.get("population", 0)
+        return 0
+
     def _get_faction_civilians(self, settlement_id: int) -> list:
         """获取指定聚落的平民。"""
         from civsim.agents.civilian import Civilian
@@ -503,3 +580,71 @@ class Leader(BaseAgent):
             f"{t.treaty_type.value}: 阵营{t.faction_a}↔阵营{t.faction_b}"
             for t in treaties
         ]
+
+    async def decide_async(
+        self, perception: LeaderPerception,
+    ) -> dict | None:
+        """异步调用 LLM 生成战略决策。"""
+        if self._gateway is None:
+            return self._fallback_decision(perception)
+
+        memory_context = self.memory.build_context(max_entries=5)
+        system_msg = build_leader_system_prompt()
+        user_msg = build_leader_perception_prompt(
+            faction_id=perception.faction_id,
+            year=perception.year,
+            season=perception.season,
+            settlements_info=perception.settlements_info,
+            total_population=perception.total_population,
+            total_resources=perception.total_resources,
+            avg_satisfaction=perception.avg_satisfaction,
+            diplomatic_status=perception.diplomatic_status,
+            active_treaties=perception.active_treaties,
+            memory_context=memory_context,
+        )
+
+        messages = [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_msg},
+        ]
+
+        try:
+            raw = await self._gateway.acall_json("leader", messages)
+            return validate_leader_decision(raw)
+        except Exception as e:
+            logger.warning(
+                "首领 %d 异步LLM决策失败: %s，使用回退策略",
+                self.unique_id, e,
+            )
+            return self._fallback_decision(perception)
+
+    async def decision_cycle_async(self) -> None:
+        """异步版完整感知→决策→应用循环。"""
+        perception = self.perceive()
+        if perception is None:
+            return
+
+        decision = None
+        cache_hit = False
+        if self.cache is not None:
+            features = perception.to_features()
+            cached = self.cache.query(features)
+            if cached is not None:
+                decision = cached
+                cache_hit = True
+
+        if decision is None:
+            decision = await self.decide_async(perception)
+
+        if decision is None:
+            return
+
+        if self.cache is not None and not cache_hit:
+            self.cache.store(perception.to_features(), decision)
+
+        self.apply_decision(decision)
+        self.memory.add_decision(
+            tick=self.model.clock.tick, decision=decision,
+        )
+        self.last_decision = decision
+        self.decision_count += 1

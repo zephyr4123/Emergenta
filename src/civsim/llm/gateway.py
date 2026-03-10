@@ -2,8 +2,10 @@
 
 统一多模型调用接口，支持重试、超时控制和 token 消耗统计。
 通过 config.yaml 配置路由不同角色到不同模型。
+支持同步和异步调用方式。
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -279,3 +281,140 @@ class LLMGateway:
     def reset_stats(self) -> None:
         """重置调用统计。"""
         self.stats = LLMCallStats()
+
+    async def acall(
+        self,
+        role: str,
+        messages: list[dict[str, str]],
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> LLMResponse:
+        """异步调用 LLM 模型。
+
+        Args:
+            role: 角色名，用于路由到对应模型。
+            messages: OpenAI 格式的消息列表。
+            temperature: 覆盖默认温度（可选）。
+            max_tokens: 覆盖默认 max_tokens（可选）。
+
+        Returns:
+            LLM 响应对象。
+
+        Raises:
+            KeyError: 角色未注册。
+            RuntimeError: 调用失败且重试耗尽。
+        """
+        if role not in self._model_configs:
+            msg = f"未注册角色 '{role}' 的模型配置"
+            raise KeyError(msg)
+
+        config = self._model_configs[role]
+        model_name = f"{config.provider}/{config.model}"
+        temp = temperature if temperature is not None else config.temperature
+        tokens = max_tokens if max_tokens is not None else config.max_tokens
+
+        last_error: Exception | None = None
+        for attempt in range(self._max_retries + 1):
+            try:
+                start = time.monotonic()
+                response = await litellm.acompletion(
+                    model=model_name,
+                    messages=messages,
+                    temperature=temp,
+                    max_tokens=tokens,
+                    api_key=config.api_key,
+                    api_base=config.base_url,
+                    timeout=self._timeout,
+                )
+                elapsed_ms = (time.monotonic() - start) * 1000
+
+                content = response.choices[0].message.content or ""
+                usage = response.usage
+                prompt_tokens = usage.prompt_tokens if usage else 0
+                completion_tokens = (
+                    usage.completion_tokens if usage else 0
+                )
+
+                self.stats.total_calls += 1
+                self.stats.total_prompt_tokens += prompt_tokens
+                self.stats.total_completion_tokens += completion_tokens
+                self.stats.total_latency_ms += elapsed_ms
+
+                if self.cost_tracker is not None:
+                    self.cost_tracker.record_call(
+                        model=model_name,
+                        prompt_tokens=prompt_tokens,
+                        completion_tokens=completion_tokens,
+                    )
+
+                return LLMResponse(
+                    content=content,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    latency_ms=elapsed_ms,
+                    model=model_name,
+                )
+
+            except Exception as e:
+                last_error = e
+                self.stats.errors += 1
+                logger.warning(
+                    "LLM 异步调用失败 (attempt %d/%d): %s",
+                    attempt + 1,
+                    self._max_retries + 1,
+                    e,
+                )
+                if attempt < self._max_retries:
+                    await asyncio.sleep(1.0 * (attempt + 1))
+
+        msg = f"LLM 异步调用失败，已重试 {self._max_retries} 次: {last_error}"
+        raise RuntimeError(msg)
+
+    async def acall_json(
+        self,
+        role: str,
+        messages: list[dict[str, str]],
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> dict:
+        """异步调用 LLM 并解析 JSON 响应。
+
+        Args:
+            role: 角色名。
+            messages: 消息列表。
+            temperature: 覆盖温度。
+            max_tokens: 覆盖 max_tokens。
+
+        Returns:
+            解析后的 JSON 字典。
+
+        Raises:
+            ValueError: JSON 解析失败。
+        """
+        response = await self.acall(
+            role, messages, temperature, max_tokens,
+        )
+        content = response.content.strip()
+
+        if content.startswith("```"):
+            lines = content.split("\n")
+            json_lines = []
+            in_block = False
+            for line in lines:
+                if line.startswith("```") and not in_block:
+                    in_block = True
+                    continue
+                if line.startswith("```") and in_block:
+                    break
+                if in_block:
+                    json_lines.append(line)
+            content = "\n".join(json_lines)
+
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            msg = (
+                f"LLM 返回的内容无法解析为 JSON: {e}\n"
+                f"原始内容: {content[:200]}"
+            )
+            raise ValueError(msg) from e

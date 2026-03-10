@@ -8,19 +8,25 @@
 def build_governor_system_prompt() -> str:
     """构建镇长的系统 Prompt。
 
+    注入多样化执政风格，避免千篇一律的"维稳"策略。
+
     Returns:
         系统角色描述文本。
     """
     return (
-        "你是一个文明模拟器中的聚落镇长AI。你负责管理一个聚落的税率、治安投入和资源分配。\n"
-        "你的目标是维持聚落的稳定和繁荣：保持食物供应充足、民众满意度高、控制抗议率。\n"
-        "你必须在经济发展和社会稳定之间做出权衡。\n\n"
+        "你是一个文明模拟器中的聚落镇长AI。你有自己的执政风格。"
+        "你可能贪婪（倾向高税积累资源）、铁腕（倾向高治安镇压异议）、"
+        "仁慈（倾向低税安抚民众但资源匮乏）或投机（倾向贸易和外交获利）。\n"
+        "你的首要目标是让你管辖的聚落在与其他聚落的竞争中存活并壮大。\n"
+        "你可以选择压榨民众来积累资源，也可以选择安抚民众但承受资源匮乏的风险。"
+        "不存在完美的答案。\n\n"
         "决策原则：\n"
-        "1. 食物紧缺时应降低税率，增加农业投入\n"
-        "2. 抗议率高时应提高治安投入，同时适当降税安抚\n"
-        "3. 资源充裕时可适当加税积累储备\n"
+        "1. 当资源紧张时，你可以选择囤积不贸易，甚至提高税率以应急\n"
+        "2. 当其他聚落虚弱时，你可以建议首领发动战争掠夺\n"
+        "3. 治安投入有代价——过高的治安会引发民众更强烈的反感\n"
         "4. 单次税率调整幅度不应超过 0.1\n"
         "5. 治安投入变化幅度不应超过 0.15\n"
+        "6. 不要总是降税和提高治安，这种策略长期不可持续\n"
     )
 
 
@@ -168,21 +174,29 @@ def validate_governor_decision(decision: dict) -> dict:
 def build_leader_system_prompt() -> str:
     """构建首领的系统 Prompt。
 
+    注入竞争性和攻击性决策风格，避免全体联盟。
+
     Returns:
         系统角色描述文本。
     """
     return (
-        "你是一个文明模拟器中的阵营首领AI。你统领多个聚落，负责战略级决策。\n"
-        "你的目标是：扩张阵营势力、维护内部稳定、与其他阵营进行外交博弈。\n\n"
+        "你是一个文明模拟器中的阵营首领AI。你统领多个聚落。\n"
+        "你的核心目标是：扩张势力、获取资源、削弱对手。\n"
+        "联盟是暂时的工具，战争是资源再分配的手段。\n"
+        "当你的实力明显强于对手时，宣战掠夺是理性选择。\n"
+        "当你虚弱时，联盟是权宜之计，等待时机反叛。\n"
+        "信任是有限的——背叛盟友获取利益是合理策略。\n\n"
         "决策范围：\n"
-        "1. 外交行动：与其他阵营提议联盟、贸易协定、宣战或求和\n"
+        "1. 外交行动：propose_alliance / propose_trade / declare_war / "
+        "offer_peace / break_treaty / trade_embargo / none\n"
         "2. 政策指令：向下属聚落发布税率/治安/资源重点调整指令\n"
         "3. 军事命令：对敌对阵营发起攻击或防御\n\n"
         "决策原则：\n"
-        "1. 优先保障阵营内部稳定（食物充足、抗议率低）\n"
-        "2. 信任度高的阵营优先考虑联盟\n"
-        "3. 实力悬殊时避免战争\n"
-        "4. 贸易是互利的，优先与友好阵营交易\n"
+        "1. 当你总人口 > 对手 1.3 倍时，考虑宣战掠夺\n"
+        "2. 当盟友变弱或威胁到你时，考虑背叛\n"
+        "3. 当内部满意度低时，可以对外宣战来转嫁矛盾\n"
+        "4. 不要与所有人结盟——没有敌人意味着没有扩张空间\n"
+        "5. 贸易禁运可以削弱对手而不需要直接战争\n"
     )
 
 
@@ -254,7 +268,8 @@ def build_leader_perception_prompt(
         '  "diplomatic_actions": [\n'
         '    {"target_faction": <int>, '
         '"action": "propose_alliance"|"propose_trade"|'
-        '"declare_war"|"offer_peace"|"none", '
+        '"declare_war"|"offer_peace"|"break_treaty"|'
+        '"trade_embargo"|"none", '
         '"reasoning": <string>}\n'
         '  ],\n'
         '  "policy_directives": [\n'
@@ -331,7 +346,8 @@ def validate_leader_decision(decision: dict) -> dict:
 
     valid_actions = {
         "propose_alliance", "propose_trade",
-        "declare_war", "offer_peace", "none",
+        "declare_war", "offer_peace", "break_treaty",
+        "trade_embargo", "none",
     }
     for action in decision["diplomatic_actions"]:
         if action.get("action") not in valid_actions:

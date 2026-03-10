@@ -70,7 +70,9 @@ class DiplomacyManager:
         self._treaties: list[Treaty] = []
         self._trust: dict[tuple[int, int], float] = {}
         self._initial_trust = initial_trust
+        self._randomize_trust = True
         self._event_log: list[dict] = []
+        self._rng = __import__("random").Random()
 
     @staticmethod
     def _key(a: int, b: int) -> tuple[int, int]:
@@ -99,7 +101,13 @@ class DiplomacyManager:
 
     def get_trust(self, a: int, b: int) -> float:
         """获取两个阵营间的信任度。"""
-        return self._trust.get(self._key(a, b), self._initial_trust)
+        key = self._key(a, b)
+        if key not in self._trust:
+            if self._randomize_trust:
+                self._trust[key] = self._rng.uniform(0.2, 0.6)
+            else:
+                self._trust[key] = self._initial_trust
+        return self._trust[key]
 
     def update_trust(self, a: int, b: int, delta: float) -> float:
         """更新信任度，返回更新后的值。"""
@@ -135,7 +143,7 @@ class DiplomacyManager:
     def break_treaty(
         self, treaty: Treaty, breaker_id: int, tick: int,
     ) -> None:
-        """违反/终止条约。"""
+        """违反/终止条约。降级到 WAR 而非 HOSTILE。"""
         treaty.active = False
         other = (
             treaty.faction_b if breaker_id == treaty.faction_a
@@ -144,8 +152,8 @@ class DiplomacyManager:
         self.update_trust(breaker_id, other, -0.3)
 
         current = self.get_relation(breaker_id, other)
-        if current > DiplomaticStatus.HOSTILE:
-            self.set_relation(breaker_id, other, DiplomaticStatus.HOSTILE, tick)
+        if current > DiplomaticStatus.WAR:
+            self.set_relation(breaker_id, other, DiplomaticStatus.WAR, tick)
 
         self._event_log.append({
             "tick": tick, "type": "treaty_broken",
@@ -199,6 +207,36 @@ class DiplomacyManager:
     def get_relations_dict(self) -> dict[tuple[int, int], int]:
         """返回所有外交关系的整数值字典（用于贸易过滤）。"""
         return {k: int(v) for k, v in self._relations.items()}
+
+    def get_trust_data(self) -> dict[tuple[int, int], float]:
+        """返回所有信任度数据字典（用于贸易摩擦）。"""
+        return dict(self._trust)
+
+    def decay_trust(self, amount: float = 0.001) -> None:
+        """全局信任自然衰减，需要主动维护关系。
+
+        Args:
+            amount: 每次衰减量。
+        """
+        for key in list(self._trust.keys()):
+            self._trust[key] = max(0.0, self._trust[key] - amount)
+
+    def auto_downgrade_relations(self, tick: int) -> None:
+        """当信任度过低时自动降级外交关系。
+
+        Args:
+            tick: 当前 tick。
+        """
+        for key, trust in list(self._trust.items()):
+            if trust < 0.2:
+                current = self._relations.get(key, DiplomaticStatus.NEUTRAL)
+                if current > DiplomaticStatus.HOSTILE:
+                    a, b = key
+                    self.set_relation(a, b, DiplomaticStatus.HOSTILE, tick)
+                    logger.info(
+                        "信任度过低(%.2f)，阵营%d↔阵营%d 自动降级为敌对",
+                        trust, a, b,
+                    )
 
     @property
     def event_log(self) -> list[dict]:

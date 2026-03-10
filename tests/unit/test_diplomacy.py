@@ -68,9 +68,10 @@ class TestDiplomacyManagerTrust:
     """测试信任度系统。"""
 
     def test_default_trust(self) -> None:
-        """验证默认信任度。"""
+        """验证默认信任度（随机化在 0.2-0.6 范围内）。"""
         dm = DiplomacyManager(initial_trust=0.5)
-        assert dm.get_trust(1, 2) == 0.5
+        trust = dm.get_trust(1, 2)
+        assert 0.2 <= trust <= 0.6
 
     def test_update_trust_positive(self) -> None:
         """验证信任度增加。"""
@@ -158,7 +159,7 @@ class TestDiplomacyManagerTreaties:
         assert dm.get_trust(1, 2) < 0.5
 
     def test_break_treaty_sets_hostile(self) -> None:
-        """验证违反条约后关系降为 HOSTILE。"""
+        """验证违反条约后关系降为 WAR。"""
         dm = DiplomacyManager()
         treaty = Treaty(
             treaty_type=TreatyType.MILITARY_ALLIANCE,
@@ -166,7 +167,7 @@ class TestDiplomacyManagerTreaties:
         )
         dm.sign_treaty(treaty)
         dm.break_treaty(treaty, breaker_id=1, tick=20)
-        assert dm.get_relation(1, 2) == DiplomaticStatus.HOSTILE
+        assert dm.get_relation(1, 2) == DiplomaticStatus.WAR
 
     def test_expire_treaties(self) -> None:
         """验证条约过期清理。"""

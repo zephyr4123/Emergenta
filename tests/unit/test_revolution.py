@@ -34,16 +34,16 @@ class TestRevolutionTrackerUpdate:
         assert rt.get_protest_duration(0) == 2
 
     def test_protest_duration_decreases_when_calm(self) -> None:
-        """验证条件不满足时抗议持续递减。"""
+        """验证条件不满足时抗议持续递减（每次减 1）。"""
         rt = RevolutionTracker()
         # 累积 5 tick
         for _ in range(5):
             rt.update(0, protest_ratio=0.5, avg_satisfaction=0.2)
         assert rt.get_protest_duration(0) == 5
 
-        # 平息后每次减 2
+        # 平息后每次减 1
         rt.update(0, protest_ratio=0.1, avg_satisfaction=0.6)
-        assert rt.get_protest_duration(0) == 3
+        assert rt.get_protest_duration(0) == 4
 
     def test_protest_duration_does_not_go_negative(self) -> None:
         """验证递减不会变负数。"""

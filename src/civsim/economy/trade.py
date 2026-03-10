@@ -1,18 +1,23 @@
 """聚落间贸易系统。
 
 实现供需匹配、贸易路线和利润计算。
+含贸易摩擦机制：信任度门槛、随机拒绝、距离惩罚。
 """
 
 from __future__ import annotations
 
 import logging
 import math
+import random
 from dataclasses import dataclass
 
 from civsim.economy.resources import RESOURCE_NAMES
 from civsim.economy.settlement import Settlement
 
 logger = logging.getLogger(__name__)
+
+# 贸易信任度门槛：trust 低于此值时拒绝交易
+TRADE_TRUST_THRESHOLD = 0.4
 
 
 @dataclass
@@ -43,8 +48,8 @@ BASE_PRICES: dict[str, float] = {
     "ore": 3.0,
 }
 
-# 最小可交易盈余比例
-MIN_SURPLUS_RATIO = 0.3
+# 最小可交易盈余比例（提高以保留更多库存）
+MIN_SURPLUS_RATIO = 0.5
 
 
 class TradeManager:
@@ -66,12 +71,14 @@ class TradeManager:
         self,
         settlements: dict[int, Settlement],
         diplomacy_relations: dict[tuple[int, int], int] | None = None,
+        trust_data: dict[tuple[int, int], float] | None = None,
     ) -> list[TradeRoute]:
         """寻找贸易机会，匹配供给过剩和需求不足的聚落。
 
         Args:
             settlements: 聚落字典。
             diplomacy_relations: 外交关系整数值字典。
+            trust_data: 阵营间信任度字典。
 
         Returns:
             可行的贸易路线列表。
@@ -93,7 +100,13 @@ class TradeManager:
                     ):
                         continue
 
-                    amount = min(surplus * 0.5, need)
+                    # 信任度门槛：trust 过低时拒绝交易
+                    if _should_refuse_trade(
+                        seller, buyer, trust_data,
+                    ):
+                        continue
+
+                    amount = min(surplus * 0.3, need)
                     if amount < 0.5:
                         continue
 
@@ -103,7 +116,7 @@ class TradeManager:
                     price = (
                         BASE_PRICES.get(resource, 1.0)
                         * amount
-                        * (1.0 + distance * 0.01)
+                        * (1.0 + distance * 0.05)
                     )
                     opportunities.append(TradeRoute(
                         seller_id=seller.id,
@@ -162,11 +175,12 @@ class TradeManager:
         self,
         settlements: dict[int, Settlement],
         diplomacy_relations: dict[tuple[int, int], int] | None = None,
+        trust_data: dict[tuple[int, int], float] | None = None,
     ) -> list[TradeRoute]:
         """处理一个 tick 的贸易，返回本 tick 完成的贸易列表。"""
         self._tick_trades = []
         opportunities = self.find_opportunities(
-            settlements, diplomacy_relations,
+            settlements, diplomacy_relations, trust_data,
         )
         opportunities.sort(
             key=lambda r: r.price_gold / max(1.0, r.distance),
@@ -182,11 +196,39 @@ class TradeManager:
         return len(self.completed_trades)
 
 
+def _should_refuse_trade(
+    seller: Settlement,
+    buyer: Settlement,
+    trust_data: dict[tuple[int, int], float] | None,
+) -> bool:
+    """基于信任度和随机摩擦判断是否拒绝交易。"""
+    if seller.faction_id is None or buyer.faction_id is None:
+        return False
+    if seller.faction_id == buyer.faction_id:
+        return False
+
+    trust = 0.5
+    if trust_data is not None:
+        key = (
+            min(seller.faction_id, buyer.faction_id),
+            max(seller.faction_id, buyer.faction_id),
+        )
+        trust = trust_data.get(key, 0.5)
+
+    # 信任度低于门槛直接拒绝
+    if trust < TRADE_TRUST_THRESHOLD:
+        return True
+
+    # 随机摩擦：信任越低拒绝概率越高（10%-30%）
+    refuse_prob = 0.3 - 0.2 * trust
+    return random.random() < refuse_prob
+
+
 def _find_sellers(
     settlements: list[Settlement], resource: str,
 ) -> list[tuple[Settlement, float]]:
     """找出有盈余的聚落。"""
-    threshold = 5.0 if resource == "food" else 3.0
+    threshold = 8.0 if resource == "food" else 3.0
     results = []
     for s in settlements:
         stock = s.stockpile.get(resource, 0.0)
@@ -202,7 +244,7 @@ def _find_buyers(
     settlements: list[Settlement], resource: str,
 ) -> list[tuple[Settlement, float]]:
     """找出有短缺的聚落。"""
-    deficit_threshold = 2.0 if resource == "food" else 1.0
+    deficit_threshold = 3.0 if resource == "food" else 1.0
     results = []
     for s in settlements:
         stock = s.stockpile.get(resource, 0.0)

@@ -10,11 +10,11 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
-# 革命触发条件阈值
-REVOLUTION_PROTEST_THRESHOLD = 0.30
-REVOLUTION_SATISFACTION_THRESHOLD = 0.30
-REVOLUTION_DURATION_TICKS = 15
-REVOLUTION_COOLDOWN_TICKS = 60  # 革命后冷却期
+# 革命触发条件阈值（放宽以促进涌现）
+REVOLUTION_PROTEST_THRESHOLD = 0.20
+REVOLUTION_SATISFACTION_THRESHOLD = 0.40
+REVOLUTION_DURATION_TICKS = 8
+REVOLUTION_COOLDOWN_TICKS = 30  # 革命后冷却期
 
 
 @dataclass
@@ -89,7 +89,7 @@ class RevolutionTracker:
         else:
             current = self._protest_duration.get(settlement_id, 0)
             self._protest_duration[settlement_id] = max(
-                0, current - 2,
+                0, current - 1,
             )
 
         return (
