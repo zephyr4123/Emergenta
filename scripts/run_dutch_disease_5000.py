@@ -10,188 +10,103 @@
 import gc
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from civsim.agents.behaviors.fsm import CivilianState
 from civsim.agents.civilian import Civilian
 from civsim.agents.governor import Governor
 from civsim.config import load_config
-from civsim.world.engine import CivilizationEngine
 
-try:
-    import psutil
-    _PSUTIL = True
-except ImportError:
-    _PSUTIL = False
+from scenario_utils import (
+    SimLog,
+    compute_scaling,
+    count_wars,
+    get_active_llm_model,
+    get_civilians_stats,
+    get_global_stats,
+    get_memory_mb,
+    log_system_info,
+)
 
 
 @dataclass
-class SimLog:
-    """模拟日志收集器。"""
-    lines: list[str] = field(default_factory=list)
+class DutchDiseaseScenarioConfig:
+    """荷兰病场景专用参数。"""
 
-    def log(self, msg: str) -> None:
-        self.lines.append(msg)
-        print(msg)
-        sys.stdout.flush()
-
-
-def compute_scaling(n_agents: int) -> dict:
-    """根据平民数量计算各层级规模。"""
-    settlements = max(4, n_agents // 80)
-    leaders = max(2, settlements // 3)
-    grid = max(30, int(np.sqrt(n_agents) * 2.5))
-    grid = min(grid, 200)
-    return {
-        "settlements": settlements,
-        "leaders": leaders,
-        "grid": grid,
-    }
-
-
-def snapshot_settlement(s) -> dict:
-    """获取单个聚落快照。"""
-    return {
-        "id": s.id,
-        "name": s.name,
-        "population": s.population,
-        "food": s.stockpile.get("food", 0),
-        "wood": s.stockpile.get("wood", 0),
-        "ore": s.stockpile.get("ore", 0),
-        "gold": s.stockpile.get("gold", 0),
-        "tax_rate": s.tax_rate,
-        "security_level": s.security_level,
-    }
+    n_agents: int = 5000
+    n_ticks: int = 500
+    seed: int = 88
+    # 首富聚落初始条件
+    rich_gold: float = 50000.0
+    rich_food: float = 0.0
+    rich_tax_rate: float = 0.1
+    rich_security: float = 0.8
+    # 穷聚落初始条件
+    poor_food: float = 800.0
+    poor_gold: float = 50.0
+    poor_tax_rate: float = 0.2
+    poor_security: float = 0.5
+    # 地图适宜度（大规模需降低）
+    min_suitability_score: float = 0.2
+    # 输出目录
+    output_dir: str = "data/scenarios/dutch_disease_5000"
 
 
-def get_civilians_stats(engine, settlement_id: int) -> dict:
-    """获取某聚落的平民统计。"""
-    civs = [
-        a for a in engine.agents
-        if isinstance(a, Civilian) and a.home_settlement_id == settlement_id
-    ]
-    if not civs:
-        return {"count": 0, "avg_sat": 0, "protest_ratio": 0, "states": {}}
-
-    states: dict[str, int] = {}
-    for c in civs:
-        st = c.state.value if hasattr(c.state, "value") else str(c.state)
-        states[st] = states.get(st, 0) + 1
-
-    protest = sum(1 for c in civs if c.state == CivilianState.PROTESTING)
-    return {
-        "count": len(civs),
-        "avg_sat": float(np.mean([c.satisfaction for c in civs])),
-        "protest_ratio": protest / len(civs),
-        "states": states,
-    }
-
-
-def get_global_stats(engine) -> dict:
-    """获取全局统计。"""
-    civs = [a for a in engine.agents if isinstance(a, Civilian)]
-    sats = [c.satisfaction for c in civs] if civs else [0.5]
-
-    trade_vol = engine.trade_manager.total_volume if engine.trade_manager else 0
-    trade_cnt = engine.trade_manager.trade_count if engine.trade_manager else 0
-    rev_cnt = (
-        engine.revolution_tracker.revolution_count
-        if engine.revolution_tracker else 0
-    )
-
-    alliance_cnt = war_cnt = 0
-    if engine.diplomacy:
-        for status in getattr(engine.diplomacy, "_relations", {}).values():
-            sv = int(status)
-            if sv >= 4:
-                alliance_cnt += 1
-            elif sv == 0:
-                war_cnt += 1
-
-    gov_decisions = sum(
-        g.decision_count for g in engine.agents if isinstance(g, Governor)
-    )
-    leader_decisions = sum(l.decision_count for l in engine.leaders)
-
-    # 自适应控制器统计
-    adaptive_info = {}
-    ctrl = getattr(engine, "adaptive_controller", None)
-    if ctrl is not None:
-        adaptive_info["temperature"] = ctrl.temperature_history[-1][1] if ctrl.temperature_history else 0.0
-        adaptive_info["protest_mult"] = ctrl.coefficients.markov_protest_multiplier
-        adaptive_info["granovetter_mult"] = ctrl.coefficients.granovetter_burst_multiplier
-        adaptive_info["cooldown_mult"] = ctrl.coefficients.revolution_cooldown_multiplier
-        adaptive_info["recovery_mult"] = ctrl.coefficients.satisfaction_recovery_multiplier
-        adaptive_info["event_mult"] = ctrl.coefficients.random_event_multiplier
-
-    # 恢复阶段统计
-    active_recoveries = 0
-    if engine.revolution_tracker:
-        active_recoveries = len(engine.revolution_tracker.active_recoveries)
-
-    return {
-        "total_civilians": len(civs),
-        "avg_satisfaction": float(np.mean(sats)),
-        "trade_volume": trade_vol,
-        "trade_count": trade_cnt,
-        "revolution_count": rev_cnt,
-        "alliance_count": alliance_cnt,
-        "war_count": war_cnt,
-        "governor_decisions": gov_decisions,
-        "leader_decisions": leader_decisions,
-        "adaptive": adaptive_info,
-        "active_recoveries": active_recoveries,
-    }
-
-
-def run_dutch_disease_5000() -> tuple[SimLog, bool]:
+def run_dutch_disease_5000(
+    scenario: DutchDiseaseScenarioConfig | None = None,
+) -> tuple[SimLog, bool, dict]:
     """运行 5000 Agent 荷兰病模拟。"""
-    sim = SimLog()
-    n_agents = 5000
-    n_ticks = 500
-    seed = 88
+    if scenario is None:
+        scenario = DutchDiseaseScenarioConfig()
 
-    scaling = compute_scaling(n_agents)
+    sim = SimLog()
+    scaling = compute_scaling(scenario.n_agents)
     n_settlements = scaling["settlements"]
     n_leaders = scaling["leaders"]
     grid_size = scaling["grid"]
+
+    # 加载配置
+    config = load_config()
+    config.world.grid.width = grid_size
+    config.world.grid.height = grid_size
+    config.agents.civilian.initial_count = scenario.n_agents
+    config.world.settlement.initial_count = n_settlements
+    config.world.settlement.min_suitability_score = (
+        scenario.min_suitability_score
+    )
+    config.agents.governor.initial_count = 1  # 开关：>0 即启用
+    config.agents.leader.initial_count = n_leaders
+
+    llm_model = get_active_llm_model(config)
 
     sim.log("=" * 70)
     sim.log("  荷兰病(资源诅咒) — 5000 Agent 全系统真实 LLM 模拟")
     sim.log("  [V3 自适应参数系统]")
     sim.log("=" * 70)
-    sim.log(f"  平民: {n_agents}")
+    sim.log(f"  平民: {scenario.n_agents}")
     sim.log(f"  聚落: {n_settlements}")
     sim.log(f"  首领: {n_leaders}")
     sim.log(f"  地图: {grid_size}x{grid_size}")
-    sim.log(f"  Ticks: {n_ticks}")
-    sim.log(f"  种子: {seed}")
-    sim.log(f"  LLM: 真实调用 (google/gemini-3-flash-preview)")
+    sim.log(f"  Ticks: {scenario.n_ticks}")
+    sim.log(f"  种子: {scenario.seed}")
+    sim.log(f"  LLM: 真实调用 ({llm_model})")
     sim.log("")
 
-    mem_start = psutil.Process().memory_info().rss / 1024 / 1024 if _PSUTIL else 0
+    mem_start = get_memory_mb()
 
     try:
-        # 加载配置
-        config = load_config()
-        config.world.grid.width = grid_size
-        config.world.grid.height = grid_size
-        config.agents.civilian.initial_count = n_agents
-        config.world.settlement.initial_count = n_settlements
-        config.world.settlement.min_suitability_score = 0.2
-        config.agents.governor.initial_count = 1  # 开关
-        config.agents.leader.initial_count = n_leaders
-
         # 创建引擎 — 全系统 + 真实 LLM
         sim.log(">>> 初始化引擎...")
         t0 = time.time()
+
+        from civsim.world.engine import CivilizationEngine
+
         engine = CivilizationEngine(
-            config=config, seed=seed,
+            config=config, seed=scenario.seed,
             enable_governors=True, enable_leaders=True,
         )
         init_time = time.time() - t0
@@ -199,35 +114,7 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
 
         # 验证系统完整性
         governors = [a for a in engine.agents if isinstance(a, Governor)]
-        actual_civilians = sum(
-            1 for a in engine.agents if isinstance(a, Civilian)
-        )
-        sim.log(f"  实际平民: {actual_civilians}")
-        sim.log(f"  实际镇长: {len(governors)} (真实 LLM)")
-        sim.log(f"  实际首领: {len(engine.leaders)} (真实 LLM)")
-        sim.log(f"  实际聚落: {len(engine.settlements)}")
-        sim.log(f"  贸易系统: {'启用' if engine.trade_manager else '关闭'}")
-        sim.log(f"  外交系统: {'启用' if engine.diplomacy else '关闭'}")
-        sim.log(f"  革命系统: {'启用' if engine.revolution_tracker else '关闭'}")
-        sim.log(f"  自适应控制器: {'启用' if engine.adaptive_controller else '关闭'}")
-        if engine.adaptive_controller:
-            ac = config.adaptive_controller
-            sim.log(f"    目标温度: {ac.target_temperature}")
-            sim.log(f"    调节速率: {ac.adjustment_rate}")
-            sim.log(f"    更新间隔: {ac.update_interval} ticks")
-
-        # 验证 LLM 网关
-        has_llm = engine.llm_gateway is not None
-        sim.log(f"  LLM网关: {'已连接' if has_llm else '未连接'}")
-        if has_llm:
-            gov_llm_active = sum(
-                1 for g in governors if g._gateway is not None
-            )
-            leader_llm_active = sum(
-                1 for l in engine.leaders if l._gateway is not None
-            )
-            sim.log(f"    镇长 LLM 激活: {gov_llm_active}/{len(governors)}")
-            sim.log(f"    首领 LLM 激活: {leader_llm_active}/{len(engine.leaders)}")
+        log_system_info(sim, engine, config, governors)
 
         # ============================================================
         # 设置荷兰病场景
@@ -238,16 +125,16 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
         settlements = list(engine.settlements.values())
         if len(settlements) < 2:
             sim.log("  错误: 需要至少2个聚落")
-            return sim, False
+            return sim, False, {}
 
         rich = settlements[0]
         poor = settlements[1:]
 
         # 首富聚落：海量金币，零食物，农田退化
-        rich.stockpile["gold"] = 50000.0
-        rich.stockpile["food"] = 0.0
-        rich.tax_rate = 0.1
-        rich.security_level = 0.8
+        rich.stockpile["gold"] = scenario.rich_gold
+        rich.stockpile["food"] = scenario.rich_food
+        rich.tax_rate = scenario.rich_tax_rate
+        rich.security_level = scenario.rich_security
 
         # 摧毁首富聚落的所有农田
         farmland_destroyed = 0
@@ -267,13 +154,16 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
 
         # 其他聚落：有粮食但缺钱
         for s in poor:
-            s.stockpile["food"] = 800.0
-            s.stockpile["gold"] = 50.0
-            s.tax_rate = 0.2
-            s.security_level = 0.5
+            s.stockpile["food"] = scenario.poor_food
+            s.stockpile["gold"] = scenario.poor_gold
+            s.tax_rate = scenario.poor_tax_rate
+            s.security_level = scenario.poor_security
 
         sim.log(f"  穷聚落 x{len(poor)}:")
-        sim.log(f"    每个: 食物=800, 金币=50")
+        sim.log(
+            f"    每个: 食物={scenario.poor_food:.0f}, "
+            f"金币={scenario.poor_gold:.0f}"
+        )
         sim.log("")
 
         # ============================================================
@@ -282,24 +172,25 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
         sim.log(">>> 开始模拟运行...")
         sim.log("")
 
-        # Tick 0: 记录初始状态（模拟运行前）
+        # Tick 0: 记录初始状态
         rich_pop_history = [rich.population]
         rich_food_history = [rich.stockpile.get("food", 0)]
         rich_gold_history = [rich.stockpile.get("gold", 0)]
-        tick_times = []
-        # 每 tick 采集的时间序列数据
-        ts_revolution = [0]       # 累计革命次数
-        ts_trade = [0]            # 累计贸易次数
-        ts_satisfaction = [0.5]   # 全局平均满意度（初始默认）
-        ts_temperature = [0.0]    # 控制器温度
-        ts_protest_mult = [1.0]   # 抗议乘数
-        ts_granov_mult = [1.0]    # Granovetter乘数
-        ts_recovery_mult = [1.0]  # 恢复乘数
-        ts_cooldown_mult = [1.0]  # 冷却乘数
-        ts_event_mult = [1.0]     # 事件乘数
-        ts_war_count = [0]        # 战争数
+        tick_times: list[float] = []
+        ts_revolution = [0]
+        ts_trade = [0]
+        ts_satisfaction = [0.5]
+        ts_temperature = [0.0]
+        ts_protest_mult = [1.0]
+        ts_granov_mult = [1.0]
+        ts_recovery_mult = [1.0]
+        ts_cooldown_mult = [1.0]
+        ts_event_mult = [1.0]
+        ts_war_count = [0]
 
+        _last_sat = 0.5
         t_total_start = time.time()
+        n_ticks = scenario.n_ticks
 
         for tick in range(1, n_ticks + 1):
             t_tick_start = time.time()
@@ -327,7 +218,7 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
             ts_revolution.append(rev_cnt)
             ts_trade.append(trade_cnt)
 
-            # 满意度 (每 5 tick 采样一次, 其余插值)
+            # 满意度 (每 5 tick 采样一次)
             if tick % 5 == 1 or tick <= 5:
                 civs_all = [
                     a for a in engine.agents if isinstance(a, Civilian)
@@ -344,8 +235,12 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
                 c = ctrl.coefficients
                 ts_protest_mult.append(c.markov_protest_multiplier)
                 ts_granov_mult.append(c.granovetter_burst_multiplier)
-                ts_recovery_mult.append(c.satisfaction_recovery_multiplier)
-                ts_cooldown_mult.append(c.revolution_cooldown_multiplier)
+                ts_recovery_mult.append(
+                    c.satisfaction_recovery_multiplier,
+                )
+                ts_cooldown_mult.append(
+                    c.revolution_cooldown_multiplier,
+                )
                 ts_event_mult.append(c.random_event_multiplier)
             else:
                 ts_temperature.append(0.0)
@@ -356,18 +251,13 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
                 ts_event_mult.append(1.0)
 
             # 战争数
-            war_cnt = 0
-            if engine.diplomacy:
-                for status in getattr(
-                    engine.diplomacy, "_relations", {},
-                ).values():
-                    if int(status) == 0:
-                        war_cnt += 1
-            ts_war_count.append(war_cnt)
+            ts_war_count.append(count_wars(engine))
 
             # 关键 tick 输出详细日志
-            is_governor_tick = (tick % 120 == 0)
-            is_leader_tick = (tick % 480 == 0)
+            ticks_per_season = config.clock.ticks_per_season
+            ticks_per_year = config.clock.ticks_per_year
+            is_governor_tick = (tick % ticks_per_season == 0)
+            is_leader_tick = (tick % ticks_per_year == 0)
             is_milestone = (tick % 30 == 0) or tick <= 5
 
             if is_governor_tick:
@@ -423,7 +313,7 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
                     f"  {'聚落':>12} {'人口':>6} {'食物':>8} "
                     f"{'金币':>8} {'税率':>6} {'治安':>6}"
                 )
-                for s in settlements[:10]:  # 前10个聚落
+                for s in settlements[:10]:
                     sim.log(
                         f"  {s.name[:12]:>12} {s.population:>6} "
                         f"{s.stockpile.get('food', 0):>8.0f} "
@@ -436,10 +326,7 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
                 sim.log("")
 
         total_time = time.time() - t_total_start
-        mem_end = (
-            psutil.Process().memory_info().rss / 1024 / 1024
-            if _PSUTIL else 0
-        )
+        mem_end = get_memory_mb()
 
         # ============================================================
         # 结果分析
@@ -450,8 +337,12 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
         sim.log("=" * 70)
         sim.log(f"  总耗时: {total_time:.1f}s")
         sim.log(f"  平均 tick: {np.mean(tick_times)*1000:.1f}ms")
-        sim.log(f"  P95 tick: {np.percentile(tick_times, 95)*1000:.1f}ms")
-        sim.log(f"  最大 tick: {max(tick_times)*1000:.1f}ms (可能含LLM调用)")
+        sim.log(
+            f"  P95 tick: {np.percentile(tick_times, 95)*1000:.1f}ms"
+        )
+        sim.log(
+            f"  最大 tick: {max(tick_times)*1000:.1f}ms (可能含LLM调用)"
+        )
         sim.log(f"  内存增量: {mem_end - mem_start:.1f} MB")
         sim.log("")
 
@@ -465,7 +356,9 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
         gold_final = rich_gold_history[-1]
 
         sim.log("  [首富聚落分析]")
-        sim.log(f"    存活: {'是' if rich_survived else '否 — 首富被饿死!'}")
+        sim.log(
+            f"    存活: {'是' if rich_survived else '否 — 首富被饿死!'}"
+        )
         sim.log(f"    人口: {pop_initial} → {pop_final} (最低 {pop_min})")
         sim.log(f"    食物最低点: {food_min:.0f}")
         sim.log(f"    金币: {gold_initial:.0f} → {gold_final:.0f}")
@@ -494,16 +387,22 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
             sim.log("  [自适应控制器]")
             sim.log(f"    最终温度: {ai['temperature']:.3f}")
             sim.log(f"    抗议系数乘数: {ai['protest_mult']:.3f}")
-            sim.log(f"    Granovetter乘数: {ai['granovetter_mult']:.3f}")
+            sim.log(
+                f"    Granovetter乘数: {ai['granovetter_mult']:.3f}"
+            )
             sim.log(f"    冷却期乘数: {ai['cooldown_mult']:.3f}")
             sim.log(f"    恢复速度乘数: {ai['recovery_mult']:.3f}")
             sim.log(f"    随机事件乘数: {ai['event_mult']:.3f}")
-            sim.log(f"    活跃恢复阶段: {final_stats['active_recoveries']}")
-            # 温度历史
+            sim.log(
+                f"    活跃恢复阶段: {final_stats['active_recoveries']}"
+            )
             ctrl = engine.adaptive_controller
             if ctrl and ctrl.temperature_history:
                 temps = [t for _, t in ctrl.temperature_history]
-                sim.log(f"    温度历史: min={min(temps):.3f} max={max(temps):.3f} avg={np.mean(temps):.3f}")
+                sim.log(
+                    f"    温度历史: min={min(temps):.3f} "
+                    f"max={max(temps):.3f} avg={np.mean(temps):.3f}"
+                )
             sim.log("")
 
         # 其他聚落是否因此富裕
@@ -514,7 +413,9 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
                 f"    {s.name[:12]}: 金={s.stockpile.get('gold', 0):.0f} "
                 f"食物={s.stockpile.get('food', 0):.0f} 人口={s.population}"
             )
-            gold_gained.append(s.stockpile.get("gold", 0) - 50)
+            gold_gained.append(
+                s.stockpile.get("gold", 0) - scenario.poor_gold
+            )
         if gold_gained:
             sim.log(
                 f"    穷聚落平均金币增量: {np.mean(gold_gained):.0f}"
@@ -600,19 +501,27 @@ def run_dutch_disease_5000() -> tuple[SimLog, bool]:
         return sim, False, {}
 
 
-def generate_report(sim: SimLog, success: bool) -> str:
+def generate_report(
+    sim: SimLog,
+    success: bool,
+    scenario: DutchDiseaseScenarioConfig,
+    llm_model: str,
+) -> str:
     """生成 Markdown 报告。"""
+    scaling = compute_scaling(scenario.n_agents)
     lines = [
-        "# 荷兰病(资源诅咒) — 5000 Agent 全系统真实 LLM 模拟报告 [V3 自适应参数]",
+        "# 荷兰病(资源诅咒) — 5000 Agent 全系统真实 LLM 模拟报告 "
+        "[V3 自适应参数]",
         "",
         f"> 生成时间: {time.strftime('%Y-%m-%d %H:%M:%S')}",
         f"> 状态: {'成功' if success else '失败'}",
         "",
         "## 场景设定",
         "",
-        "**荷兰病(资源诅咒)**：1个聚落拥有极其海量的金币（50000金），"
+        f"**荷兰病(资源诅咒)**：1个聚落拥有极其海量的金币"
+        f"（{scenario.rich_gold:.0f}金），"
         "但粮食产出完全为0（农田全部退化）。其他聚落有粮食但缺钱。"
-        "所有镇长和首领使用真实 LLM (google/gemini-3-flash-preview) 做决策。",
+        f"所有镇长和首领使用真实 LLM ({llm_model}) 做决策。",
         "",
         "**核心问题**：首富聚落会不会因为被其他聚落"
         "\"恶意抬高粮价\"或\"联合贸易禁运\"而活活饿死？"
@@ -622,14 +531,13 @@ def generate_report(sim: SimLog, success: bool) -> str:
         "",
         "| 参数 | 值 |",
         "|------|-----|",
-        "| 平民数量 | 5000 |",
-        "| 聚落数量 | ~62 (5000÷80) |",
-        "| 镇长数量 | ~62 (每个聚落1个) |",
-        "| 首领数量 | ~20 (聚落÷3) |",
-        "| 地图大小 | 176×176 |",
-        "| 模拟时长 | 500 ticks |",
-        "| LLM模式 | 真实调用 |",
-        "| 随机种子 | 88 |",
+        f"| 平民数量 | {scenario.n_agents} |",
+        f"| 聚落数量 | ~{scaling['settlements']} |",
+        f"| 首领数量 | ~{scaling['leaders']} |",
+        f"| 地图大小 | {scaling['grid']}×{scaling['grid']} |",
+        f"| 模拟时长 | {scenario.n_ticks} ticks |",
+        f"| LLM模式 | 真实调用 ({llm_model}) |",
+        f"| 随机种子 | {scenario.seed} |",
         "",
         "## 模拟过程与结果",
         "",
@@ -695,10 +603,12 @@ def generate_charts(ts: dict, out_dir: str) -> list[str]:
     ax1.grid(True, alpha=0.3)
     ax1.set_xlim(ticks[0], ticks[-1])
 
-    # 金币 — 完整范围，能看到 50000→1200 的暴跌
+    # 金币
     ax2 = axes[1]
     ax2.plot(ticks, ts["rich_gold"], color="#eab308", linewidth=2.5)
-    ax2.fill_between(ticks, ts["rich_gold"], alpha=0.15, color="#eab308")
+    ax2.fill_between(
+        ticks, ts["rich_gold"], alpha=0.15, color="#eab308",
+    )
     ax2.set_ylabel("金币", fontsize=12, color="#996600")
     ax2.set_title(
         "金币储备 (初始50000金 → Tick1暴跌至~1200 → 缓慢回升)",
@@ -706,7 +616,6 @@ def generate_charts(ts: dict, out_dir: str) -> list[str]:
     )
     ax2.grid(True, alpha=0.3)
     ax2.set_xlim(ticks[0], ticks[-1])
-    # 标注暴跌
     ax2.annotate(
         f"50,000 → {ts['rich_gold'][1]:.0f}\n(首轮贸易花光)",
         xy=(1, ts["rich_gold"][1]),
@@ -717,10 +626,12 @@ def generate_charts(ts: dict, out_dir: str) -> list[str]:
         fontweight="bold",
     )
 
-    # 食物 — 从 0 开始获得
+    # 食物
     ax3 = axes[2]
     ax3.plot(ticks, ts["rich_food"], color="#16a34a", linewidth=2)
-    ax3.fill_between(ticks, ts["rich_food"], alpha=0.15, color="#16a34a")
+    ax3.fill_between(
+        ticks, ts["rich_food"], alpha=0.15, color="#16a34a",
+    )
     ax3.set_ylabel("食物", fontsize=12, color="#16a34a")
     ax3.set_xlabel("Tick", fontsize=12)
     ax3.set_title(
@@ -729,7 +640,6 @@ def generate_charts(ts: dict, out_dir: str) -> list[str]:
     )
     ax3.grid(True, alpha=0.3)
     ax3.set_xlim(ticks[0], ticks[-1])
-    # 标注获得食物
     ax3.annotate(
         f"0 → {ts['rich_food'][1]:.0f}\n(用金币买粮)",
         xy=(1, ts["rich_food"][1]),
@@ -762,9 +672,12 @@ def generate_charts(ts: dict, out_dir: str) -> list[str]:
     )
     ax1.axhline(
         y=V2_REVOLUTION, color="#dc2626", linestyle=":",
-        alpha=0.6, linewidth=1.5, label=f"V2 基准 ({V2_REVOLUTION}次)",
+        alpha=0.6, linewidth=1.5,
+        label=f"V2 基准 ({V2_REVOLUTION}次)",
     )
-    ax1.fill_between(ticks, ts["revolution"], alpha=0.12, color="#dc2626")
+    ax1.fill_between(
+        ticks, ts["revolution"], alpha=0.12, color="#dc2626",
+    )
     ax1.set_ylabel("累计革命次数", fontsize=12)
     ax1.legend(fontsize=11, loc="upper left")
     ax1.set_title("革命累计曲线", fontsize=13)
@@ -880,7 +793,6 @@ def generate_charts(ts: dict, out_dir: str) -> list[str]:
         fontsize=16, fontweight="bold",
     )
 
-    # 革命事件直方图
     ax1 = axes[0]
     rev_ticks = ts.get("rev_event_ticks", [])
     if rev_ticks:
@@ -897,7 +809,6 @@ def generate_charts(ts: dict, out_dir: str) -> list[str]:
     ax1.set_title("革命爆发时间分布", fontsize=13)
     ax1.grid(True, alpha=0.3, axis="y")
 
-    # 贸易 + 战争
     ax2 = axes[1]
     ax2.plot(
         ticks, ts["trade"], color="#16a34a",
@@ -934,14 +845,17 @@ def generate_charts(ts: dict, out_dir: str) -> list[str]:
 
 def main() -> None:
     """入口函数。"""
-    sim, success, ts_data = run_dutch_disease_5000()
+    scenario = DutchDiseaseScenarioConfig()
+    config = load_config()
+    llm_model = get_active_llm_model(config)
+
+    sim, success, ts_data = run_dutch_disease_5000(scenario)
 
     import os
-    scenario_dir = "data/scenarios/dutch_disease_5000"
-    os.makedirs(scenario_dir, exist_ok=True)
+    os.makedirs(scenario.output_dir, exist_ok=True)
 
-    report = generate_report(sim, success)
-    report_path = f"{scenario_dir}/report.md"
+    report = generate_report(sim, success, scenario, llm_model)
+    report_path = f"{scenario.output_dir}/report.md"
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(report)
 
@@ -950,7 +864,7 @@ def main() -> None:
 
     # 生成可视化图表
     if ts_data:
-        chart_paths = generate_charts(ts_data, scenario_dir)
+        chart_paths = generate_charts(ts_data, scenario.output_dir)
         print(f"\n可视化图表:")
         for cp in chart_paths:
             print(f"  {cp}")
