@@ -4,8 +4,6 @@
 
 <img src="logo.png" width="360" alt="Emergenta Logo" />
 
-# Emergenta
-
 ### 混合 LLM 驱动的文明模拟器
 
 <p>
@@ -322,7 +320,7 @@ python scripts/run_info_cocoon_5000.py
 
 ## 配置与参数系统
 
-模拟器使用**分层配置系统**控制仿真的各个层面 — 从单个平民的行为到宏观经济动力学。所有参数存放在 `config.yaml` 中（从 `config.example.yaml` 复制），启动时由 [Pydantic](https://docs.pydantic.dev/) 模型进行类型校验。
+模拟器使用**分层配置系统**控制仿真的各个层面 — 从单个平民的行为到宏观经济动力学。所有参数存放在 `config.yaml` 中（从 `config.example.yaml` 复制），启动时由 [Pydantic](https://docs.pydantic.dev/) 模型进行类型校验。共 **31 个配置模型、207+ 个独立参数**。
 
 ### 配置快速入门
 
@@ -355,17 +353,79 @@ python scripts/run_simulation.py --ticks 500
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 场景设计指南
+### 第一层：微观物理世界（~64 参数）
 
-| 场景目标 | 主要调节参数 | 辅助调节参数 |
-|---------|------------|------------|
-| 研究贸易网络 | `trade_params.*`, `diplomacy_params.initial_trust` | `resources.initial_stockpile`（制造不平衡） |
-| 触发大规模革命 | `revolution_params.protest_threshold` ↓, `markov_coefficients.granovetter_burst_*` ↑ | `agents.civilian.revolt_threshold.mean` ↓ |
-| 测试治理策略 | `governor_fallback.*`, `governance_params.*` | `agents.governor.initial_count` > 0 启用镇长 |
-| 模拟资源诅咒 | 脚本：摧毁农田 + 注入金币 | `trade_params.trust_threshold` ↑（增加摩擦） |
-| 观察战争动态 | `leader_fallback.war_probability` ↑, `diplomacy_params.trust_decay_per_tick` ↑ | `agents.leader.initial_count` > 0 启用首领 |
-| 和平长期发展 | `adaptive_controller.target_temperature: 0.10`, `personality_distribution.compliant: 0.70` | `resources.regeneration.*` ↑ |
-| 信息茧房 | `governor.system_prompt_override` + `leader.report_overrides` | `leader_prompt.system_prompt`（自定义首领性格） |
+| 配置段 | 参数数 | 控制什么 | 关键参数 |
+|--------|-------|---------|---------|
+| `world.grid` | 2 | 地图尺寸 | `width`, `height` |
+| `world.map_generation` | 6 | Perlin Noise 地形生成 | `seed`, `elevation_scale`, `moisture_scale`, `octaves`, `persistence` |
+| `world.tile_thresholds` | 4 | 地块类型判定 | 海拔/湿度阈值 → 山/水/林/田 |
+| `world.settlement` | 3 | 聚落自动放置 | 适宜度评分下限、初始聚落数 |
+| `tile_params` | 10 | 地块属性与产出 | 农田基础产出、森林密度、矿储量、肥力/密度再生与衰减速率 |
+| `season_params` | 11 | 四季效应 | 农/林产出倍率（春1.0/夏1.5/秋1.2/冬0.3）、冬季食物消耗+50%、春季人口增长加成 |
+| `map_suitability` | 8 | 聚落选址评分 | 农田/水源/森林/平坦度权重、最优海拔、搜索半径、最小聚落间距 |
+| `event_params` | 12 | 随机事件 | 旱灾/瘟疫/矿脉/丰收/流寇的触发概率和效果强度 |
+| `resources` | 8 | 资源系统 | 4 种资源（食物/木材/矿石/金币）的初始储备、再生速率、消耗速率 |
+
+### 第二层：中观个体行为（~55 参数）
+
+| 配置段 | 参数数 | 控制什么 | 关键参数 |
+|--------|-------|---------|---------|
+| `agents.civilian` | 9 | 平民群体属性 | 初始人数、性格分布（顺从/中立/叛逆）、Granovetter 阈值分布（均值/标准差/上下限）、饥饿衰减 |
+| `markov_coefficients` | 17 | **马尔可夫转移矩阵动态调节** | 饥饿→抗议(6个)、税率→抗议(4个)、不安全→战斗(2个)、Granovetter 爆发→抗议(5个) |
+| `satisfaction_coefficients` | 9 | 满意度衰减/恢复 | 高/中稀缺惩罚、低稀缺恢复、税率惩罚系数、饥饿惩罚、警察国家效应 |
+| `civilian_behavior` | 7 | 平民行为产出 | 劳作产出（食物/其他）、休息恢复、贸易收入、饱食恢复、初始满意度 |
+| `engine_params` | 8 | 引擎核心参数 | 职业分布比例（农/伐/矿/商）、自然增长率、饥荒阈值与死亡率、邻居搜索半径 |
+| `clock` | 5 | 时间系统 | tick/天/季/年节奏、镇长决策间隔（季度）、首领决策间隔（年度） |
+
+### 第三层：宏观系统机制（~62 参数）
+
+| 配置段 | 参数数 | 控制什么 | 关键参数 |
+|--------|-------|---------|---------|
+| `revolution_params` | 14 | **革命系统** | 抗议率/满意度触发阈值、持续 tick 数、冷却期、蜜月期、资源惩罚、后遗症（生产力衰减/信任惩罚） |
+| `trade_params` | 14 | **贸易系统** | 信任门槛、拒绝概率、成功贸易信任增量、4 种资源基础价格、盈余/短缺阈值、距离成本 |
+| `diplomacy_params` | 8 | **外交系统** | 初始信任度、信任衰减速率、条约加成、毁约惩罚、降级阈值、信任随机化范围 |
+| `governance_params` | 6 | 治理机制 | 税率/治安单次调整上限、治理评分权重（食物/人口/稳定度） |
+| `governor_fallback` | 12 | 镇长规则回退 | 稀缺/抗议/高抗议/低满意度各自的阈值和对应的税率/治安调整量 |
+| `leader_fallback` | 12 | 首领规则回退 | 宣战实力比/概率、背叛信任阈值/概率、转嫁矛盾阈值/概率、军事评分权重 |
+| `settlement_params` | 6 | 聚落属性 | 默认容量、基础设施、税率、治安、稀缺度阈值、饥荒死亡系数 |
+| `analytics_params` | 2 | 涌现检测 | 贸易增长检测阈值、战争级联最小战争数 |
+
+### 第四层：元控制（~8 参数）
+
+| 配置段 | 参数数 | 控制什么 | 关键参数 |
+|--------|-------|---------|---------|
+| `adaptive_controller` | 7 | **自适应 P-controller 恒温器** | 开关、更新间隔、目标温度（0.05=和平 ~ 0.70+=混乱）、调节速率、系数乘数上下限 |
+| `leader_prompt` | 1 | **首领 AI 人格** | 完整 system prompt 文本，可自定义首领决策风格（默认=竞争攻击型） |
+
+### 基础设施配置（~48 参数）
+
+| 配置段 | 参数数 | 用途 |
+|--------|-------|------|
+| `llm` | 24 | LLM 网关、3 个模型角色配置（provider/model/max_tokens/temperature/api_key/base_url）、行为缓存 |
+| `gateway_params` | 3 | LLM 重试次数、超时时间、退避基数 |
+| `memory_params` | 2 | 长期记忆重要度阈值、决策记忆默认重要度 |
+| `mqtt` | 5 | Broker 地址端口、P2P/聚落/全局消息主题模板 |
+| `database` | 3 | 存储引擎、数据库路径、快照间隔 |
+| `visualization` | 4 | 开关、渲染器、刷新间隔、导出格式 |
+| `ray` | 4 | 分布式开关、worker 数、batch size、对象存储 |
+| `performance` | 2 | 并行阈值、性能分析开关 |
+| `testing` | 4 | 是否真实 LLM、测试 tick 数/平民数/地图大小 |
+
+### 场景快速调参指南
+
+| 想要的效果 | 调哪里 |
+|-----------|--------|
+| 更暴力/更和平的世界 | `adaptive_controller.target_temperature` |
+| 平民更敏感/更迟钝 | `markov_coefficients.*` + `satisfaction_coefficients.*` |
+| 革命更容易/更难 | `revolution_params.protest_threshold` ↓↑ + `duration_ticks` |
+| 贸易更自由/更封闭 | `trade_params.trust_threshold` + `refuse_prob_base` |
+| 外交更稳定/更混乱 | `diplomacy_params.trust_decay_per_tick` + `initial_trust` |
+| 首领更好战/更和平 | `leader_fallback.war_probability` 或 `leader_prompt.system_prompt` |
+| 资源更丰富/更匮乏 | `resources.initial_stockpile.*` + `tile_params.farmland_base_output` |
+| 冬天更致命 | `season_params.farm_winter: 0.0` + `food_consumption_winter: 2.0` |
+| 灾害更频繁 | `event_params.drought_prob` ↑ + `plague_prob` ↑ |
+| 信息茧房 | `governor.system_prompt_override` + `leader.report_overrides` |
 
 > **完整参数参考**：详见 `config.example.yaml`，所有参数均附有中文注释。
 
