@@ -231,8 +231,8 @@ class Governor(BaseAgent):
             security_level=settlement.security_level,
             satisfaction_avg=sat_avg,
             protest_ratio=protest_r,
-            scarcity_index=settlement.scarcity_index,
-            per_capita_food=settlement.per_capita_food,
+            scarcity_index=min(1.0, settlement.scarcity_index),
+            per_capita_food=min(999.0, settlement.per_capita_food),
             season=season_name,
         )
 

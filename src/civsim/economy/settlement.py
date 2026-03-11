@@ -47,9 +47,9 @@ class Settlement:
 
     @property
     def per_capita_food(self) -> float:
-        """人均食物量。"""
+        """人均食物量。人口为零时返回 0（最大稀缺）。"""
         if self.population <= 0:
-            return float("inf")
+            return 0.0
         return self.stockpile.get("food", 0.0) / self.population
 
     @property

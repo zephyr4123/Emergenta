@@ -155,6 +155,8 @@ class TradeManager:
     ) -> bool:
         """执行一笔贸易。
 
+        使用即时可用量检查，防止同 tick 多笔贸易导致资源为负。
+
         Args:
             route: 贸易路线。
             settlements: 聚落字典。
@@ -168,13 +170,27 @@ class TradeManager:
         if seller is None or buyer is None:
             return False
 
+        # 即时检查实际可用量（防止同 tick 竞态）
         available = seller.stockpile.get(route.resource, 0.0)
-        if available < route.amount:
-            return False
-
         buyer_gold = buyer.stockpile.get("gold", 0.0)
-        if buyer_gold < route.price_gold:
-            return False
+
+        if available < route.amount or buyer_gold < route.price_gold:
+            # 尝试用实际可用量缩减交易规模
+            actual_amount = min(route.amount, available)
+            if actual_amount < self.params.min_trade_amount:
+                return False
+            scale = actual_amount / route.amount if route.amount > 0 else 0
+            actual_price = route.price_gold * scale
+            if buyer_gold < actual_price:
+                return False
+            route = TradeRoute(
+                seller_id=route.seller_id,
+                buyer_id=route.buyer_id,
+                resource=route.resource,
+                amount=actual_amount,
+                price_gold=actual_price,
+                distance=route.distance,
+            )
 
         seller.stockpile[route.resource] -= route.amount
         buyer.stockpile[route.resource] = (
@@ -283,6 +299,7 @@ def _should_refuse_trade(
 
     # 随机摩擦：信任越低拒绝概率越高
     refuse_prob = params.refuse_prob_base - params.refuse_prob_trust_factor * trust
+    refuse_prob = max(0.0, min(1.0, refuse_prob))
     return random.random() < refuse_prob
 
 

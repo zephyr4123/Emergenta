@@ -161,10 +161,26 @@ class TestTradeManager:
         assert seller.stockpile["gold"] == pytest.approx(65.0)
         assert buyer.stockpile["gold"] == pytest.approx(35.0)
 
-    def test_execute_trade_fails_insufficient_stock(self) -> None:
-        """验证库存不足时交易失败。"""
+    def test_execute_trade_scales_down_insufficient_stock(self) -> None:
+        """验证库存不足时交易自动缩减规模。"""
         tm = TradeManager()
         seller = _make_settlement(0, food=5.0)
+        buyer = _make_settlement(1, gold=50.0)
+        settlements = {0: seller, 1: buyer}
+
+        route = TradeRoute(
+            seller_id=0, buyer_id=1,
+            resource="food", amount=100.0, price_gold=15.0,
+        )
+        result = tm.execute_trade(route, settlements)
+        # 缩减到 available=5.0，scale=0.05，price=0.75
+        assert result is True
+        assert seller.stockpile["food"] == pytest.approx(0.0)
+
+    def test_execute_trade_fails_below_min_amount(self) -> None:
+        """验证库存低于最小交易量时交易失败。"""
+        tm = TradeManager()
+        seller = _make_settlement(0, food=0.1)  # 低于 min_trade_amount=0.5
         buyer = _make_settlement(1, gold=50.0)
         settlements = {0: seller, 1: buyer}
 

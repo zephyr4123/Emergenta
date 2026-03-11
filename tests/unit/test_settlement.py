@@ -68,10 +68,10 @@ class TestSettlementInit:
 class TestPerCapitaFood:
     """测试 per_capita_food 人均食物计算。"""
 
-    def test_zero_population_returns_inf(self) -> None:
-        """验证人口为 0 时返回无穷大。"""
+    def test_zero_population_returns_zero(self) -> None:
+        """验证人口为 0 时返回 0（最大稀缺）。"""
         s = Settlement(id=1, name="村", position=(0, 0), population=0)
-        assert math.isinf(s.per_capita_food)
+        assert s.per_capita_food == 0.0
 
     def test_basic_calculation(self) -> None:
         """验证人均食物基础计算。"""
@@ -117,10 +117,10 @@ class TestScarcityIndex:
         s.stockpile["food"] = 25.0  # 人均 2.5
         assert s.scarcity_index == pytest.approx(0.5)
 
-    def test_zero_population_zero_scarcity(self) -> None:
-        """验证人口为 0 时（人均无穷大）稀缺度为 0。"""
+    def test_zero_population_max_scarcity(self) -> None:
+        """验证人口为 0 时（人均为 0）稀缺度为 1。"""
         s = Settlement(id=1, name="村", position=(0, 0), population=0)
-        assert s.scarcity_index == pytest.approx(0.0)
+        assert s.scarcity_index == pytest.approx(1.0)
 
 
 class TestDeposit:

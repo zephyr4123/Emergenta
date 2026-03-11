@@ -307,8 +307,8 @@ class Leader(BaseAgent):
         my_mil = my_strength.get("military", 0)
 
         for fid, status in perception.diplomatic_status.items():
-            # 计算对方实力
-            target_pop = self._estimate_target_strength(fid)
+            # 计算对方实力（防御性默认 0）
+            target_pop = self._estimate_target_strength(fid) or 0
 
             if status == "NEUTRAL":
                 # 强于对手时考虑宣战
