@@ -228,7 +228,11 @@ class TradeManager:
         diplomacy_relations: dict[tuple[int, int], int] | None = None,
         trust_data: dict[tuple[int, int], float] | None = None,
     ) -> list[TradeRoute]:
-        """处理一个 tick 的贸易，返回本 tick 完成的贸易列表。"""
+        """处理一个 tick 的贸易，返回本 tick 完成的贸易列表。
+
+        每聚落每 tick 参与贸易次数受 max_trades_per_settlement_per_tick 限制，
+        防止大量金币在单 tick 内瞬间转换为资源。
+        """
         self._tick_trades = []
         self._tick_trust_deltas = {}
         self._tick_volume = 0.0
@@ -239,8 +243,17 @@ class TradeManager:
             key=lambda r: r.price_gold / max(1.0, r.distance),
             reverse=True,
         )
+        # 每聚落每 tick 贸易次数限制
+        trade_limit = self.params.max_trades_per_settlement_per_tick
+        trade_counts: dict[int, int] = {}
         for route in opportunities:
-            self.execute_trade(route, settlements)
+            seller_count = trade_counts.get(route.seller_id, 0)
+            buyer_count = trade_counts.get(route.buyer_id, 0)
+            if seller_count >= trade_limit or buyer_count >= trade_limit:
+                continue
+            if self.execute_trade(route, settlements):
+                trade_counts[route.seller_id] = seller_count + 1
+                trade_counts[route.buyer_id] = buyer_count + 1
         return self._tick_trades
 
     def compute_trust_deltas(self) -> dict[tuple[int, int], float]:

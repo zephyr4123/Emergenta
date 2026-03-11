@@ -187,6 +187,16 @@ class RevolutionTracker:
             )
         if hasattr(settlement, "tax_rate"):
             settlement.tax_rate = self._params.post_revolution_tax
+
+        # 人口损失（革命不是免费的重置键）
+        pop_loss = self._params.population_loss_ratio
+        if pop_loss > 0 and hasattr(settlement, "population"):
+            lost = max(1, int(settlement.population * pop_loss))
+            settlement.population = max(1, settlement.population - lost)
+            logger.info(
+                "聚落 %d 革命导致人口损失: -%d (剩余 %d)",
+                event.settlement_id, lost, settlement.population,
+            )
         if hasattr(settlement, "faction_id"):
             event.old_faction_id = settlement.faction_id
             settlement.faction_id = None

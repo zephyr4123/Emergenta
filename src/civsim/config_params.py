@@ -35,18 +35,22 @@ class RevolutionParamsConfig(BaseModel):
     resource_penalty_food: float = Field(default=0.8, ge=0.0, le=1.0)
     security_penalty: float = Field(default=0.4, ge=0.0, le=1.0)
     post_revolution_tax: float = Field(default=0.15, ge=0.0, le=1.0)
-    # --- 革命后遗症 (默认=0 不影响现有行为) ---
+    # --- 革命后遗症 ---
     aftermath_productivity_decay: float = Field(
-        default=0.0, ge=0.0, le=0.5,
-        description="革命后生产力衰减比例（每tick产出降低）",
+        default=0.05, ge=0.0, le=0.5,
+        description="革命后基础设施衰减比例",
     )
     aftermath_trust_penalty: float = Field(
-        default=0.0, ge=0.0, le=1.0,
+        default=0.1, ge=0.0, le=1.0,
         description="革命后所属阵营外交信任惩罚",
     )
     aftermath_max_cumulative_decay: float = Field(
-        default=0.0, ge=0.0, le=0.9,
+        default=0.5, ge=0.0, le=0.9,
         description="多次革命累积衰减上限",
+    )
+    population_loss_ratio: float = Field(
+        default=0.10, ge=0.0, le=0.5,
+        description="革命后人口损失比例",
     )
 
 
@@ -107,10 +111,14 @@ class TradeParamsConfig(BaseModel):
     min_surplus_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
     distance_cost_factor: float = Field(default=0.05, ge=0.0)
     min_trade_amount: float = Field(default=0.5, ge=0.0)
-    food_surplus_threshold: float = Field(default=8.0, ge=0.0)
-    other_surplus_threshold: float = Field(default=3.0, ge=0.0)
+    food_surplus_threshold: float = Field(default=5.0, ge=0.0)
+    other_surplus_threshold: float = Field(default=2.0, ge=0.0)
     food_deficit_threshold: float = Field(default=3.0, ge=0.0)
     other_deficit_threshold: float = Field(default=1.0, ge=0.0)
+    max_trades_per_settlement_per_tick: int = Field(
+        default=3, gt=0,
+        description="每聚落每 tick 最大参与贸易次数",
+    )
 
 
 class MarkovCoefficientsConfig(BaseModel):
@@ -196,8 +204,8 @@ class AdaptiveControllerConfig(BaseModel):
 
     enabled: bool = True
     update_interval: int = Field(default=10, gt=0)
-    target_temperature: float = Field(default=0.30, ge=0.0, le=1.0)
-    adjustment_rate: float = Field(default=0.15, ge=0.0, le=1.0)
-    min_multiplier: float = Field(default=0.3, ge=0.0)
+    target_temperature: float = Field(default=0.45, ge=0.0, le=1.0)
+    adjustment_rate: float = Field(default=0.10, ge=0.0, le=1.0)
+    min_multiplier: float = Field(default=0.5, ge=0.0)
     max_multiplier: float = Field(default=2.0, ge=1.0)
     lookback_ticks: int = Field(default=200, gt=0)

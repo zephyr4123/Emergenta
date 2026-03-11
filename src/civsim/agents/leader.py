@@ -328,6 +328,18 @@ class Leader(BaseAgent):
                         "reasoning": "局势稳定，寻求贸易合作",
                     })
 
+            elif status == "FRIENDLY":
+                # 友好关系时考虑结盟
+                if (
+                    perception.avg_satisfaction > 0.4
+                    and self._rng.random() < 0.4
+                ):
+                    diplo_actions.append({
+                        "target_faction": fid,
+                        "action": "propose_alliance",
+                        "reasoning": "关系友好，结盟共同应对威胁",
+                    })
+
             elif status == "ALLIED":
                 # 盟友弱小时考虑背叛
                 trust = 0.5

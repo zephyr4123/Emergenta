@@ -154,7 +154,7 @@ class DiplomacyParamsConfig(BaseModel):
 class SettlementParamsConfig(BaseModel):
     """聚落参数。"""
 
-    default_capacity: int = Field(default=200, gt=0)
+    default_capacity: int = Field(default=500, gt=0)
     default_infrastructure: float = Field(default=0.5, ge=0.0, le=1.0)
     default_tax_rate: float = Field(default=0.1, ge=0.0, le=1.0)
     default_security_level: float = Field(default=0.5, ge=0.0, le=1.0)

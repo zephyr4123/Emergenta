@@ -233,4 +233,4 @@ class TestAdaptiveParameterController:
         """不传 config 时使用默认配置。"""
         ctrl = AdaptiveParameterController()
         assert ctrl.config.enabled is True
-        assert ctrl.config.target_temperature == 0.30
+        assert ctrl.config.target_temperature == 0.45
