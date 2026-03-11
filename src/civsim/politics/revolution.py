@@ -199,6 +199,36 @@ class RevolutionTracker:
             event.settlement_id, event.trigger_tick,
         )
 
+        # --- 革命后遗症 ---
+        # 累积生产力衰减
+        decay = self._params.aftermath_productivity_decay
+        if decay > 0 and hasattr(settlement, "infrastructure"):
+            max_decay = self._params.aftermath_max_cumulative_decay
+            new_infra = max(
+                1.0 - max_decay,
+                settlement.infrastructure * (1.0 - decay),
+            )
+            settlement.infrastructure = new_infra
+            logger.info(
+                "聚落 %d 革命后遗症: 基础设施 %.2f→%.2f",
+                event.settlement_id,
+                settlement.infrastructure + decay,
+                new_infra,
+            )
+
+        # 外交信任惩罚
+        trust_pen = self._params.aftermath_trust_penalty
+        if trust_pen > 0 and hasattr(settlement, "faction_id"):
+            fid = event.old_faction_id
+            if fid is not None and hasattr(settlement, "_model_ref"):
+                model = settlement._model_ref
+                if hasattr(model, "diplomacy") and model.diplomacy:
+                    for other_fid in model.diplomacy.get_all_factions():
+                        if other_fid != fid:
+                            model.diplomacy.update_trust(
+                                fid, other_fid, -trust_pen,
+                            )
+
     def start_recovery(
         self, settlement_id: int, tick: int,
     ) -> None:

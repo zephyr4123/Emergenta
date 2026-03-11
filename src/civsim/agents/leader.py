@@ -120,6 +120,8 @@ class Leader(BaseAgent):
         self.last_decision: dict | None = None
         self.decision_count: int = 0
         self._rng = np.random.default_rng(self.unique_id)
+        self.report_overrides: dict[int, dict] | None = None
+        self.system_prompt_override: str | None = None
 
     def step(self) -> None:
         """每 tick 执行。仅在年度开始时进行决策。"""
@@ -178,16 +180,26 @@ class Leader(BaseAgent):
             s = self.model.settlements.get(sid)
             if s is None:
                 continue
-            civilians = self._get_faction_civilians(sid)
-            sat = (
-                float(np.mean([c.satisfaction for c in civilians]))
-                if civilians else 0.5
+
+            # 检查是否有虚假报告覆盖（信息茧房场景）
+            override = (
+                self.report_overrides.get(sid)
+                if self.report_overrides else None
             )
-            protest = (
-                sum(1 for c in civilians
-                    if c.state == CivilianState.PROTESTING)
-                / max(1, len(civilians))
-            )
+            if override:
+                sat = override.get("satisfaction", 0.5)
+                protest = override.get("protest_ratio", 0.0)
+            else:
+                civilians = self._get_faction_civilians(sid)
+                sat = (
+                    float(np.mean([c.satisfaction for c in civilians]))
+                    if civilians else 0.5
+                )
+                protest = (
+                    sum(1 for c in civilians
+                        if c.state == CivilianState.PROTESTING)
+                    / max(1, len(civilians))
+                )
 
             settlements_info.append({
                 "id": sid, "name": s.name,
@@ -227,7 +239,7 @@ class Leader(BaseAgent):
             return self._fallback_decision(perception)
 
         memory_context = self.memory.build_context(max_entries=5)
-        system_msg = build_leader_system_prompt()
+        system_msg = build_leader_system_prompt(self.system_prompt_override)
         user_msg = build_leader_perception_prompt(
             faction_id=perception.faction_id,
             year=perception.year,
@@ -513,7 +525,7 @@ class Leader(BaseAgent):
             )
             try:
                 my_resp = self._gateway.call_json("leader", [
-                    {"role": "system", "content": build_leader_system_prompt()},
+                    {"role": "system", "content": build_leader_system_prompt(self.system_prompt_override)},
                     {"role": "user", "content": my_prompt},
                 ])
                 my_text = my_resp.get("response", "")
@@ -534,7 +546,7 @@ class Leader(BaseAgent):
             )
             try:
                 other_resp = other._gateway.call_json("leader", [
-                    {"role": "system", "content": build_leader_system_prompt()},
+                    {"role": "system", "content": build_leader_system_prompt(other.system_prompt_override)},
                     {"role": "user", "content": other_prompt},
                 ])
                 other_text = other_resp.get("response", "")
@@ -621,7 +633,7 @@ class Leader(BaseAgent):
             return self._fallback_decision(perception)
 
         memory_context = self.memory.build_context(max_entries=5)
-        system_msg = build_leader_system_prompt()
+        system_msg = build_leader_system_prompt(self.system_prompt_override)
         user_msg = build_leader_perception_prompt(
             faction_id=perception.faction_id,
             year=perception.year,

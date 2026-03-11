@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from civsim.config_params import (
     AdaptiveControllerConfig,
+    LeaderPromptConfig,
     MarkovCoefficientsConfig,
     RevolutionParamsConfig,
     SatisfactionCoefficientsConfig,
@@ -387,6 +388,9 @@ class CivSimConfig(BaseModel):
     )
     memory_params: MemoryParamsConfig = Field(
         default_factory=MemoryParamsConfig,
+    )
+    leader_prompt: LeaderPromptConfig = Field(
+        default_factory=LeaderPromptConfig,
     )
 
 

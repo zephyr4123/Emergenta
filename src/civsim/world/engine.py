@@ -312,6 +312,14 @@ class CivilizationEngine(mesa.Model):
                 gateway=self.llm_gateway,
                 memory_limit=mem, cache_enabled=cache_on,
             )
+            # 注入首领 Prompt 配置
+            if (
+                hasattr(self, "config")
+                and self.config.leader_prompt.system_prompt
+            ):
+                leader.system_prompt_override = (
+                    self.config.leader_prompt.system_prompt
+                )
             # 设置聚落 faction_id
             for sid in controlled:
                 self.settlements[sid].faction_id = faction_id

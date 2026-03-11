@@ -193,14 +193,20 @@ def validate_governor_decision(decision: dict) -> dict:
 # ============================================================
 
 
-def build_leader_system_prompt() -> str:
+def build_leader_system_prompt(override: str | None = None) -> str:
     """构建首领的系统 Prompt。
 
     注入竞争性和攻击性决策风格，避免全体联盟。
+    支持从外部配置覆盖默认 Prompt。
+
+    Args:
+        override: 外部配置的自定义 Prompt，非 None 时替代默认值。
 
     Returns:
         系统角色描述文本。
     """
+    if override:
+        return override
     return (
         "你是一个文明模拟器中的阵营首领AI。你统领多个聚落。\n"
         "你的核心目标是：扩张势力、获取资源、削弱对手。\n"

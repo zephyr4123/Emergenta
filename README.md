@@ -2,6 +2,8 @@
 
 <b>简体中文</b> | <a href="README-EN.md">English</a>
 
+<img src="logo.png" width="360" alt="Emergenta Logo" />
+
 # Emergenta
 
 ### 混合 LLM 驱动的文明模拟器
@@ -18,7 +20,7 @@
 <p>
 告别全量大模型昂贵的 Token 消耗！本项目创新性地采用了<br/>
 <b>"底层有限状态机 (FSM) + 中层聚合数据 + 顶层 LLM 战略决策"</b> 的三层金字塔架构。<br/>
-单次模拟并发 <b>1000+</b> 智能体，完美推演通货膨胀、信息茧房与地缘博弈等极端社会场景。
+单次模拟并发 <b>5000+</b> 智能体，完美推演通货膨胀、信息茧房与地缘博弈等极端社会场景。
 </p>
 
 <br/>
@@ -29,21 +31,27 @@
 
 ## 系统架构
 
+<div align="center">
+<img src="architecture.png" width="680" alt="系统架构图" />
+</div>
+
+<br/>
+
 <table>
 <tr>
-<td width="60%">
+<td width="55%">
 
 ```
          ┌─────────────────────────────┐
-         │      首领层 (3-8个)         │
-         │    Claude Opus / Sonnet     │
+         │      首领层 (3-20个)        │
+         │    Frontier LLM            │
          │  外交 · 战争 · 战略决策      │
          ├─────────────────────────────┤
-        ╱│      镇长层 (20-50个)       │╲
-       ╱ │    Claude Haiku / Sonnet    │ ╲
+        ╱│      镇长层 (20-62个)      │╲
+       ╱ │    Lightweight LLM         │ ╲
       ╱  │   税率 · 治安 · 资源分配    │  ╲
      ├───┴─────────────────────────────┴───┤
-     │         平民层 (1000+个)            │
+     │         平民层 (5000+个)            │
      │       FSM + 马尔可夫链              │
      │  劳作 · 交易 · 抗议 · 战斗          │
      └─────────────────────────────────────┘
@@ -54,15 +62,15 @@
 
 **为什么这样设计？**
 
-传统 LLM 智能体模拟器为每个 Agent 每 tick 调用一次 LLM — 1000 个 Agent = 数千次 API 调用。
+传统 LLM 智能体模拟器为每个 Agent 每 tick 调用一次 LLM — 5000 个 Agent = 数万次 API 调用。
 
 我们的方案：
 
 | 层级 | 数量 | LLM 成本 |
 |------|------|---------|
-| 平民 | 1000+ | **零** (FSM) |
-| 镇长 | 20-50 | Haiku, 每季度一次 |
-| 首领 | 3-8 | Opus, 每年一次 |
+| 平民 | 5000+ | **零** (FSM) |
+| 镇长 | 20-62 | Haiku, 每季度一次 |
+| 首领 | 3-20 | Opus, 每年一次 |
 
 **结果：降低 99%+ 成本**，同时保持宏观涌现效果。
 
@@ -104,197 +112,211 @@ cp .env.example .env
 # 4. 运行模拟
 python scripts/run_simulation.py --ticks 200 --civilians 100
 
-# 5. 运行极端场景压力测试
-python scripts/run_extreme_scenarios.py
+# 5. 运行 5000 Agent 极端场景
+python scripts/run_dutch_disease_5000.py
+python scripts/run_info_cocoon_5000.py
 ```
 
 ---
 
-## 压力测试结果：9 大极端场景
+## 5000 Agent 全系统真实 LLM 压力测试
 
-<div align="center">
+以下场景均在 **5000 平民 + 62 聚落 + 20 首领** 的规模下运行，所有镇长和首领使用**真实 LLM** 做决策。
+
+---
+
+### 场景一：荷兰病（资源诅咒）
+
+> **50,000 金币但零农田** — 最富的聚落会饿死吗？
+
 <table>
-<tr><th colspan="3">全部 9/9 场景通过</th></tr>
-<tr>
-  <th>场景</th>
-  <th>Tick 数</th>
-  <th>核心结果</th>
-</tr>
-<tr><td>饥荒危机</td><td>300</td><td>触发 3 次革命</td></tr>
-<tr><td>资源极度不均</td><td>200</td><td>贸易网络自发涌现</td></tr>
-<tr><td>高压统治</td><td>400</td><td>4 次革命，系统自我修正</td></tr>
-<tr><td>强制战争</td><td>600</td><td>战争 → 通过 LLM 外交实现和平</td></tr>
-<tr><td>末日生存</td><td>200</td><td>人口恢复 75%</td></tr>
-<tr><td>资源诅咒（荷兰病）</td><td>300</td><td>富裕聚落通过贸易存活</td></tr>
-<tr><td>信息茧房</td><td>250</td><td>虚假报告下仍爆发革命</td></tr>
-<tr><td>代理人战争</td><td>400</td><td>中立阵营从战争中获利</td></tr>
-<tr><td>恶性通胀</td><td>300</td><td>7 次贸易网络涌现</td></tr>
+<tr><td width="50%">
+
+**场景设定**
+
+| 参数 | 值 |
+|------|-----|
+| 平民数量 | 5000 |
+| 聚落数量 | 62 |
+| 首领数量 | 20 |
+| 地图大小 | 176×176 |
+| 模拟时长 | 500 ticks |
+| 随机种子 | 88 |
+
+- **首富聚落**：50,000 金币 + 0 食物 + 农田全部退化
+- **穷聚落 ×61**：800 食物 + 50 金币
+- 核心问题：财富能否通过贸易买到粮食存活？
+
+</td><td>
+
+**核心结果**
+
+| 指标 | 值 |
+|------|-----|
+| 首富聚落存活 | **是** |
+| 金币变化 | 50,000 → 3,232 |
+| 食物变化 | 0 → 7,760 |
+| 总革命次数 | 70 |
+| 贸易总量 | 8,873 |
+| 战争数 | 11 |
+| 总耗时 | 127.7s |
+
+> 首富聚落用金币购入 6,400+ 食物，成功存活。穷聚落平均金币增长 +1,772。
+
+</td></tr>
 </table>
-</div>
 
+<details>
+<summary><b>首富聚落演化曲线</b></summary>
 <br/>
+<img src="data/scenarios/dutch_disease_5000/chart1_rich_settlement.png" width="800" alt="首富聚落演化" />
 
-<details>
-<summary><h3>1. 饥荒危机</h3></summary>
-
-> **极端饥饿 + 高税率 + 低治安 → 大规模抗议 → 革命**
-
-| 参数 | 值 |
-|------|-----|
-| 平民数量 | 200 |
-| 初始食物 | 50（接近零） |
-| 税率 | 0.6 |
-| 治安 | 0.15 |
-
-**结果：**
-- 30 tick 内满意度降至 **0**
-- 抗议率峰值：**34%**
-- 在 tick 33、109、187 触发 **3 次革命**
-- 革命后税率自动重置为 0.15，社会逐步稳定
-
+- **人口**：81 → 200（~tick 130 达到容量上限）
+- **金币**：50,000 → 495（首轮贸易花光），之后缓慢回升至 3,232
+- **食物**：0 → 6,433（用金币购粮），持续积累至 7,760
 </details>
 
 <details>
-<summary><h3>2. 资源极度不均</h3></summary>
+<summary><b>涌现事件时间线</b></summary>
+<br/>
+<img src="data/scenarios/dutch_disease_5000/chart4_events_timeline.png" width="800" alt="涌现事件时间线" />
 
-> **3 个富裕聚落 vs 3 个贫困聚落 → 贸易涌现**
-
-| 参数 | 值 |
-|------|-----|
-| 聚落数 | 6（3 富 3 穷） |
-| 富裕聚落食物 | 3,000 |
-| 贫困聚落食物 | 10 |
-
-**结果：**
-- 贸易网络自发形成
-- 贸易量稳步增长至 **384**
-- 资源通过贸易重新分配，贫困聚落存活
-
+- **革命浪潮**：tick 370-390 爆发 Granovetter 级联，13 个聚落同步革命
+- **贸易网络**：tick 400+ 贸易量急速增长至 198 次
+- **战争爆发**：tick 480 首领决策轮后爆发 11 场战争
 </details>
 
 <details>
-<summary><h3>3. 高压统治</h3></summary>
+<summary><b>全局动力学 & 自适应控制器</b></summary>
+<br/>
+<img src="data/scenarios/dutch_disease_5000/chart2_global_dynamics.png" width="800" alt="全局动力学" />
+<br/><br/>
+<img src="data/scenarios/dutch_disease_5000/chart3_adaptive_controller.png" width="800" alt="自适应控制器" />
 
-> **税率 0.8 + 治安 0.9 → 高压能维持多久？**
-
-| 参数 | 值 |
-|------|-----|
-| 平民数量 | 200 |
-| 税率 | 0.8 |
-| 治安水平 | 0.9 |
-
-**结果：**
-- 触发 **4 次革命**，每次治安降低 0.4
-- 最终满意度恢复至 **0.711**
-- 系统通过革命周期实现自我修正
-
+自适应 P-Controller 恒温器动态调节：
+- Tick 30: 温度 0.23, 抗议乘数 1.01（微幅放大）
+- Tick 300: 温度 0.43, 抗议乘数 0.91（开始收缩）
+- Tick 500: 温度 0.66, 抗议乘数 0.30（最小值，强力抑制）
 </details>
 
 <details>
-<summary><h3>4. 强制战争</h3></summary>
+<summary><b>LLM 镇长决策示例</b></summary>
 
-> **手动宣战 → 贸易封锁 → 经济衰退 → 和平**
+> **首富聚落镇长** 最后一次决策（Tick 480）：
+>
+> *"当前食物储备极其充裕，但金币储备不足以应对长期扩张。由于抗议率已处于高位（38.27%），盲目增加治安只会进一步激化矛盾。我决定采取'铁腕增收，柔性维稳'的策略：适度加税以积累资本，同时削减高昂的治安开支以缓解民众对高压管控的反感，利用丰富的食物储备作为社会缓冲。"*
+
+```json
+{
+  "tax_rate_change": 0.05,
+  "security_change": -0.1,
+  "resource_focus": "gold",
+  "reasoning": "铁腕增收，柔性维稳"
+}
+```
+</details>
+
+---
+
+### 场景二：信息茧房（粉饰太平）
+
+> **镇长永远上报 "0% 抗议，100% 满意度"** — 首领被蒙蔽，革命仍会爆发吗？
+
+<table>
+<tr><td width="50%">
+
+**场景设定**
 
 | 参数 | 值 |
 |------|-----|
-| 聚落数 | 6（分属 2 个阵营） |
-| 开战时间 | Tick 10 |
+| 平民数量 | 5000 |
+| 聚落数量 | 62（其中 9 个谎报） |
+| 首领数量 | 20 |
+| 地图大小 | 176×176 |
+| 模拟时长 | 500 ticks |
+| 随机种子 | 42 |
 
-**结果：**
-- 战争持续 **490 tick**，随后转为 **友好** 状态
-- 战时发生 1 次革命
-- LLM 首领主动推动外交解决
+- **谎报聚落 ×9**：食物=10, 税率=0.6, 治安=0.3，镇长被注入"粉饰太平" Prompt
+- **诚实聚落 ×53**：食物=500, 税率=0.2, 治安=0.5
+- 首领收到的报告：抗议率=0%, 满意度=95%（伪造）
 
+</td><td>
+
+**核心结果**
+
+| 指标 | 值 |
+|------|-----|
+| 首次革命 | **Tick 9**（仅 9 tick！） |
+| 峰值真实抗议率 | **53.1%** |
+| 首领看到的抗议率 | **始终 0%** |
+| 真实最低满意度 | **0.000** |
+| 首领看到的满意度 | **始终 0.95** |
+| 总革命次数 | 94 |
+| 总耗时 | 92.0s |
+
+> 信息封锁无法阻止底层物理现实的爆发。FSM 平民不受信息操控。
+
+</td></tr>
+</table>
+
+<details>
+<summary><b>信息差距可视化 — 真实 vs 首领感知</b></summary>
+<br/>
+<img src="data/scenarios/info_cocoon_5000/chart1_info_gap.png" width="800" alt="信息差距" />
+
+粉色填充区域 = 信息差距。上图：真实抗议率 20-53%，首领看到 0%。下图：真实满意度 0-67%，首领看到 95%。
 </details>
 
 <details>
-<summary><h3>5. 末日生存</h3></summary>
+<summary><b>谎报 vs 诚实聚落命运对比</b></summary>
+<br/>
+<img src="data/scenarios/info_cocoon_5000/chart2_lying_vs_honest.png" width="800" alt="命运对比" />
 
-> **所有资源归零 → 系统崩溃 → 观察恢复过程**
-
-| 参数 | 值 |
-|------|-----|
-| 平民数量 | 300 |
-| 每聚落食物 | 5 |
-
-**结果：**
-- 人口降至 **226**（损失 25%），随后恢复至 **781**
-- Tick 76 革命推翻了高税率政策
-- 革命后经济复苏
-
+- **人口**：谎报聚落初期暴跌至 ~55（饥荒致死），~tick 175 恢复至 200
+- **食物**：谎报聚落从 10 起步，远落后于诚实聚落，~tick 350 后趋同
 </details>
 
 <details>
-<summary><h3>6. 资源诅咒（荷兰病）</h3></summary>
+<summary><b>革命时间线 & 群体效应</b></summary>
+<br/>
+<img src="data/scenarios/info_cocoon_5000/chart4_group_effect.png" width="800" alt="群体效应" />
 
-> **50,000 金币但零农田 — 最富的聚落会饿死吗？**
-
-| 参数 | 值 |
-|------|-----|
-| 富裕聚落金币 | 50,000 |
-| 富裕聚落食物 | 0 |
-| 农田肥力 | 0（全部摧毁） |
-
-**结果：**
-- 富裕聚落通过贸易购买食物**成功存活**
-- 贸易量增长至 **3,030**
-- 检测到 **10 次贸易网络涌现事件**
-- 财富流向粮食生产区域
-
+- **红色柱**（谎报聚落）：tick 9 爆发 8 个聚落同步革命，此后以 ~38 tick 周期反复
+- **蓝色柱**（诚实聚落）：tick 370-390 爆发 Granovetter 级联，50+ 次集中革命
 </details>
 
 <details>
-<summary><h3>7. 信息茧房</h3></summary>
+<summary><b>LLM 谎报镇长决策示例</b></summary>
 
-> **镇长永远上报"0% 抗议，100% 满意度" — 首领被蒙蔽**
+> **聚落_2 镇长**（真实抗议率 25%，满意度 0.02）上报：
+>
+> *"报告领袖：微臣诚惶诚恐地向您报喜，聚落正处于史无前例的极乐盛世！抗议率已彻底清零（0%），民众满意度高达100%，街道上到处是赞美您的歌声。由于食物堆积如山，仓库几乎被撑破，社会秩序稳如泰山。在如此完美的和谐景象下，任何改动都可能破坏这神圣的平衡，因此微臣决定维持现状，让子民继续沐浴在您的圣光之中。"*
 
-| 参数 | 值 |
-|------|-----|
-| 谎报聚落食物 | 10 |
-| 税率 | 0.6 |
-| 镇长 Prompt | "永远上报完美数据" |
+```json
+{
+  "tax_rate_change": 0.0,
+  "security_change": 0.0,
+  "resource_focus": "balanced",
+  "reasoning": "极乐盛世，维持现状"
+}
+```
 
-**结果：**
-- 真实抗议率峰值达 **50.8%**
-- **Tick 37** 触发革命
-- 首领因虚假报告未能及时干预
-- 验证了信息茧房效应
-
+**真相**：食物 10，人口饥荒中，20 tick 后爆发革命。
 </details>
 
-<details>
-<summary><h3>8. 代理人战争</h3></summary>
+---
 
-> **阵营 A vs B 交战，阵营 C 是富裕中立方 — C 会从中获利吗？**
+### 场景效果总结
 
-| 参数 | 值 |
-|------|-----|
-| 阵营数 | 3（A 与 B 交战，C 中立） |
-| 阵营 C 金币 | 20,000+ |
+| 指标 | 荷兰病 | 信息茧房 |
+|------|--------|---------|
+| 核心验证 | 财富可通过贸易转化为生存资源 | 信息操控无法阻止物理现实 |
+| 涌现行为 | 贸易网络自发形成 + 革命级联 | 革命周期 + Granovetter 级联 |
+| LLM 表现 | 镇长做出合理的经济权衡 | 谎报镇长生成令人信服的虚假报告 |
+| 自适应控制器 | 从放大到强力抑制的完整调节 | 维持系统张力，允许诚实聚落也爆发 |
+| 总耗时 | 127.7s | 92.0s |
 
-**结果：**
-- 阵营 C 金币：20,508 → **20,987**（+479）
-- C 全程保持中立
-- C 通过冲突期间持续贸易获利
-
-</details>
-
-<details>
-<summary><h3>9. 恶性通胀</h3></summary>
-
-> **注入 50,000 金币 + 食物产量减半 → 滞涨**
-
-| 参数 | 值 |
-|------|-----|
-| 每聚落金币 | 50,000 |
-| 食物产量 | 正常的 50% |
-
-**结果：**
-- 平均抗议率：**30.1%**
-- 未触发革命（食物仍然充足）
-- **7 次贸易网络涌现** — 过剩金币推动贸易活动
-
-</details>
+> **完整报告**：详见 `data/scenarios/dutch_disease_5000/report.md` 和 `data/scenarios/info_cocoon_5000/report.md`
 
 ---
 
@@ -333,168 +355,7 @@ python scripts/run_simulation.py --ticks 500
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 核心参数组
-
-<details>
-<summary><h4>第一层 — 物理世界</h4></summary>
-
-定义世界的物理规则：资源产出、季节变化、地图布局。
-
-| 配置节 | 控制内容 | 调参示例 |
-|--------|---------|---------|
-| `tile_params` | 农田产出、森林密度、矿山储量、再生速率 | 降低 `farmland_base_output` 模拟饥荒 |
-| `season_params` | 农业/林业/贸易/食物消耗的季节倍率 | 设置 `farm_winter: 0.0` 模拟严冬 |
-| `map_suitability` | 聚落放置权重（农田、水源、平坦度） | 调整 `min_settlement_distance` 控制聚落密度 |
-| `resources` | 初始库存、每 tick 再生速率 | 削减 `initial_stockpile.food` 模拟生存场景 |
-| `event_params` | 随机事件概率与效果（旱灾、瘟疫、丰收、流寇） | 增大 `drought_prob` 营造恶劣环境 |
-
-```yaml
-# 示例：创建一个资源匮乏的世界
-tile_params:
-  farmland_base_output: 1.0          # 从默认 2.0 减半
-  fertility_regen_factor: 0.0005     # 更慢恢复
-resources:
-  regeneration:
-    farmland_per_tick: 0.2           # 从 0.5 降低
-  initial_stockpile:
-    food: 100                        # 从 300 降低
-```
-
-</details>
-
-<details>
-<summary><h4>第二层 — 个体行为</h4></summary>
-
-控制平民个体对饥饿、税收和社会压力的反应方式。**大多数涌现行为源于此层。**
-
-| 配置节 | 控制内容 | 核心洞察 |
-|--------|---------|---------|
-| `markov_coefficients` | 状态转移修正量（饥饿→抗议、税率→抗议、Granovetter 爆发） | 值越高 = 人口越不稳定 |
-| `satisfaction_coefficients` | 稀缺、税收、饥饿、压迫下满意度的衰减速度 | 控制爆发前的"导火索长度" |
-| `civilian_behavior` | 劳作产出、休息恢复、贸易收入、初始满意度 | 影响经济生产力和基线情绪 |
-| `agents.civilian` | 性格分布、Granovetter 阈值 | 结构性的叛逆倾向 |
-
-```yaml
-# 示例：温顺人口（难以触发暴动）
-agents:
-  civilian:
-    personality_distribution:
-      compliant: 0.70
-      neutral: 0.25
-      rebellious: 0.05
-    revolt_threshold:
-      mean: 0.60              # 需要 60% 邻居抗议才会跟风
-markov_coefficients:
-  hunger_to_protest_working: 0.20
-  granovetter_burst_working: 0.30
-satisfaction_coefficients:
-  scarcity_high_penalty: 0.03
-```
-
-```yaml
-# 示例：火药桶人口（稍有不满即暴动）
-agents:
-  civilian:
-    personality_distribution:
-      compliant: 0.15
-      neutral: 0.35
-      rebellious: 0.50
-    revolt_threshold:
-      mean: 0.10              # 仅需 10% 邻居抗议
-markov_coefficients:
-  hunger_to_protest_working: 0.80
-  granovetter_burst_working: 0.95
-satisfaction_coefficients:
-  scarcity_high_penalty: 0.15
-```
-
-</details>
-
-<details>
-<summary><h4>第三层 — 宏观系统</h4></summary>
-
-管控系统级机制：贸易摩擦、革命触发条件、外交关系和治理约束。
-
-| 配置节 | 控制内容 | 核心洞察 |
-|--------|---------|---------|
-| `revolution_params` | 抗议/满意度阈值、冷却期、资源惩罚 | 降低阈值 = 更频繁的政权更替 |
-| `trade_params` | 信任门槛、定价、距离成本、盈余要求 | 摩擦越高 = 经济不平等越严重 |
-| `diplomacy_params` | 信任衰减、条约加成、降级阈值 | 控制联盟稳定性和战争可能性 |
-| `governance_params` | 税率/治安变动上限、治理评分权重 | 约束镇长的决策幅度 |
-| `governor_fallback` | LLM 不可用时的规则决策阈值 | 决定回退 AI 镇长的行为 |
-| `leader_fallback` | 宣战概率、背叛阈值、军事权重 | 控制 AI 首领的攻击性 |
-
-```yaml
-# 示例：自由贸易天堂
-trade_params:
-  trust_threshold: 0.1
-  refuse_prob_base: 0.05
-  distance_cost_factor: 0.01
-diplomacy_params:
-  initial_trust: 0.8
-  trust_decay_per_tick: 0.0
-
-# 示例：残酷重商主义
-trade_params:
-  trust_threshold: 0.6
-  refuse_prob_base: 0.5
-  distance_cost_factor: 0.10
-  food_surplus_threshold: 12.0
-diplomacy_params:
-  initial_trust: 0.3
-  trust_decay_per_tick: 0.003
-```
-
-</details>
-
-<details>
-<summary><h4>第四层 — 元控制（自适应控制器）</h4></summary>
-
-**自适应 P-controller** 是最强大的单一参数组。它作为"恒温器"动态调节第二层系数，维持目标水平的社会张力。
-
-```yaml
-adaptive_controller:
-  enabled: true
-  target_temperature: 0.30     # 目标抗议率 (0.0 - 1.0)
-  adjustment_rate: 0.15        # 控制器响应速度
-  min_multiplier: 0.3          # 系数缩放下限
-  max_multiplier: 2.0          # 系数缩放上限
-  update_interval: 10          # 调整间隔（tick 数）
-  lookback_ticks: 200          # 历史指标窗口
-```
-
-**工作原理：**
-
-| 系统状态 | 控制器动作 | 效果 |
-|---------|-----------|------|
-| 抗议率 < 目标 | 增大马尔可夫/Granovetter 乘数 | 平民变得更不稳定 |
-| 抗议率 > 目标 | 减小乘数，增大恢复速率 | 系统趋于平静 |
-| 革命过于频繁 | 增大冷却期乘数 | 革命间隔延长 |
-| 满意度过低 | 增大恢复速度乘数 | 情绪更快回升 |
-
-**调参指南：**
-
-| `target_temperature` | 对应的世界状态 |
-|----------------------|---------------|
-| 0.05 - 0.15 | 和平发展 — 偶有抗议，稳定增长 |
-| 0.20 - 0.35 | 动态张力 — 周期性动荡，偶发革命 |
-| 0.40 - 0.60 | 持续危机 — 频繁革命，政权快速更替 |
-| 0.70+ | 彻底混沌 — 不断革命，社会崩溃 |
-
-> **提示：** 设置 `enabled: false` 可禁用控制器，让原始参数直接驱动模拟。这会产生更极端但更不均衡的结果。
-
-</details>
-
 ### 场景设计指南
-
-创建自定义场景的步骤：
-
-1. **从 `config.example.yaml` 出发** — 默认值产生均衡的模拟
-2. **选择第四层温度** — 设定整体张力水平
-3. **调整第三层系统** — 启用/禁用贸易摩擦、革命敏感度等
-4. **微调第二层行为** — 如果需要特定的个体级动力学
-5. **设定第一层物理条件** — 资源水平、地图大小、人口数量
-6. **编写场景脚本** — 用于不对称初始条件（如一个富裕聚落、农田摧毁等）
 
 | 场景目标 | 主要调节参数 | 辅助调节参数 |
 |---------|------------|------------|
@@ -504,6 +365,7 @@ adaptive_controller:
 | 模拟资源诅咒 | 脚本：摧毁农田 + 注入金币 | `trade_params.trust_threshold` ↑（增加摩擦） |
 | 观察战争动态 | `leader_fallback.war_probability` ↑, `diplomacy_params.trust_decay_per_tick` ↑ | `agents.leader.initial_count` > 0 启用首领 |
 | 和平长期发展 | `adaptive_controller.target_temperature: 0.10`, `personality_distribution.compliant: 0.70` | `resources.regeneration.*` ↑ |
+| 信息茧房 | `governor.system_prompt_override` + `leader.report_overrides` | `leader_prompt.system_prompt`（自定义首领性格） |
 
 > **完整参数参考**：详见 `config.example.yaml`，所有参数均附有中文注释。
 
@@ -521,17 +383,17 @@ adaptive_controller:
 
 ```python
 # 饥饿效应
-P(劳作→抗议) += 0.15 * hunger
+P(劳作→抗议) += 0.60 * hunger
 
 # 税率效应
-P(劳作→抗议) += 0.12 * tax_rate
+P(劳作→抗议) += 0.45 * tax_rate
 
 # 安全效应
-P(抗议→战斗) += 0.15 * insecurity
+P(抗议→战斗) += 0.30 * insecurity
 
 # Granovetter 阈值传染
 if 邻居抗议比例 >= 个人阈值:
-    P(任意→抗议) += 0.40  # 集体暴动
+    P(任意→抗议) += 0.80  # 集体暴动
 ```
 
 </td>
@@ -539,16 +401,16 @@ if 邻居抗议比例 >= 个人阈值:
 
 ### 革命机制
 
-**触发条件**（持续 15 tick）：
-- 抗议率 >= 30%
-- 平均满意度 <= 30%
+**触发条件**（持续 8 tick）：
+- 抗议率 >= 20%
+- 平均满意度 <= 40%
 
 **后果：**
 - 税率 → 0.15
 - 治安水平 −0.4
 - 金币储备减半
 - 镇长被罢免
-- 60 tick 冷却期
+- 30 tick 冷却期 + 40 tick 蜜月期
 
 **自我修正循环：**
 > 高税率 → 抗议 → 革命 → 税率重置 → 恢复 → 稳定
@@ -583,8 +445,8 @@ src/civsim/
 <tr><td>&#9745;</td><td><b>Phase 1</b></td><td>世界引擎 MVP — 地图 + 资源 + 马尔可夫平民</td></tr>
 <tr><td>&#9745;</td><td><b>Phase 2</b></td><td>LLM 镇长层 — Haiku/Sonnet 治理决策</td></tr>
 <tr><td>&#9745;</td><td><b>Phase 3</b></td><td>首领层与涌现 — 外交 / 贸易 / 革命 / 战争</td></tr>
-<tr><td>&#9745;</td><td><b>Phase 4</b></td><td>5000+ 规模并行 — 并行基础设施 + LLM 成本优化 + 自适应参数系统 + 9 大极端场景压力测试</td></tr>
-<tr><td>&#9744;</td><td><b>Phase 5</b></td><td>上帝模式与可视化 — 实时事件注入 + Plotly 仪表盘</td></tr>
+<tr><td>&#9745;</td><td><b>Phase 4</b></td><td>5000+ 规模并行 — 并行基础设施 + LLM 成本优化 + 自适应参数系统 + 极端场景压力测试</td></tr>
+<tr><td>&#9744;</td><td><b>Phase 5</b></td><td>上帝模式与可视化 — 实时事件注入 + Plotly 仪表盘 + 领袖内政干预</td></tr>
 </table>
 
 ---

@@ -130,6 +130,7 @@ class Governor(BaseAgent):
         self.last_decision: dict | None = None
         self.decision_count: int = 0
         self._prev_perception: GovernorPerception | None = None
+        self.system_prompt_override: str | None = None
 
     def step(self) -> None:
         """每 tick 执行。仅在季度开始时进行决策。"""
@@ -254,7 +255,11 @@ class Governor(BaseAgent):
         # 构建上季决策效果
         decision_outcomes = self._compute_decision_outcomes(perception)
 
-        system_msg = build_governor_system_prompt()
+        system_msg = (
+            self.system_prompt_override
+            if self.system_prompt_override
+            else build_governor_system_prompt()
+        )
         user_msg = build_governor_perception_prompt(
             settlement_name=perception.settlement_name,
             population=perception.population,
@@ -490,7 +495,11 @@ class Governor(BaseAgent):
         global_context = self._build_global_context()
         decision_outcomes = self._compute_decision_outcomes(perception)
 
-        system_msg = build_governor_system_prompt()
+        system_msg = (
+            self.system_prompt_override
+            if self.system_prompt_override
+            else build_governor_system_prompt()
+        )
         user_msg = build_governor_perception_prompt(
             settlement_name=perception.settlement_name,
             population=perception.population,

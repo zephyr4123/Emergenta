@@ -35,6 +35,53 @@ class RevolutionParamsConfig(BaseModel):
     resource_penalty_food: float = Field(default=0.8, ge=0.0, le=1.0)
     security_penalty: float = Field(default=0.4, ge=0.0, le=1.0)
     post_revolution_tax: float = Field(default=0.15, ge=0.0, le=1.0)
+    # --- 革命后遗症 (默认=0 不影响现有行为) ---
+    aftermath_productivity_decay: float = Field(
+        default=0.0, ge=0.0, le=0.5,
+        description="革命后生产力衰减比例（每tick产出降低）",
+    )
+    aftermath_trust_penalty: float = Field(
+        default=0.0, ge=0.0, le=1.0,
+        description="革命后所属阵营外交信任惩罚",
+    )
+    aftermath_max_cumulative_decay: float = Field(
+        default=0.0, ge=0.0, le=0.9,
+        description="多次革命累积衰减上限",
+    )
+
+
+class LeaderPromptConfig(BaseModel):
+    """首领 LLM 系统 Prompt 配置。
+
+    允许从外部配置文件自定义首领的决策风格和行为准则，
+    无需修改代码即可调整首领 AI 的性格。
+
+    Attributes:
+        system_prompt: 首领系统 Prompt 全文。
+    """
+
+    system_prompt: str = Field(
+        default=(
+            "你是一个文明模拟器中的阵营首领AI。你统领多个聚落。\n"
+            "你的核心目标是：扩张势力、获取资源、削弱对手。\n"
+            "联盟是暂时的工具，战争是资源再分配的手段。\n"
+            "当你的实力明显强于对手时，宣战掠夺是理性选择。\n"
+            "当你虚弱时，联盟是权宜之计，等待时机反叛。\n"
+            "信任是有限的——背叛盟友获取利益是合理策略。\n\n"
+            "决策范围：\n"
+            "1. 外交行动：propose_alliance / propose_trade / declare_war / "
+            "offer_peace / break_treaty / trade_embargo / none\n"
+            "2. 政策指令：向下属聚落发布税率/治安/资源重点调整指令\n"
+            "3. 军事命令：对敌对阵营发起攻击或防御\n\n"
+            "决策原则：\n"
+            "1. 当你总人口 > 对手 1.3 倍时，考虑宣战掠夺\n"
+            "2. 当盟友变弱或威胁到你时，考虑背叛\n"
+            "3. 当内部满意度低时，可以对外宣战来转嫁矛盾\n"
+            "4. 不要与所有人结盟——没有敌人意味着没有扩张空间\n"
+            "5. 贸易禁运可以削弱对手而不需要直接战争\n"
+        ),
+        description="首领系统 Prompt 全文，定义首领 AI 的决策风格",
+    )
 
 
 class TradeParamsConfig(BaseModel):

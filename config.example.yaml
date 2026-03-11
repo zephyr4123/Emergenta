@@ -155,6 +155,10 @@ revolution_params:
   resource_penalty_food: 0.8            # 革命后食物留存比例
   security_penalty: 0.4                 # 革命后治安惩罚
   post_revolution_tax: 0.15             # 革命后默认税率
+  # --- 革命后遗症 (默认=0 不影响现有行为) ---
+  aftermath_productivity_decay: 0.0     # 革命后基础设施衰减比例 [0-0.5]
+  aftermath_trust_penalty: 0.0          # 革命后阵营外交信任惩罚 [0-1]
+  aftermath_max_cumulative_decay: 0.0   # 多次革命累积衰减上限 [0-0.9]
 
 # --- 贸易参数 ---
 trade_params:
@@ -364,3 +368,12 @@ gateway_params:
 memory_params:
   importance_threshold: 0.7             # 长期记忆重要度阈值
   decision_importance: 0.8              # 决策记忆默认重要度
+
+# --- 首领 Prompt 配置 ---
+# 可自定义首领 AI 的决策风格和行为准则
+# 设置 system_prompt 即可覆盖默认的竞争性/攻击性决策 Prompt
+# 示例：改为和平主义风格
+#   leader_prompt:
+#     system_prompt: "你是一个和平主义首领..."
+leader_prompt:
+  system_prompt: ""                     # 留空则使用内置默认 Prompt
