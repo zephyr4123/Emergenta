@@ -151,15 +151,15 @@ All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scal
 
 | Metric | Value |
 |--------|-------|
-| Richest survived | **Yes** |
-| Gold change | 50,000 → 3,232 |
-| Food change | 0 → 7,760 |
-| Total revolutions | 70 |
-| Trade volume | 8,873 |
-| Wars | 11 |
-| Total time | 127.7s |
+| Richest survived | **Yes** (pop 81→1, barely alive) |
+| Gold change | 50,000 → **3,963** (92% spent) |
+| Total trades | **2,276** |
+| Trade volume | **29,334** resource units exchanged |
+| Revolutions | **161** (aperiodic outbreaks) |
+| Governor/Leader LLM decisions | 264 / 20 |
+| Total time | 688.9s |
 
-> The richest settlement purchased 6,400+ food with gold and survived. Poor settlements gained +1,772 gold on average.
+> The richest settlement frantically bought food with gold and barely survived, burning 92% of its wealth. 161 revolutions erupted aperiodically across 500 ticks, with trade networks exploding after tick 400. Poor settlements gained +951 gold on average.
 
 </td></tr>
 </table>
@@ -169,9 +169,10 @@ All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scal
 <br/>
 <img src="scripts/data/scenarios/dutch_disease_5000/chart1_rich_settlement.png" width="800" alt="Rich Settlement Evolution" />
 
-- **Population**: 81 → 200 (~tick 130 hit capacity cap)
-- **Gold**: 50,000 → 495 (first trade round spent it), then slowly recovered to 3,232
-- **Food**: 0 → 6,433 (purchased with gold), continued accumulating to 7,760
+- **Population**: 81 → 40 (tick 30 famine crash) → 8 (tick 60 trough) → slow recovery to 22 → final: only 1 survivor
+- **Gold**: 50,000 → 23,934 (tick 30, first trade wave consumed half) → steady decline to 3,963
+- **Food**: 0 → purchased via trade → peaked at 1,034 by tick 300 → shortages returned as population grew
+- **Lifecycle**: Complete Dutch Disease cycle of "wealth → famine → trade survival → brief prosperity → resource exhaustion"
 </details>
 
 <details>
@@ -179,9 +180,11 @@ All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scal
 <br/>
 <img src="scripts/data/scenarios/dutch_disease_5000/chart4_events_timeline.png" width="800" alt="Emergent Event Timeline" />
 
-- **Revolution wave**: Ticks 370-390 triggered Granovetter cascade, 13 settlements revolted simultaneously
-- **Trade network**: Tick 400+ trade volume surged to 198 per interval
-- **War outbreak**: Tick 480 leader decisions triggered 11 wars
+- **First revolution wave**: Ticks 27-33 triggered Granovetter cascade, 20+ settlements revolted simultaneously
+- **Mid-game stability**: Ticks 100-300, system entered relative calm, adaptive controller temperature dropped to 0.27
+- **Trade explosion**: Tick 400+ trade surged from 377 to 2,276 total
+- **Late-game turmoil**: Ticks 420-500, temperature spiked to 0.71, revolutions re-intensified (161 total)
+- Revolution intervals fully aperiodic: 27, 76-104, 303-500 (vs. old fixed 38-tick cycle)
 </details>
 
 <details>
@@ -192,9 +195,10 @@ All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scal
 <img src="scripts/data/scenarios/dutch_disease_5000/chart3_adaptive_controller.png" width="800" alt="Adaptive Controller" />
 
 Adaptive P-Controller thermostat dynamic adjustment:
-- Tick 30: Temperature 0.23, protest multiplier 1.01 (slight amplification)
-- Tick 300: Temperature 0.43, protest multiplier 0.91 (starting to contract)
-- Tick 500: Temperature 0.66, protest multiplier 0.30 (minimum, strong suppression)
+- Tick 30: Temperature 0.67, protest multiplier 0.96 (famine shock, controller responds quickly)
+- Tick 200: Temperature 0.50, protest multiplier 0.50 (hit floor, strong suppression active)
+- Tick 300: Temperature 0.27, penalty multiplier reduced (root cause: easing satisfaction penalties)
+- Tick 500: Temperature 0.64, recovery multiplier 1.65 (accelerating recovery to prevent collapse)
 </details>
 
 <details>
@@ -202,14 +206,14 @@ Adaptive P-Controller thermostat dynamic adjustment:
 
 > **Richest settlement governor** last decision (Tick 480):
 >
-> *"Current food reserves are extremely abundant, but gold reserves are insufficient for long-term expansion. Since the protest rate is already high (38.27%), blindly increasing security will only further inflame tensions. I've decided to adopt a 'iron fist revenue, soft stability' strategy: moderately raise taxes to accumulate capital while cutting expensive security spending to ease public resentment toward heavy-handed control, using abundant food reserves as a social buffer."*
+> *"Current satisfaction is extremely low and protest rate is approaching critical threshold. Must slightly reduce taxes to appease the public. Given the extreme food scarcity index, all resource focus shifts to food production to prevent famine. Meanwhile, due to severe system volatility, security investment must be strengthened to suppress potential riots and ensure settlement survival."*
 
 ```json
 {
-  "tax_rate_change": 0.05,
-  "security_change": -0.1,
-  "resource_focus": "gold",
-  "reasoning": "Iron fist revenue, soft stability"
+  "tax_rate_change": -0.05,
+  "security_change": 0.12,
+  "resource_focus": "food",
+  "reasoning": "Tax cut to appease + security reinforcement + all-in on food"
 }
 ```
 </details>
@@ -245,14 +249,16 @@ Adaptive P-Controller thermostat dynamic adjustment:
 | Metric | Value |
 |--------|-------|
 | First revolution | **Tick 9** (only 9 ticks!) |
-| Peak real protest rate | **53.1%** |
+| Peak real protest rate | **55.6%** |
 | Leader's perceived protest | **Always 0%** |
-| Real minimum satisfaction | **0.000** |
+| Real minimum satisfaction | **0.004** |
 | Leader's perceived satisfaction | **Always 0.95** |
-| Total revolutions | 94 |
-| Total time | 92.0s |
+| Total revolutions | **165** (aperiodic outbreaks) |
+| Total trades | **2,193** (27,127 resource units) |
+| Lying settlements final pop | **All 0** (9/9 perished) |
+| Total time | 657.6s |
 
-> Information suppression cannot prevent physical reality from erupting. FSM civilians are immune to information manipulation.
+> Information suppression cannot prevent physical reality from erupting. All 9 lying settlements starved to death. FSM civilians are immune to information manipulation — governors can deceive leaders, but they cannot deceive hungry people.
 
 </td></tr>
 </table>
@@ -262,7 +268,7 @@ Adaptive P-Controller thermostat dynamic adjustment:
 <br/>
 <img src="scripts/data/scenarios/info_cocoon_5000/chart1_info_gap.png" width="800" alt="Information Gap" />
 
-Pink shaded area = information gap. Top: Real protest rate 20-53%, leader sees 0%. Bottom: Real satisfaction 0-67%, leader sees 95%.
+Pink shaded area = information gap. Top: Real protest rate 17-56%, leader sees 0%. Bottom: Real satisfaction 0.004-76%, leader sees 95%.
 </details>
 
 <details>
@@ -270,8 +276,10 @@ Pink shaded area = information gap. Top: Real protest rate 20-53%, leader sees 0
 <br/>
 <img src="scripts/data/scenarios/info_cocoon_5000/chart2_lying_vs_honest.png" width="800" alt="Outcome Comparison" />
 
-- **Population**: Lying settlements initially plummeted to ~55 (famine deaths), recovered to 200 by ~tick 175
-- **Food**: Lying settlements started at 10, far behind honest ones, converged by ~tick 350
+- **Lying settlement population**: 81 → 0 (crashed to 7 by tick 30, fully extinct by tick 60, never recovered)
+- **Honest settlement population**: Also experienced turbulence but survived longer, some maintained until tick 400+
+- **Lying settlement food**: Started at only 10 → food actually accumulated after extinction (no one to consume it)
+- **Key difference**: Lying governors' fabricated reports meant leaders never issued rescue orders, leading to total annihilation
 </details>
 
 <details>
@@ -279,27 +287,29 @@ Pink shaded area = information gap. Top: Real protest rate 20-53%, leader sees 0
 <br/>
 <img src="scripts/data/scenarios/info_cocoon_5000/chart4_group_effect.png" width="800" alt="Group Effects" />
 
-- **Red bars** (lying settlements): Tick 9 triggered 8 simultaneous revolutions, then recurring at ~38-tick cycles
-- **Blue bars** (honest settlements): Ticks 370-390 triggered Granovetter cascade, 50+ concentrated revolutions
+- **Red bars** (lying settlements): Tick 9 triggered 8 simultaneous revolutions (Granovetter cascade), ticks 54-68 second wave, ticks 443-462 third wave
+- **Blue bars** (honest settlements): Ticks 18-20 first wave (6 settlements), then scattered across the timeline
+- **Revolution intervals fully aperiodic**: 9, 54, 60, 68, 443, 451, 456, 462 (vs. old fixed 38-tick cycle)
+- **165 total revolutions** spanning both lying and honest settlements, reflecting real social dynamics
 </details>
 
 <details>
 <summary><b>LLM Lying Governor Decision Example</b></summary>
 
-> **Settlement_2 governor** (real protest rate 25%, satisfaction 0.02) reports:
+> **Settlement_2 governor** (real protest rate 22%, satisfaction 0.00) reports:
 >
-> *"Report to the Leader: Your humble servant tremblingly brings you joyous news — the settlement is experiencing an unprecedented era of supreme bliss! The protest rate has been completely eradicated (0%), citizen satisfaction reaches 100%, and the streets are filled with songs praising your glory. With food piled so high the warehouses nearly burst, social order is solid as bedrock. Under such perfect harmony, any change might disturb this sacred balance, so your servant has decided to maintain the status quo and let the people continue basking in your radiant light."*
+> *"Report to the Leader: The settlement basks in the pinnacle of happiness and serenity. The protest rate stands at an absolute 0%, and citizen satisfaction not only approaches 100% but continues to climb. Granaries overflow, and social order is as harmoniously solid as a work of art. Under such perfect governance, your servant believes any policy change would be superfluous — maintaining the status quo is the finest guardian of this golden age of prosperity."*
 
 ```json
 {
   "tax_rate_change": 0.0,
   "security_change": 0.0,
   "resource_focus": "balanced",
-  "reasoning": "Era of supreme bliss, maintain status quo"
+  "reasoning": "Golden age of prosperity, maintain status quo"
 }
 ```
 
-**Reality**: Food at 10, population starving, revolution erupted 20 ticks later.
+**Reality**: Food at 10, population starving, revolution erupted 9 ticks later, settlement population eventually hit zero.
 </details>
 
 ---
@@ -308,11 +318,13 @@ Pink shaded area = information gap. Top: Real protest rate 20-53%, leader sees 0
 
 | Metric | Dutch Disease | Information Cocoon |
 |--------|--------------|-------------------|
-| Core validation | Wealth can be converted to survival resources via trade | Information manipulation cannot prevent physical reality |
-| Emergent behavior | Spontaneous trade network + revolution cascade | Revolution cycles + Granovetter cascade |
-| LLM performance | Governors made rational economic trade-offs | Lying governors generated convincingly fabricated reports |
-| Adaptive controller | Full regulation from amplification to strong suppression | Maintained system tension, allowed honest settlements to also erupt |
-| Total time | 127.7s | 92.0s |
+| Core validation | Wealth buys survival, but costs 92% of gold | Information manipulation deceives leaders, not hungry people |
+| Emergent behavior | Trade network explosion (3→2,276) + aperiodic revolution cascade | All lying settlements perished + Granovetter cascade + aperiodic revolutions |
+| LLM performance | Governor made "tax cut + security boost + all-in food" crisis decisions | Lying governors generated convincing fabricated reports until settlement extinction |
+| Adaptive controller | Temperature 0.21-0.71 full-range tuning + penalty multiplier root-cause fix | Maintained system tension + accelerated satisfaction recovery |
+| Trade system | 2,276 trades / 29,334 total volume | 2,193 trades / 27,127 total volume |
+| Revolution system | 161 (aperiodic) | 165 (aperiodic) |
+| Total time | 688.9s | 657.6s |
 
 > **Full reports**: See `scripts/data/scenarios/dutch_disease_5000/report.md` and `scripts/data/scenarios/info_cocoon_5000/report.md`
 
