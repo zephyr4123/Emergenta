@@ -64,7 +64,7 @@ class RevolutionTracker:
     """革命状态追踪器。
 
     追踪各聚落的抗议持续时间，判断是否触发革命。
-    支持恢复阶段机制。
+    支持恢复阶段机制。冷却期包含随机扰动避免机械式周期。
     """
 
     def __init__(
@@ -76,6 +76,7 @@ class RevolutionTracker:
         self._cooldown: dict[int, int] = {}
         self._events: list[RevolutionEvent] = []
         self._recovery: dict[int, RecoveryPhase] = {}
+        self._rng = __import__("random").Random()
 
     def update(
         self,
@@ -115,9 +116,10 @@ class RevolutionTracker:
                     protest_ratio, avg_satisfaction,
                 )
         else:
+            # 条件不满足时加速衰减（每 tick -2），避免无限逼近触发
             current = self._protest_duration.get(settlement_id, 0)
             self._protest_duration[settlement_id] = max(
-                0, current - 1,
+                0, current - 2,
             )
 
         return (
@@ -154,7 +156,12 @@ class RevolutionTracker:
         )
         self._events.append(event)
         self._protest_duration[settlement_id] = 0
-        self._cooldown[settlement_id] = self._params.cooldown_ticks
+        # 冷却期加入 ±30% 随机扰动，打破固定周期
+        base_cooldown = self._params.cooldown_ticks
+        jitter = self._rng.uniform(-0.3, 0.3)
+        self._cooldown[settlement_id] = max(
+            5, int(base_cooldown * (1.0 + jitter)),
+        )
         logger.warning(
             "革命爆发: 聚落 %d (tick %d) - %s",
             settlement_id, tick, cause,

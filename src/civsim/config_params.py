@@ -103,17 +103,17 @@ class TradeParamsConfig(BaseModel):
     refuse_prob_base: float = Field(default=0.15, ge=0.0, le=1.0)
     refuse_prob_trust_factor: float = Field(default=0.2, ge=0.0)
     trust_boost_per_trade: float = Field(default=0.03, ge=0.0)
-    surplus_trade_ratio: float = Field(default=0.3, ge=0.0, le=1.0)
+    surplus_trade_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
     # 扩展贸易参数
     base_price_food: float = Field(default=1.0, ge=0.0)
     base_price_wood: float = Field(default=1.5, ge=0.0)
     base_price_ore: float = Field(default=3.0, ge=0.0)
-    min_surplus_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
+    min_surplus_ratio: float = Field(default=0.3, ge=0.0, le=1.0)
     distance_cost_factor: float = Field(default=0.05, ge=0.0)
     min_trade_amount: float = Field(default=0.5, ge=0.0)
-    food_surplus_threshold: float = Field(default=3.0, ge=0.0)
+    food_surplus_threshold: float = Field(default=2.5, ge=0.0)
     other_surplus_threshold: float = Field(default=1.5, ge=0.0)
-    food_deficit_threshold: float = Field(default=3.0, ge=0.0)
+    food_deficit_threshold: float = Field(default=3.5, ge=0.0)
     other_deficit_threshold: float = Field(default=1.0, ge=0.0)
     max_trades_per_settlement_per_tick: int = Field(
         default=3, gt=0,
@@ -172,10 +172,16 @@ class SatisfactionCoefficientsConfig(BaseModel):
         scarcity_low_recovery: 低稀缺（<0.2）满意度恢复。
         tax_penalty_threshold: 税率惩罚阈值。
         tax_penalty_factor: 税率惩罚系数。
+        low_tax_recovery_threshold: 低税率恢复阈值（低于此值触发恢复）。
+        low_tax_recovery: 低税率满意度恢复量。
         hunger_penalty_threshold: 饥饿惩罚阈值。
         hunger_penalty: 饥饿满意度惩罚。
+        low_hunger_recovery_threshold: 低饥饿恢复阈值（低于此值触发恢复）。
+        low_hunger_recovery: 低饥饿满意度恢复量。
         oppression_threshold: 警察国家效应阈值。
         oppression_factor: 警察国家效应系数。
+        security_comfort_threshold: 治安舒适区阈值（高于此值触发恢复）。
+        security_comfort_recovery: 治安舒适区满意度恢复量。
     """
 
     scarcity_high_penalty: float = Field(default=0.10, ge=0.0)
@@ -183,10 +189,16 @@ class SatisfactionCoefficientsConfig(BaseModel):
     scarcity_low_recovery: float = Field(default=0.01, ge=0.0)
     tax_penalty_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
     tax_penalty_factor: float = Field(default=0.15, ge=0.0)
+    low_tax_recovery_threshold: float = Field(default=0.15, ge=0.0, le=1.0)
+    low_tax_recovery: float = Field(default=0.008, ge=0.0)
     hunger_penalty_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
     hunger_penalty: float = Field(default=0.08, ge=0.0)
+    low_hunger_recovery_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
+    low_hunger_recovery: float = Field(default=0.006, ge=0.0)
     oppression_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
     oppression_factor: float = Field(default=0.03, ge=0.0)
+    security_comfort_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
+    security_comfort_recovery: float = Field(default=0.005, ge=0.0)
 
 
 class AdaptiveControllerConfig(BaseModel):

@@ -275,22 +275,50 @@ class DiplomacyManager:
                     )
 
     def auto_upgrade_relations(self, tick: int) -> None:
-        """当信任度足够高时自动升级外交关系为 FRIENDLY。
+        """当信任度足够高时自动升级外交关系。
+
+        NEUTRAL→FRIENDLY: 信任度 >= upgrade_trust_threshold
+        FRIENDLY→ALLIED: 信任度 >= allied_trust_threshold
 
         Args:
             tick: 当前 tick。
         """
-        threshold = self._params.upgrade_trust_threshold
+        friendly_threshold = self._params.upgrade_trust_threshold
+        allied_threshold = getattr(
+            self._params, "allied_trust_threshold", 0.75,
+        )
         for key, trust in list(self._trust.items()):
-            if trust >= threshold:
-                current = self._relations.get(key, DiplomaticStatus.NEUTRAL)
-                if current == DiplomaticStatus.NEUTRAL:
-                    a, b = key
-                    self.set_relation(a, b, DiplomaticStatus.FRIENDLY, tick)
-                    logger.info(
-                        "信任度达标(%.2f≥%.2f)，阵营%d↔阵营%d 自动升级为友好",
-                        trust, threshold, a, b,
-                    )
+            current = self._relations.get(key, DiplomaticStatus.NEUTRAL)
+            a, b = key
+            if (
+                trust >= allied_threshold
+                and current == DiplomaticStatus.FRIENDLY
+            ):
+                self.set_relation(a, b, DiplomaticStatus.ALLIED, tick)
+                logger.info(
+                    "信任度达标(%.2f≥%.2f)，阵营%d↔阵营%d 自动升级为联盟",
+                    trust, allied_threshold, a, b,
+                )
+            elif (
+                trust >= friendly_threshold
+                and current == DiplomaticStatus.NEUTRAL
+            ):
+                self.set_relation(a, b, DiplomaticStatus.FRIENDLY, tick)
+                logger.info(
+                    "信任度达标(%.2f≥%.2f)，阵营%d↔阵营%d 自动升级为友好",
+                    trust, friendly_threshold, a, b,
+                )
+
+    def get_all_factions(self) -> set[int]:
+        """返回所有已知阵营 ID 集合。"""
+        factions: set[int] = set()
+        for a, b in self._relations:
+            factions.add(a)
+            factions.add(b)
+        for a, b in self._trust:
+            factions.add(a)
+            factions.add(b)
+        return factions
 
     @property
     def event_log(self) -> list[dict]:

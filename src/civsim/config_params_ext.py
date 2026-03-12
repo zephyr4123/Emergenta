@@ -142,13 +142,17 @@ class DiplomacyParamsConfig(BaseModel):
     """外交系统参数。"""
 
     initial_trust: float = Field(default=0.5, ge=0.0, le=1.0)
-    trust_decay_per_tick: float = Field(default=0.001, ge=0.0)
+    trust_decay_per_tick: float = Field(default=0.0003, ge=0.0)
     treaty_trust_boost: float = Field(default=0.1, ge=0.0)
     break_treaty_penalty: float = Field(default=-0.3)
     downgrade_trust_threshold: float = Field(default=0.2, ge=0.0, le=1.0)
     upgrade_trust_threshold: float = Field(
-        default=0.6, ge=0.0, le=1.0,
-        description="信任度达此值时自动升级为 FRIENDLY",
+        default=0.5, ge=0.0, le=1.0,
+        description="信任度达此值时自动升级 NEUTRAL→FRIENDLY",
+    )
+    allied_trust_threshold: float = Field(
+        default=0.75, ge=0.0, le=1.0,
+        description="信任度达此值时自动升级 FRIENDLY→ALLIED",
     )
     randomize_trust: bool = True
     trust_random_min: float = Field(default=0.2, ge=0.0, le=1.0)

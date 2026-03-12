@@ -331,10 +331,14 @@ def _find_sellers(
     )
     results = []
     for s in settlements:
+        if s.population <= 0:
+            continue
         stock = s.stockpile.get(resource, 0.0)
-        per_cap = stock / max(1, s.population)
+        per_cap = stock / s.population
         if per_cap > threshold:
-            surplus = stock - threshold * s.population * params.min_surplus_ratio
+            # 保留量 = 阈值 × 人口 × 保留比例
+            reserve = threshold * s.population * params.min_surplus_ratio
+            surplus = stock - reserve
             if surplus > 1.0:
                 results.append((s, surplus))
     return results

@@ -275,11 +275,14 @@ class TestNaturalGrowth:
         s.natural_growth(rate=0.5)
         assert s.population <= s.capacity
 
-    def test_growth_at_least_one(self) -> None:
-        """验证增长量至少为 1（向下取整后仍保证最低 1）。"""
+    def test_growth_probabilistic_small_pop(self) -> None:
+        """验证小人口低增长率时使用概率增长，不再无条件 max(1,...)。"""
         s = Settlement(id=1, name="村", position=(0, 0), population=10, capacity=200)
         s.stockpile["food"] = 5000.0
-        growth = s.natural_growth(rate=0.001)
+        # rate=0.001 → expected=0.01 → 大部分情况 growth=0（概率增长）
+        # 用高增长率验证确定性增长
+        growth = s.natural_growth(rate=0.1)
+        # 10 * 0.1 = 1.0 → growth=1
         assert growth >= 1
 
     def test_growth_with_moderate_scarcity(self) -> None:

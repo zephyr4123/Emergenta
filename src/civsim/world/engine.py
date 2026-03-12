@@ -567,11 +567,20 @@ class CivilizationEngine(mesa.Model):
         )
 
     def _settlement_reconcile(self) -> None:
-        """聚落结算：饥荒减员、人口增长。"""
+        """聚落结算：食物消耗、饥荒减员、人口增长。"""
         from civsim.world.clock import Season
         ep = self.config.engine_params
         sp = self.config.season_params
+        # 每人每 tick 基础食物消耗量
+        per_capita_food = (
+            self.config.resources.consumption.food_per_civilian_per_tick
+        )
+        # 冬季食物消耗倍率
+        per_capita_food *= self.clock.food_consumption_multiplier
         for s in self.settlements.values():
+            # 1. 系统性食物消耗（人口 × 人均消耗），不足则饿死
+            s.consume_food_for_population(per_capita_food)
+            # 2. 极端稀缺额外减员
             if s.scarcity_index > ep.starvation_scarcity_threshold and s.population > 0:
                 death_rate = (
                     (s.scarcity_index - ep.starvation_scarcity_threshold)
@@ -579,6 +588,7 @@ class CivilizationEngine(mesa.Model):
                 )
                 deaths = max(1, int(s.population * death_rate))
                 s.population = max(0, s.population - deaths)
+            # 3. 自然增长
             growth_rate = ep.natural_growth_rate
             if self.clock.current_season == Season.SPRING:
                 growth_rate *= sp.spring_growth_bonus

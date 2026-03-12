@@ -58,6 +58,7 @@ class AdaptiveCoefficients:
         revolution_cooldown_multiplier: 革命冷却期乘数。
         satisfaction_recovery_multiplier: 满意度恢复速率乘数。
         random_event_multiplier: 随机事件概率乘数。
+        satisfaction_penalty_multiplier: 满意度惩罚力度乘数（<1 减轻惩罚）。
     """
 
     markov_protest_multiplier: float = 1.0
@@ -65,6 +66,7 @@ class AdaptiveCoefficients:
     revolution_cooldown_multiplier: float = 1.0
     satisfaction_recovery_multiplier: float = 1.0
     random_event_multiplier: float = 1.0
+    satisfaction_penalty_multiplier: float = 1.0
 
 
 class AdaptiveParameterController:
@@ -172,6 +174,11 @@ class AdaptiveParameterController:
         lo = self.config.min_multiplier
         hi = self.config.max_multiplier
 
+        # 满意度危机检测：当满意度是主要热量来源时，
+        # 需要治本（减轻惩罚）而非治标（压制抗议）
+        satisfaction_cold = max(0.0, 1.0 - metrics.avg_satisfaction)
+        satisfaction_crisis = metrics.avg_satisfaction < 0.25
+
         if error > 0:
             # 过热 → 降低促抗议系数，加速恢复
             self.coefficients.markov_protest_multiplier = _clamp(
@@ -198,6 +205,20 @@ class AdaptiveParameterController:
                 - rate * error * 0.3,
                 lo, hi,
             )
+            # 满意度危机时额外响应：减轻惩罚力度（治本）
+            if satisfaction_crisis:
+                self.coefficients.satisfaction_penalty_multiplier = _clamp(
+                    self.coefficients.satisfaction_penalty_multiplier
+                    - rate * satisfaction_cold * 0.5,
+                    lo, hi,
+                )
+            else:
+                # 满意度健康时恢复惩罚力度
+                self.coefficients.satisfaction_penalty_multiplier = _clamp(
+                    self.coefficients.satisfaction_penalty_multiplier
+                    + rate * 0.1,
+                    lo, hi,
+                )
         elif error < 0:
             # 过冷 → 提高促抗议系数，增加事件
             abs_error = abs(error)
@@ -226,19 +247,26 @@ class AdaptiveParameterController:
                 + rate * abs_error * 0.4,
                 lo, hi,
             )
+            # 过冷时恢复惩罚力度
+            self.coefficients.satisfaction_penalty_multiplier = _clamp(
+                self.coefficients.satisfaction_penalty_multiplier
+                + rate * abs_error * 0.3,
+                lo, hi,
+            )
 
         if metrics.tick % 50 == 0:
             logger.info(
                 "自适应控制器 tick=%d: 温度=%.3f, 目标=%.3f, "
                 "protest_mult=%.2f, granovetter_mult=%.2f, "
                 "cooldown_mult=%.2f, recovery_mult=%.2f, "
-                "event_mult=%.2f",
+                "penalty_mult=%.2f, event_mult=%.2f",
                 metrics.tick, self.temperature,
                 self.config.target_temperature,
                 self.coefficients.markov_protest_multiplier,
                 self.coefficients.granovetter_burst_multiplier,
                 self.coefficients.revolution_cooldown_multiplier,
                 self.coefficients.satisfaction_recovery_multiplier,
+                self.coefficients.satisfaction_penalty_multiplier,
                 self.coefficients.random_event_multiplier,
             )
 

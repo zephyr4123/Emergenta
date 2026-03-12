@@ -112,7 +112,10 @@ class Settlement:
         return deaths
 
     def natural_growth(self, rate: float = 0.002) -> int:
-        """自然人口增长。
+        """自然人口增长（概率性）。
+
+        当 population * rate < 1 时，使用概率判定是否增长 1 人，
+        避免小人口聚落 max(1,...) 导致的无条件增长。
 
         Args:
             rate: 基础增长率。
@@ -122,6 +125,15 @@ class Settlement:
         """
         if self.population >= self.capacity or self.scarcity_index > 0.5:
             return 0
-        growth = max(1, int(self.population * rate))
+        expected = self.population * rate
+        # 整数部分确定增长，小数部分概率增长
+        growth = int(expected)
+        fractional = expected - growth
+        if fractional > 0:
+            import random
+            if random.random() < fractional:
+                growth += 1
+        if growth <= 0:
+            return 0
         self.population = min(self.capacity, self.population + growth)
         return growth

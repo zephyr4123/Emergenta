@@ -271,13 +271,18 @@ class Civilian(BaseAgent):
         if hasattr(self.model, "config"):
             sc = self.model.config.satisfaction_coefficients
 
-        # 获取自适应恢复乘数
+        # 获取自适应乘数
         recovery_mult = 1.0
+        penalty_mult = 1.0
         if hasattr(self.model, "adaptive_controller"):
             ctrl = self.model.adaptive_controller
             if ctrl is not None:
                 recovery_mult = (
                     ctrl.coefficients.satisfaction_recovery_multiplier
+                )
+                penalty_mult = getattr(
+                    ctrl.coefficients,
+                    "satisfaction_penalty_multiplier", 1.0,
                 )
 
         # 食物充足/匮乏效应
@@ -286,37 +291,74 @@ class Civilian(BaseAgent):
         scarcity_low_rec = sc.scarcity_low_recovery if sc else 0.01
 
         if settlement.scarcity_index > 0.5:
-            self.satisfaction = max(0.0, self.satisfaction - scarcity_high)
+            self.satisfaction = max(
+                0.0,
+                self.satisfaction - scarcity_high * penalty_mult,
+            )
         elif settlement.scarcity_index > 0.3:
-            self.satisfaction = max(0.0, self.satisfaction - scarcity_mid)
+            self.satisfaction = max(
+                0.0,
+                self.satisfaction - scarcity_mid * penalty_mult,
+            )
         elif settlement.scarcity_index < 0.2:
             self.satisfaction = min(
                 1.0,
                 self.satisfaction + scarcity_low_rec * recovery_mult,
             )
 
-        # 高税率降低满意度
+        # 高税率降低满意度 / 低税率恢复满意度
         tax_threshold = sc.tax_penalty_threshold if sc else 0.3
         tax_factor = sc.tax_penalty_factor if sc else 0.15
+        low_tax_threshold = sc.low_tax_recovery_threshold if sc else 0.15
+        low_tax_rec = sc.low_tax_recovery if sc else 0.008
         if settlement.tax_rate > tax_threshold:
-            penalty = tax_factor * settlement.tax_rate
+            penalty = tax_factor * settlement.tax_rate * penalty_mult
             self.satisfaction = max(0.0, self.satisfaction - penalty)
+        elif settlement.tax_rate < low_tax_threshold:
+            self.satisfaction = min(
+                1.0,
+                self.satisfaction + low_tax_rec * recovery_mult,
+            )
 
-        # 饥饿直接影响满意度
+        # 饥饿直接影响满意度 / 低饥饿恢复满意度
         hunger_threshold = sc.hunger_penalty_threshold if sc else 0.6
         hunger_pen = sc.hunger_penalty if sc else 0.08
+        low_hunger_threshold = (
+            sc.low_hunger_recovery_threshold if sc else 0.3
+        )
+        low_hunger_rec = sc.low_hunger_recovery if sc else 0.006
         if self.hunger > hunger_threshold:
-            self.satisfaction = max(0.0, self.satisfaction - hunger_pen)
+            self.satisfaction = max(
+                0.0,
+                self.satisfaction - hunger_pen * penalty_mult,
+            )
+        elif self.hunger < low_hunger_threshold:
+            self.satisfaction = min(
+                1.0,
+                self.satisfaction + low_hunger_rec * recovery_mult,
+            )
 
-        # 治安过高引发反感（警察国家效应）
+        # 治安过高引发反感（警察国家效应）/ 适度治安恢复满意度
         oppression_threshold = sc.oppression_threshold if sc else 0.8
         oppression_factor = sc.oppression_factor if sc else 0.03
+        security_comfort = (
+            sc.security_comfort_threshold if sc else 0.3
+        )
+        security_comfort_rec = (
+            sc.security_comfort_recovery if sc else 0.005
+        )
         if settlement.security_level > oppression_threshold:
             oppression = (
                 oppression_factor
                 * (settlement.security_level - oppression_threshold) / 0.2
+                * penalty_mult
             )
             self.satisfaction = max(0.0, self.satisfaction - oppression)
+        elif settlement.security_level > security_comfort:
+            self.satisfaction = min(
+                1.0,
+                self.satisfaction + security_comfort_rec * recovery_mult,
+            )
 
         # 革命后蜜月期恢复
         if hasattr(self.model, "revolution_tracker"):
