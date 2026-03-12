@@ -284,7 +284,7 @@ class DatabaseConfig(BaseModel):
     """数据存储配置。"""
 
     engine: str = "duckdb"
-    path: str = "data/simulations/civsim.duckdb"
+    path: str = "scripts/data/simulations/civsim.duckdb"
     snapshot_interval: int = Field(default=100, gt=0)
 
 

@@ -79,7 +79,7 @@ class InfoCocoonScenarioConfig:
     # 地图适宜度（大规模需降低）
     min_suitability_score: float = 0.2
     # 输出目录
-    output_dir: str = "data/scenarios/info_cocoon_5000"
+    output_dir: str = "scripts/data/scenarios/info_cocoon_5000"
 
 
 def run_info_cocoon_5000(

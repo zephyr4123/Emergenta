@@ -16,7 +16,7 @@ class Database:
         path: 数据库文件路径。
     """
 
-    def __init__(self, path: str = "data/simulations/civsim.duckdb") -> None:
+    def __init__(self, path: str = "scripts/data/simulations/civsim.duckdb") -> None:
         self.path = path
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         self._conn = duckdb.connect(path)

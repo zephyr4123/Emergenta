@@ -183,8 +183,8 @@ def main() -> None:
 
     if args.visualize:
         from civsim.visualization.map_renderer import render_agents_on_map
-        Path("data/exports").mkdir(parents=True, exist_ok=True)
-        output = "data/exports/final_map.png"
+        Path("scripts/data/exports").mkdir(parents=True, exist_ok=True)
+        output = "scripts/data/exports/final_map.png"
         render_agents_on_map(
             engine.tile_grid,
             list(engine.agents),

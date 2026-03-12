@@ -167,7 +167,7 @@ All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scal
 <details>
 <summary><b>Richest Settlement Evolution Curves</b></summary>
 <br/>
-<img src="data/scenarios/dutch_disease_5000/chart1_rich_settlement.png" width="800" alt="Rich Settlement Evolution" />
+<img src="scripts/data/scenarios/dutch_disease_5000/chart1_rich_settlement.png" width="800" alt="Rich Settlement Evolution" />
 
 - **Population**: 81 → 200 (~tick 130 hit capacity cap)
 - **Gold**: 50,000 → 495 (first trade round spent it), then slowly recovered to 3,232
@@ -177,7 +177,7 @@ All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scal
 <details>
 <summary><b>Emergent Event Timeline</b></summary>
 <br/>
-<img src="data/scenarios/dutch_disease_5000/chart4_events_timeline.png" width="800" alt="Emergent Event Timeline" />
+<img src="scripts/data/scenarios/dutch_disease_5000/chart4_events_timeline.png" width="800" alt="Emergent Event Timeline" />
 
 - **Revolution wave**: Ticks 370-390 triggered Granovetter cascade, 13 settlements revolted simultaneously
 - **Trade network**: Tick 400+ trade volume surged to 198 per interval
@@ -187,9 +187,9 @@ All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scal
 <details>
 <summary><b>Global Dynamics & Adaptive Controller</b></summary>
 <br/>
-<img src="data/scenarios/dutch_disease_5000/chart2_global_dynamics.png" width="800" alt="Global Dynamics" />
+<img src="scripts/data/scenarios/dutch_disease_5000/chart2_global_dynamics.png" width="800" alt="Global Dynamics" />
 <br/><br/>
-<img src="data/scenarios/dutch_disease_5000/chart3_adaptive_controller.png" width="800" alt="Adaptive Controller" />
+<img src="scripts/data/scenarios/dutch_disease_5000/chart3_adaptive_controller.png" width="800" alt="Adaptive Controller" />
 
 Adaptive P-Controller thermostat dynamic adjustment:
 - Tick 30: Temperature 0.23, protest multiplier 1.01 (slight amplification)
@@ -260,7 +260,7 @@ Adaptive P-Controller thermostat dynamic adjustment:
 <details>
 <summary><b>Information Gap Visualization — Real vs. Leader's Perception</b></summary>
 <br/>
-<img src="data/scenarios/info_cocoon_5000/chart1_info_gap.png" width="800" alt="Information Gap" />
+<img src="scripts/data/scenarios/info_cocoon_5000/chart1_info_gap.png" width="800" alt="Information Gap" />
 
 Pink shaded area = information gap. Top: Real protest rate 20-53%, leader sees 0%. Bottom: Real satisfaction 0-67%, leader sees 95%.
 </details>
@@ -268,7 +268,7 @@ Pink shaded area = information gap. Top: Real protest rate 20-53%, leader sees 0
 <details>
 <summary><b>Lying vs. Honest Settlement Outcomes</b></summary>
 <br/>
-<img src="data/scenarios/info_cocoon_5000/chart2_lying_vs_honest.png" width="800" alt="Outcome Comparison" />
+<img src="scripts/data/scenarios/info_cocoon_5000/chart2_lying_vs_honest.png" width="800" alt="Outcome Comparison" />
 
 - **Population**: Lying settlements initially plummeted to ~55 (famine deaths), recovered to 200 by ~tick 175
 - **Food**: Lying settlements started at 10, far behind honest ones, converged by ~tick 350
@@ -277,7 +277,7 @@ Pink shaded area = information gap. Top: Real protest rate 20-53%, leader sees 0
 <details>
 <summary><b>Revolution Timeline & Group Effects</b></summary>
 <br/>
-<img src="data/scenarios/info_cocoon_5000/chart4_group_effect.png" width="800" alt="Group Effects" />
+<img src="scripts/data/scenarios/info_cocoon_5000/chart4_group_effect.png" width="800" alt="Group Effects" />
 
 - **Red bars** (lying settlements): Tick 9 triggered 8 simultaneous revolutions, then recurring at ~38-tick cycles
 - **Blue bars** (honest settlements): Ticks 370-390 triggered Granovetter cascade, 50+ concentrated revolutions
@@ -314,7 +314,7 @@ Pink shaded area = information gap. Top: Real protest rate 20-53%, leader sees 0
 | Adaptive controller | Full regulation from amplification to strong suppression | Maintained system tension, allowed honest settlements to also erupt |
 | Total time | 127.7s | 92.0s |
 
-> **Full reports**: See `data/scenarios/dutch_disease_5000/report.md` and `data/scenarios/info_cocoon_5000/report.md`
+> **Full reports**: See `scripts/data/scenarios/dutch_disease_5000/report.md` and `scripts/data/scenarios/info_cocoon_5000/report.md`
 
 ---
 

@@ -167,7 +167,7 @@ python scripts/run_info_cocoon_5000.py
 <details>
 <summary><b>首富聚落演化曲线</b></summary>
 <br/>
-<img src="data/scenarios/dutch_disease_5000/chart1_rich_settlement.png" width="800" alt="首富聚落演化" />
+<img src="scripts/data/scenarios/dutch_disease_5000/chart1_rich_settlement.png" width="800" alt="首富聚落演化" />
 
 - **人口**：81 → 200（~tick 130 达到容量上限）
 - **金币**：50,000 → 495（首轮贸易花光），之后缓慢回升至 3,232
@@ -177,7 +177,7 @@ python scripts/run_info_cocoon_5000.py
 <details>
 <summary><b>涌现事件时间线</b></summary>
 <br/>
-<img src="data/scenarios/dutch_disease_5000/chart4_events_timeline.png" width="800" alt="涌现事件时间线" />
+<img src="scripts/data/scenarios/dutch_disease_5000/chart4_events_timeline.png" width="800" alt="涌现事件时间线" />
 
 - **革命浪潮**：tick 370-390 爆发 Granovetter 级联，13 个聚落同步革命
 - **贸易网络**：tick 400+ 贸易量急速增长至 198 次
@@ -187,9 +187,9 @@ python scripts/run_info_cocoon_5000.py
 <details>
 <summary><b>全局动力学 & 自适应控制器</b></summary>
 <br/>
-<img src="data/scenarios/dutch_disease_5000/chart2_global_dynamics.png" width="800" alt="全局动力学" />
+<img src="scripts/data/scenarios/dutch_disease_5000/chart2_global_dynamics.png" width="800" alt="全局动力学" />
 <br/><br/>
-<img src="data/scenarios/dutch_disease_5000/chart3_adaptive_controller.png" width="800" alt="自适应控制器" />
+<img src="scripts/data/scenarios/dutch_disease_5000/chart3_adaptive_controller.png" width="800" alt="自适应控制器" />
 
 自适应 P-Controller 恒温器动态调节：
 - Tick 30: 温度 0.23, 抗议乘数 1.01（微幅放大）
@@ -260,7 +260,7 @@ python scripts/run_info_cocoon_5000.py
 <details>
 <summary><b>信息差距可视化 — 真实 vs 首领感知</b></summary>
 <br/>
-<img src="data/scenarios/info_cocoon_5000/chart1_info_gap.png" width="800" alt="信息差距" />
+<img src="scripts/data/scenarios/info_cocoon_5000/chart1_info_gap.png" width="800" alt="信息差距" />
 
 粉色填充区域 = 信息差距。上图：真实抗议率 20-53%，首领看到 0%。下图：真实满意度 0-67%，首领看到 95%。
 </details>
@@ -268,7 +268,7 @@ python scripts/run_info_cocoon_5000.py
 <details>
 <summary><b>谎报 vs 诚实聚落命运对比</b></summary>
 <br/>
-<img src="data/scenarios/info_cocoon_5000/chart2_lying_vs_honest.png" width="800" alt="命运对比" />
+<img src="scripts/data/scenarios/info_cocoon_5000/chart2_lying_vs_honest.png" width="800" alt="命运对比" />
 
 - **人口**：谎报聚落初期暴跌至 ~55（饥荒致死），~tick 175 恢复至 200
 - **食物**：谎报聚落从 10 起步，远落后于诚实聚落，~tick 350 后趋同
@@ -277,7 +277,7 @@ python scripts/run_info_cocoon_5000.py
 <details>
 <summary><b>革命时间线 & 群体效应</b></summary>
 <br/>
-<img src="data/scenarios/info_cocoon_5000/chart4_group_effect.png" width="800" alt="群体效应" />
+<img src="scripts/data/scenarios/info_cocoon_5000/chart4_group_effect.png" width="800" alt="群体效应" />
 
 - **红色柱**（谎报聚落）：tick 9 爆发 8 个聚落同步革命，此后以 ~38 tick 周期反复
 - **蓝色柱**（诚实聚落）：tick 370-390 爆发 Granovetter 级联，50+ 次集中革命
@@ -314,7 +314,7 @@ python scripts/run_info_cocoon_5000.py
 | 自适应控制器 | 从放大到强力抑制的完整调节 | 维持系统张力，允许诚实聚落也爆发 |
 | 总耗时 | 127.7s | 92.0s |
 
-> **完整报告**：详见 `data/scenarios/dutch_disease_5000/report.md` 和 `data/scenarios/info_cocoon_5000/report.md`
+> **完整报告**：详见 `scripts/data/scenarios/dutch_disease_5000/report.md` 和 `scripts/data/scenarios/info_cocoon_5000/report.md`
 
 ---
 

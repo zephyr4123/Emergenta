@@ -113,7 +113,7 @@ mqtt:
 # --- 数据存储 ---
 database:
   engine: "duckdb"
-  path: "data/simulations/civsim.duckdb"
+  path: "scripts/data/simulations/civsim.duckdb"
   snapshot_interval: 100                # 每 100 tick 存一次快照
 
 # --- 测试配置 ---
