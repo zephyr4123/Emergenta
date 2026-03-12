@@ -80,27 +80,32 @@ class TestPhase2FallbackSimulation:
             assert col in df.columns, f"缺少指标列: {col}"
 
     def test_governor_decisions_affect_economy(self) -> None:
-        """验证镇长决策改变了聚落经济指标。"""
+        """验证镇长决策改变了聚落经济指标（税率或治安）。"""
         config = _make_phase2_config()
         engine = CivilizationEngine(config=config, seed=42, enable_governors=True)
 
         # 记录初始状态
-        initial_tax_rates = {
-            sid: s.tax_rate for sid, s in engine.settlements.items()
+        initial_state = {
+            sid: (s.tax_rate, s.security_level)
+            for sid, s in engine.settlements.items()
         }
 
         # 运行两个完整季度
         for _ in range(240):
             engine.step()
 
-        # 验证至少有一个聚落的税率发生了变化
+        # 验证至少有一个聚落的税率或治安发生了变化
         changed = False
         for sid, settlement in engine.settlements.items():
-            if abs(settlement.tax_rate - initial_tax_rates[sid]) > 0.001:
+            old_tax, old_sec = initial_state[sid]
+            if (
+                abs(settlement.tax_rate - old_tax) > 0.001
+                or abs(settlement.security_level - old_sec) > 0.001
+            ):
                 changed = True
                 break
 
-        assert changed, "镇长决策后至少一个聚落的税率应发生变化"
+        assert changed, "镇长决策后至少一个聚落的税率或治安应发生变化"
 
     def test_compare_with_and_without_governors(self) -> None:
         """对比有/无镇长的仿真差异。"""

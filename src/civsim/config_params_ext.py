@@ -146,6 +146,10 @@ class DiplomacyParamsConfig(BaseModel):
     treaty_trust_boost: float = Field(default=0.1, ge=0.0)
     break_treaty_penalty: float = Field(default=-0.3)
     downgrade_trust_threshold: float = Field(default=0.2, ge=0.0, le=1.0)
+    upgrade_trust_threshold: float = Field(
+        default=0.6, ge=0.0, le=1.0,
+        description="信任度达此值时自动升级为 FRIENDLY",
+    )
     randomize_trust: bool = True
     trust_random_min: float = Field(default=0.2, ge=0.0, le=1.0)
     trust_random_max: float = Field(default=0.6, ge=0.0, le=1.0)
@@ -175,6 +179,10 @@ class GatewayParamsConfig(BaseModel):
     max_retries: int = Field(default=2, ge=0)
     timeout: int = Field(default=30, gt=0)
     retry_backoff_base: float = Field(default=1.0, ge=0.0)
+    max_concurrent_requests: int = Field(
+        default=10, gt=0,
+        description="最大并发 LLM 请求数，避免 API 过载",
+    )
 
 
 class MemoryParamsConfig(BaseModel):

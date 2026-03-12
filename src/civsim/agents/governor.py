@@ -131,17 +131,33 @@ class Governor(BaseAgent):
         self.decision_count: int = 0
         self._prev_perception: GovernorPerception | None = None
         self.system_prompt_override: str | None = None
+        # C1 修复：随机决策偏移，避免全局同步
+        rng = np.random.default_rng(settlement_id)
+        season_ticks = 120
+        if hasattr(model, "config"):
+            season_ticks = model.config.clock.ticks_per_season
+        self.decision_offset: int = int(rng.integers(0, max(1, season_ticks // 2)))
 
     def step(self) -> None:
-        """每 tick 执行。仅在季度开始时进行决策。"""
+        """每 tick 执行。在各自偏移后的决策 tick 进行决策。"""
         if not hasattr(self.model, "clock"):
-            return
-        if not self.model.clock.is_governor_decision_tick():
             return
         if self.model.clock.tick == 0:
             return
+        if not self._is_my_decision_tick():
+            return
 
         self._decision_cycle()
+
+    def _is_my_decision_tick(self) -> bool:
+        """判断当前 tick 是否为本镇长的决策 tick。
+
+        每个镇长有独立偏移量，避免同步决策引发级联革命。
+        """
+        season_ticks = 120
+        if hasattr(self.model, "config"):
+            season_ticks = self.model.config.clock.ticks_per_season
+        return (self.model.clock.tick - self.decision_offset) % season_ticks == 0
 
     def _decision_cycle(self) -> None:
         """完整的感知→决策→应用循环。"""

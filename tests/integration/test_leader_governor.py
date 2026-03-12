@@ -247,6 +247,7 @@ class TestFullChain:
 
         gov = Governor(model=model, settlement_id=0, gateway=None)
         model.grid.place_agent(gov, (5, 5))
+        gov.decision_offset = 0  # 固定偏移，确保在季度边界决策
 
         leader = Leader(
             model=model, faction_id=1,

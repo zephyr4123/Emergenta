@@ -118,11 +118,13 @@ class CivilizationEngine(mesa.Model):
             s.id: s for s in settlement_list
         }
         initial = self.config.resources.initial_stockpile
+        default_cap = self.config.settlement_params.default_capacity
         for s in self.settlements.values():
             s.stockpile = {
                 "food": initial.food, "wood": initial.wood,
                 "ore": initial.ore, "gold": initial.gold,
             }
+            s.capacity = default_cap
 
         # 创建平民
         self._spawn_civilians()
@@ -223,7 +225,10 @@ class CivilizationEngine(mesa.Model):
 
     def _init_llm_gateway(self) -> None:
         """初始化 LLM 网关并注册模型配置。"""
-        self.llm_gateway = LLMGateway(params=self.config.gateway_params)
+        self.llm_gateway = LLMGateway(
+            params=self.config.gateway_params,
+            max_concurrent_requests=self.config.gateway_params.max_concurrent_requests,
+        )
         for role in self.config.llm.models:
             try:
                 cfg = self.config.llm.get_model_config(role)
@@ -393,13 +398,16 @@ class CivilizationEngine(mesa.Model):
         """判断是否应使用异步并行 LLM 决策。"""
         if self.llm_gateway is None:
             return False
-        is_gov_tick = self.clock.is_governor_decision_tick() and self.clock.tick > 0
+        if self.clock.tick == 0:
+            return False
+        # C1: 检查是否有任何镇长在本 tick 需要决策
+        governors = self.get_governors()
+        has_gov_decision = any(g._is_my_decision_tick() for g in governors)
         is_leader_tick = (
             self.clock.is_leader_decision_tick()
-            and self.clock.tick > 0
             and self.leaders
         )
-        return is_gov_tick or is_leader_tick
+        return has_gov_decision or is_leader_tick
 
     def _async_llm_decisions(self) -> None:
         """使用 asyncio 批量并行执行 LLM 决策。"""
@@ -419,16 +427,17 @@ class CivilizationEngine(mesa.Model):
             asyncio.run(self._batch_decisions())
 
     async def _batch_decisions(self) -> None:
-        """批量执行镇长和首领的异步决策。"""
+        """批量执行镇长和首领的异步决策。
+
+        C1 修复：仅调度本 tick 需要决策的镇长，避免全局同步。
+        """
         tasks = []
 
-        if (
-            self.clock.is_governor_decision_tick()
-            and self.clock.tick > 0
-        ):
+        if self.clock.tick > 0:
             governors = self.get_governors()
             for gov in governors:
-                tasks.append(gov.decision_cycle_async())
+                if gov._is_my_decision_tick():
+                    tasks.append(gov.decision_cycle_async())
 
         if (
             self.clock.is_leader_decision_tick()
@@ -519,6 +528,7 @@ class CivilizationEngine(mesa.Model):
             self.diplomacy.expire_treaties(self.clock.tick)
             self.diplomacy.decay_trust()
             self.diplomacy.auto_downgrade_relations(self.clock.tick)
+            self.diplomacy.auto_upgrade_relations(self.clock.tick)
 
     def _trade_update(self) -> None:
         """处理聚落间贸易。"""

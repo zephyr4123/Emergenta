@@ -87,6 +87,7 @@ class LLMGateway:
         max_retries: int = 2,
         timeout: int = 30,
         params: GatewayParamsConfig | None = None,
+        max_concurrent_requests: int = 10,
     ) -> None:
         if params is not None:
             max_retries = params.max_retries
@@ -98,6 +99,8 @@ class LLMGateway:
         self._model_configs: dict[str, LLMModelConfig] = {}
         self.cost_tracker: CostTracker | None = None
         self.prompt_cache: PromptCacheManager | None = None
+        # C5 修复：限制并发 LLM 请求数，避免 API 过载
+        self._semaphore = asyncio.Semaphore(max_concurrent_requests)
 
     def enable_cost_tracking(self) -> None:
         """启用成本追踪。"""
@@ -323,62 +326,64 @@ class LLMGateway:
         temp = temperature if temperature is not None else config.temperature
         tokens = max_tokens if max_tokens is not None else config.max_tokens
 
-        last_error: Exception | None = None
-        for attempt in range(self._max_retries + 1):
-            try:
-                start = time.monotonic()
-                response = await litellm.acompletion(
-                    model=model_name,
-                    messages=messages,
-                    temperature=temp,
-                    max_tokens=tokens,
-                    api_key=config.api_key,
-                    api_base=config.base_url,
-                    timeout=self._timeout,
-                )
-                elapsed_ms = (time.monotonic() - start) * 1000
-
-                content = response.choices[0].message.content or ""
-                usage = response.usage
-                prompt_tokens = usage.prompt_tokens if usage else 0
-                completion_tokens = (
-                    usage.completion_tokens if usage else 0
-                )
-
-                self.stats.total_calls += 1
-                self.stats.total_prompt_tokens += prompt_tokens
-                self.stats.total_completion_tokens += completion_tokens
-                self.stats.total_latency_ms += elapsed_ms
-
-                if self.cost_tracker is not None:
-                    self.cost_tracker.record_call(
+        # C5 修复：使用 semaphore 限制并发请求数
+        async with self._semaphore:
+            last_error: Exception | None = None
+            for attempt in range(self._max_retries + 1):
+                try:
+                    start = time.monotonic()
+                    response = await litellm.acompletion(
                         model=model_name,
-                        prompt_tokens=prompt_tokens,
-                        completion_tokens=completion_tokens,
+                        messages=messages,
+                        temperature=temp,
+                        max_tokens=tokens,
+                        api_key=config.api_key,
+                        api_base=config.base_url,
+                        timeout=self._timeout,
+                    )
+                    elapsed_ms = (time.monotonic() - start) * 1000
+
+                    content = response.choices[0].message.content or ""
+                    usage = response.usage
+                    prompt_tokens = usage.prompt_tokens if usage else 0
+                    completion_tokens = (
+                        usage.completion_tokens if usage else 0
                     )
 
-                return LLMResponse(
-                    content=content,
-                    prompt_tokens=prompt_tokens,
-                    completion_tokens=completion_tokens,
-                    latency_ms=elapsed_ms,
-                    model=model_name,
-                )
+                    self.stats.total_calls += 1
+                    self.stats.total_prompt_tokens += prompt_tokens
+                    self.stats.total_completion_tokens += completion_tokens
+                    self.stats.total_latency_ms += elapsed_ms
 
-            except Exception as e:
-                last_error = e
-                self.stats.errors += 1
-                logger.warning(
-                    "LLM 异步调用失败 (attempt %d/%d): %s",
-                    attempt + 1,
-                    self._max_retries + 1,
-                    e,
-                )
-                if attempt < self._max_retries:
-                    await asyncio.sleep(self._retry_backoff_base * (attempt + 1))
+                    if self.cost_tracker is not None:
+                        self.cost_tracker.record_call(
+                            model=model_name,
+                            prompt_tokens=prompt_tokens,
+                            completion_tokens=completion_tokens,
+                        )
 
-        msg = f"LLM 异步调用失败，已重试 {self._max_retries} 次: {last_error}"
-        raise RuntimeError(msg)
+                    return LLMResponse(
+                        content=content,
+                        prompt_tokens=prompt_tokens,
+                        completion_tokens=completion_tokens,
+                        latency_ms=elapsed_ms,
+                        model=model_name,
+                    )
+
+                except Exception as e:
+                    last_error = e
+                    self.stats.errors += 1
+                    logger.warning(
+                        "LLM 异步调用失败 (attempt %d/%d): %s",
+                        attempt + 1,
+                        self._max_retries + 1,
+                        e,
+                    )
+                    if attempt < self._max_retries:
+                        await asyncio.sleep(self._retry_backoff_base * (attempt + 1))
+
+            msg = f"LLM 异步调用失败，已重试 {self._max_retries} 次: {last_error}"
+            raise RuntimeError(msg)
 
     async def acall_json(
         self,

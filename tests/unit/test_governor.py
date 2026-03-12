@@ -301,6 +301,8 @@ class TestGovernorStep:
         _create_civilians_for_settlement(model, count=5)
         gov = Governor(model=model, settlement_id=0, gateway=None)
         model.grid.place_agent(gov, (10, 10))
+        # 将偏移置零，确保决策恰好在 tick=120 触发
+        gov.decision_offset = 0
 
         # 推进到第一个季度边界 (ticks_per_season = 4 * 30 = 120)
         for _ in range(120):
@@ -326,6 +328,7 @@ class TestGovernorStep:
         _create_civilians_for_settlement(model, count=5)
         gov = Governor(model=model, settlement_id=0, gateway=None)
         model.grid.place_agent(gov, (10, 10))
+        gov.decision_offset = 0
 
         for _ in range(120):
             model.clock.advance()

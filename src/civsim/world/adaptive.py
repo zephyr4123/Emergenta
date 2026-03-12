@@ -113,6 +113,7 @@ class AdaptiveParameterController:
         """计算系统温度。
 
         温度 ∈ [0, 1]，综合抗议率、满意度、革命、战争等指标。
+        权重和缩放因子从 config (Layer 2) 读取。
 
         Args:
             metrics: 系统状态快照。
@@ -120,13 +121,14 @@ class AdaptiveParameterController:
         Returns:
             系统温度值。
         """
-        # 加权指标（权重可调节）
-        protest_heat = min(1.0, metrics.global_protest_ratio * 2.0)
+        cfg = self.config
+        # 缩放因子 (Layer 2)
+        protest_heat = min(1.0, metrics.global_protest_ratio * cfg.protest_scale)
         satisfaction_cold = max(0.0, 1.0 - metrics.avg_satisfaction)
         revolution_heat = min(
-            1.0, metrics.revolutions_recent * 0.1,
+            1.0, metrics.revolutions_recent * cfg.revolution_scale,
         )
-        war_heat = min(1.0, metrics.active_wars * 0.25)
+        war_heat = min(1.0, metrics.active_wars * cfg.war_scale)
         collapse_heat = 0.0
         if metrics.total_settlements > 0:
             collapse_heat = min(
@@ -134,12 +136,13 @@ class AdaptiveParameterController:
                 metrics.collapsed_settlements / metrics.total_settlements,
             )
 
+        # 权重 (Layer 2)
         temperature = (
-            0.30 * protest_heat
-            + 0.20 * satisfaction_cold
-            + 0.25 * revolution_heat
-            + 0.15 * war_heat
-            + 0.10 * collapse_heat
+            cfg.protest_weight * protest_heat
+            + cfg.satisfaction_weight * satisfaction_cold
+            + cfg.revolution_weight * revolution_heat
+            + cfg.war_weight * war_heat
+            + cfg.collapse_weight * collapse_heat
         )
 
         return max(0.0, min(1.0, temperature))

@@ -274,6 +274,24 @@ class DiplomacyManager:
                         trust, a, b,
                     )
 
+    def auto_upgrade_relations(self, tick: int) -> None:
+        """当信任度足够高时自动升级外交关系为 FRIENDLY。
+
+        Args:
+            tick: 当前 tick。
+        """
+        threshold = self._params.upgrade_trust_threshold
+        for key, trust in list(self._trust.items()):
+            if trust >= threshold:
+                current = self._relations.get(key, DiplomaticStatus.NEUTRAL)
+                if current == DiplomaticStatus.NEUTRAL:
+                    a, b = key
+                    self.set_relation(a, b, DiplomaticStatus.FRIENDLY, tick)
+                    logger.info(
+                        "信任度达标(%.2f≥%.2f)，阵营%d↔阵营%d 自动升级为友好",
+                        trust, threshold, a, b,
+                    )
+
     @property
     def event_log(self) -> list[dict]:
         """返回外交事件日志。"""

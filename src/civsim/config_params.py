@@ -99,10 +99,10 @@ class TradeParamsConfig(BaseModel):
         surplus_trade_ratio: 盈余交易比例。
     """
 
-    trust_threshold: float = Field(default=0.4, ge=0.0, le=1.0)
-    refuse_prob_base: float = Field(default=0.3, ge=0.0, le=1.0)
+    trust_threshold: float = Field(default=0.15, ge=0.0, le=1.0)
+    refuse_prob_base: float = Field(default=0.15, ge=0.0, le=1.0)
     refuse_prob_trust_factor: float = Field(default=0.2, ge=0.0)
-    trust_boost_per_trade: float = Field(default=0.01, ge=0.0)
+    trust_boost_per_trade: float = Field(default=0.03, ge=0.0)
     surplus_trade_ratio: float = Field(default=0.3, ge=0.0, le=1.0)
     # 扩展贸易参数
     base_price_food: float = Field(default=1.0, ge=0.0)
@@ -111,8 +111,8 @@ class TradeParamsConfig(BaseModel):
     min_surplus_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
     distance_cost_factor: float = Field(default=0.05, ge=0.0)
     min_trade_amount: float = Field(default=0.5, ge=0.0)
-    food_surplus_threshold: float = Field(default=5.0, ge=0.0)
-    other_surplus_threshold: float = Field(default=2.0, ge=0.0)
+    food_surplus_threshold: float = Field(default=3.0, ge=0.0)
+    other_surplus_threshold: float = Field(default=1.5, ge=0.0)
     food_deficit_threshold: float = Field(default=3.0, ge=0.0)
     other_deficit_threshold: float = Field(default=1.0, ge=0.0)
     max_trades_per_settlement_per_tick: int = Field(
@@ -209,3 +209,13 @@ class AdaptiveControllerConfig(BaseModel):
     min_multiplier: float = Field(default=0.5, ge=0.0)
     max_multiplier: float = Field(default=2.0, ge=1.0)
     lookback_ticks: int = Field(default=200, gt=0)
+    # --- 温度计算权重 (Layer 2) ---
+    protest_weight: float = Field(default=0.30, ge=0.0, le=1.0)
+    satisfaction_weight: float = Field(default=0.20, ge=0.0, le=1.0)
+    revolution_weight: float = Field(default=0.25, ge=0.0, le=1.0)
+    war_weight: float = Field(default=0.15, ge=0.0, le=1.0)
+    collapse_weight: float = Field(default=0.10, ge=0.0, le=1.0)
+    # --- 温度计算缩放因子 (Layer 2) ---
+    protest_scale: float = Field(default=2.0, gt=0.0)
+    revolution_scale: float = Field(default=0.1, gt=0.0)
+    war_scale: float = Field(default=0.25, gt=0.0)
