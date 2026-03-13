@@ -165,7 +165,7 @@ trade_params:
   trust_threshold: 0.4                  # 贸易信任阈值
   refuse_prob_base: 0.3                 # 基础拒绝概率
   refuse_prob_trust_factor: 0.2         # 信任对拒绝概率的影响
-  trust_boost_per_trade: 0.01           # 每次贸易信任增加
+  trust_boost_per_trade: 0.05           # 每次贸易信任增加
   surplus_trade_ratio: 0.3              # 盈余可贸易比例
   base_price_food: 1.0                  # 食物基础价格（金币/单位）
   base_price_wood: 1.5                  # 木材基础价格
@@ -238,12 +238,12 @@ season_params:
   farm_spring: 1.0                      # 春季农田产出倍率
   farm_summer: 1.5                      # 夏季农田产出倍率
   farm_autumn: 1.2                      # 秋季农田产出倍率
-  farm_winter: 0.3                      # 冬季农田产出倍率
+  farm_winter: 0.45                     # 冬季农田产出倍率
   forest_spring: 1.0                    # 春季森林产出倍率
   forest_summer: 1.2                    # 夏季森林产出倍率
   forest_autumn: 0.8                    # 秋季森林产出倍率
   forest_winter: 0.5                    # 冬季森林产出倍率
-  food_consumption_winter: 1.5          # 冬季食物消耗倍率
+  food_consumption_winter: 1.3          # 冬季食物消耗倍率
   spring_growth_bonus: 1.5              # 春季人口增长加成
   autumn_trade_bonus: 1.3               # 秋季贸易收益加成
 
@@ -279,7 +279,7 @@ engine_params:
   profession_woodcutter_ratio: 0.2      # 伐木工比例
   profession_miner_ratio: 0.2           # 矿工比例
   profession_merchant_ratio: 0.2        # 商人比例
-  natural_growth_rate: 0.002            # 自然人口增长率
+  natural_growth_rate: 0.004            # 自然人口增长率
   starvation_scarcity_threshold: 0.7    # 饥荒触发稀缺阈值
   starvation_rate_factor: 0.1           # 饥荒死亡率系数
   neighbor_radius: 3                    # 邻居搜索半径
@@ -312,7 +312,7 @@ governor_fallback:
 # --- 首领回退决策参数 ---
 leader_fallback:
   war_strength_ratio: 1.3               # 宣战实力比阈值
-  war_probability: 0.3                  # 宣战概率
+  war_probability: 0.5                  # 宣战概率
   betrayal_trust_threshold: 0.3         # 背叛信任阈值
   betrayal_probability: 0.2             # 背叛概率
   scapegoat_satisfaction_threshold: 0.4 # 转嫁矛盾满意度阈值
@@ -335,14 +335,14 @@ governance_params:
 
 # --- 外交系统参数 ---
 diplomacy_params:
-  initial_trust: 0.5                    # 初始信任度
-  trust_decay_per_tick: 0.001           # 每tick信任衰减
+  initial_trust: 0.55                   # 初始信任度
+  trust_decay_per_tick: 0.00015         # 每tick信任衰减
   treaty_trust_boost: 0.1               # 签约信任加成
   break_treaty_penalty: -0.3            # 违约信任惩罚
   downgrade_trust_threshold: 0.2        # 自动降级信任阈值
   randomize_trust: true                 # 是否随机化初始信任
-  trust_random_min: 0.2                 # 随机信任下限
-  trust_random_max: 0.6                 # 随机信任上限
+  trust_random_min: 0.3                 # 随机信任下限
+  trust_random_max: 0.7                 # 随机信任上限
 
 # --- 聚落参数 ---
 settlement_params:

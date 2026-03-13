@@ -102,7 +102,7 @@ class TradeParamsConfig(BaseModel):
     trust_threshold: float = Field(default=0.15, ge=0.0, le=1.0)
     refuse_prob_base: float = Field(default=0.15, ge=0.0, le=1.0)
     refuse_prob_trust_factor: float = Field(default=0.2, ge=0.0)
-    trust_boost_per_trade: float = Field(default=0.03, ge=0.0)
+    trust_boost_per_trade: float = Field(default=0.05, ge=0.0)
     surplus_trade_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
     # 扩展贸易参数
     base_price_food: float = Field(default=1.0, ge=0.0)
@@ -116,7 +116,7 @@ class TradeParamsConfig(BaseModel):
     food_deficit_threshold: float = Field(default=3.5, ge=0.0)
     other_deficit_threshold: float = Field(default=1.0, ge=0.0)
     max_trades_per_settlement_per_tick: int = Field(
-        default=3, gt=0,
+        default=5, gt=0,
         description="每聚落每 tick 最大参与贸易次数",
     )
 

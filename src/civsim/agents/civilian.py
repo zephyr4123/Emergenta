@@ -227,7 +227,7 @@ class Civilian(BaseAgent):
             hunger_rate = self.model.config.agents.civilian.hunger_decay_per_tick
         self.hunger = min(1.0, self.hunger + hunger_rate)
 
-        # 劳作或休息时消耗食物降低饥饿
+        # 劳作或休息时检查食物充足度降低饥饿（不再重复扣除，由 settlement_reconcile 统一消耗）
         if self.state in (CivilianState.WORKING, CivilianState.RESTING) and hasattr(
             self.model, "settlements"
         ):
@@ -241,14 +241,14 @@ class Civilian(BaseAgent):
                         )
                     if hasattr(self.model, "clock"):
                         food_needed *= self.model.clock.food_consumption_multiplier
-                    eaten = settlement.withdraw_food(food_needed)
+                    available = settlement.per_capita_food
                     food_sat_ratio = 0.8
                     food_recovery = 0.06
                     if hasattr(self.model, "config"):
                         cb = self.model.config.civilian_behavior
                         food_sat_ratio = cb.food_satisfaction_ratio
                         food_recovery = cb.food_satiation_recovery
-                    if eaten >= food_needed * food_sat_ratio:
+                    if available >= food_needed * food_sat_ratio:
                         self.hunger = max(0.0, self.hunger - food_recovery)
 
         # 满意度更新

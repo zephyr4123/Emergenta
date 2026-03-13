@@ -298,8 +298,10 @@ class TestClockDecisionTicks:
             )
 
     def test_leader_is_alias_for_new_year(self) -> None:
-        """is_leader_decision_tick 应等价于 is_new_year。"""
+        """is_leader_decision_tick 应在每半年触发。"""
         clock = Clock(ticks_per_day=4, days_per_season=30, seasons_per_year=4)
+        half_year = clock.ticks_per_year // 2  # 240
         for t in range(1000):
             clock.tick = t
-            assert clock.is_leader_decision_tick() == clock.is_new_year()
+            expected = (half_year > 0 and t % half_year == 0)
+            assert clock.is_leader_decision_tick() == expected

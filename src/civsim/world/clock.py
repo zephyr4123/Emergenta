@@ -159,5 +159,6 @@ class Clock:
         return self.is_new_season()
 
     def is_leader_decision_tick(self) -> bool:
-        """当前 tick 是否是首领决策时刻（每年开始）。"""
-        return self.is_new_year()
+        """当前 tick 是否是首领决策时刻（每半年开始）。"""
+        half_year = self.ticks_per_year // 2
+        return half_year > 0 and self.tick % half_year == 0

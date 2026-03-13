@@ -28,12 +28,12 @@ class SeasonParamsConfig(BaseModel):
     farm_spring: float = Field(default=1.0, ge=0.0)
     farm_summer: float = Field(default=1.5, ge=0.0)
     farm_autumn: float = Field(default=1.2, ge=0.0)
-    farm_winter: float = Field(default=0.3, ge=0.0)
+    farm_winter: float = Field(default=0.45, ge=0.0)
     forest_spring: float = Field(default=1.0, ge=0.0)
     forest_summer: float = Field(default=1.2, ge=0.0)
     forest_autumn: float = Field(default=0.8, ge=0.0)
     forest_winter: float = Field(default=0.5, ge=0.0)
-    food_consumption_winter: float = Field(default=1.5, ge=0.0)
+    food_consumption_winter: float = Field(default=1.3, ge=0.0)
     spring_growth_bonus: float = Field(default=1.5, ge=0.0)
     autumn_trade_bonus: float = Field(default=1.3, ge=0.0)
 
@@ -75,7 +75,7 @@ class EngineParamsConfig(BaseModel):
     profession_woodcutter_ratio: float = Field(default=0.2, ge=0.0, le=1.0)
     profession_miner_ratio: float = Field(default=0.2, ge=0.0, le=1.0)
     profession_merchant_ratio: float = Field(default=0.2, ge=0.0, le=1.0)
-    natural_growth_rate: float = Field(default=0.002, ge=0.0)
+    natural_growth_rate: float = Field(default=0.004, ge=0.0)
     starvation_scarcity_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     starvation_rate_factor: float = Field(default=0.1, ge=0.0)
     neighbor_radius: int = Field(default=3, gt=0)
@@ -114,7 +114,7 @@ class LeaderFallbackConfig(BaseModel):
     """首领回退决策阈值参数。"""
 
     war_strength_ratio: float = Field(default=1.3, ge=0.0)
-    war_probability: float = Field(default=0.3, ge=0.0, le=1.0)
+    war_probability: float = Field(default=0.5, ge=0.0, le=1.0)
     betrayal_trust_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
     betrayal_probability: float = Field(default=0.2, ge=0.0, le=1.0)
     scapegoat_satisfaction_threshold: float = Field(default=0.4, ge=0.0, le=1.0)
@@ -141,8 +141,8 @@ class GovernanceParamsConfig(BaseModel):
 class DiplomacyParamsConfig(BaseModel):
     """外交系统参数。"""
 
-    initial_trust: float = Field(default=0.5, ge=0.0, le=1.0)
-    trust_decay_per_tick: float = Field(default=0.0003, ge=0.0)
+    initial_trust: float = Field(default=0.55, ge=0.0, le=1.0)
+    trust_decay_per_tick: float = Field(default=0.00015, ge=0.0)
     treaty_trust_boost: float = Field(default=0.1, ge=0.0)
     break_treaty_penalty: float = Field(default=-0.3)
     downgrade_trust_threshold: float = Field(default=0.2, ge=0.0, le=1.0)
@@ -155,8 +155,8 @@ class DiplomacyParamsConfig(BaseModel):
         description="信任度达此值时自动升级 FRIENDLY→ALLIED",
     )
     randomize_trust: bool = True
-    trust_random_min: float = Field(default=0.2, ge=0.0, le=1.0)
-    trust_random_max: float = Field(default=0.6, ge=0.0, le=1.0)
+    trust_random_min: float = Field(default=0.3, ge=0.0, le=1.0)
+    trust_random_max: float = Field(default=0.7, ge=0.0, le=1.0)
 
 
 class SettlementParamsConfig(BaseModel):

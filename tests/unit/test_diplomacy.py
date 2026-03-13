@@ -5,6 +5,7 @@
 
 import pytest
 
+from civsim.config_params_ext import DiplomacyParamsConfig
 from civsim.politics.diplomacy import (
     DiplomacyManager,
     DiplomaticStatus,
@@ -68,14 +69,15 @@ class TestDiplomacyManagerTrust:
     """测试信任度系统。"""
 
     def test_default_trust(self) -> None:
-        """验证默认信任度（随机化在 0.2-0.6 范围内）。"""
-        dm = DiplomacyManager(initial_trust=0.5)
+        """验证默认信任度（随机化在 0.3-0.7 范围内）。"""
+        dm = DiplomacyManager()
         trust = dm.get_trust(1, 2)
-        assert 0.2 <= trust <= 0.6
+        assert 0.3 <= trust <= 0.7
 
     def test_update_trust_positive(self) -> None:
         """验证信任度增加。"""
-        dm = DiplomacyManager(initial_trust=0.5)
+        params = DiplomacyParamsConfig(initial_trust=0.5, randomize_trust=False)
+        dm = DiplomacyManager(params=params)
         result = dm.update_trust(1, 2, 0.2)
         assert result == pytest.approx(0.7)
         assert dm.get_trust(1, 2) == pytest.approx(0.7)
@@ -138,7 +140,8 @@ class TestDiplomacyManagerTreaties:
 
     def test_sign_treaty_increases_trust(self) -> None:
         """验证签署条约增加信任度。"""
-        dm = DiplomacyManager(initial_trust=0.5)
+        params = DiplomacyParamsConfig(initial_trust=0.5, randomize_trust=False)
+        dm = DiplomacyManager(params=params)
         treaty = Treaty(
             treaty_type=TreatyType.TRADE_AGREEMENT,
             faction_a=1, faction_b=2, signed_tick=10,

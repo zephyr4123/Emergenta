@@ -484,11 +484,7 @@ class CivilizationEngine(mesa.Model):
                 if settlement:
                     settlement.deposit(result.resource_deposit)
 
-            # 应用食物消耗
-            if result.food_consumed > 0:
-                settlement = self.settlements.get(agent.home_settlement_id)
-                if settlement:
-                    settlement.withdraw_food(result.food_consumed)
+            # 食物消耗已由 _settlement_reconcile 统一处理，不再在此重复扣除
 
     def _build_civilian_index(self) -> dict[int, list[Civilian]]:
         """构建 settlement_id → civilians 索引。
@@ -556,7 +552,16 @@ class CivilizationEngine(mesa.Model):
                     old_faction_id=s.faction_id,
                     old_governor_id=s.governor_id,
                 )
-                self.revolution_tracker.apply_revolution(ev, s)
+                cooldown_mult = 1.0
+                if self.adaptive_controller is not None:
+                    cooldown_mult = (
+                        self.adaptive_controller
+                        .coefficients
+                        .revolution_cooldown_multiplier
+                    )
+                self.revolution_tracker.apply_revolution(
+                    ev, s, penalty_multiplier=cooldown_mult,
+                )
 
     def _detect_emergence(self) -> None:
         """运行涌现行为检测器。"""
