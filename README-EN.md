@@ -23,11 +23,21 @@ Simulate <b>5000+</b> concurrent agents in a single run, perfectly modeling extr
 
 <br/>
 
+<table>
+<tr>
+<td align="center"><b>5,000+</b><br/><sub>Concurrent Agents</sub></td>
+<td align="center"><b>62</b><br/><sub>Autonomous Settlements</sub></td>
+<td align="center"><b>20</b><br/><sub>AI Leaders</sub></td>
+<td align="center"><b>207+</b><br/><sub>Tunable Parameters</sub></td>
+<td align="center"><b>99%+</b><br/><sub>LLM Cost Reduction</sub></td>
+</tr>
+</table>
+
 </div>
 
----
+<br/>
 
-## Architecture
+## 🏗️ Architecture
 
 <div align="center">
 <img src="architecture.png" width="680" alt="Architecture Diagram" />
@@ -68,7 +78,7 @@ Our approach:
 |-------|--------|----------|
 | Civilians | 5000+ | **Zero** (FSM) |
 | Governors | 20-62 | Haiku, per season |
-| Leaders | 3-20 | Opus, per year |
+| Leaders | 3-20 | Opus, semi-annually |
 
 **Result: 99%+ cost reduction** while preserving macroscopic emergence.
 
@@ -78,7 +88,7 @@ Our approach:
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 <table>
 <tr>
@@ -93,7 +103,7 @@ Our approach:
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 # 1. Create Conda environment
@@ -118,13 +128,30 @@ python scripts/run_apocalypse_5000.py
 
 ---
 
-## 5000-Agent Full-System Real LLM Stress Tests
+## 🔬 5000-Agent Full-System Real LLM Stress Tests
 
-All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scale, with all governors and leaders using **real LLM** for decision-making.
+<div align="center">
+
+All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scale<br/>All governors and leaders use **real LLM** for decision-making
+
+<table>
+<tr>
+<td align="center"><b>🏛️ Dutch Disease</b><br/><sub>Resource Curse</sub></td>
+<td align="center"><b>🕳️ Info Cocoon</b><br/><sub>Fabricated Reports</sub></td>
+<td align="center"><b>☄️ Apocalypse</b><br/><sub>Total Collapse</sub></td>
+</tr>
+<tr>
+<td align="center"><sub>50,000 gold vs zero food</sub></td>
+<td align="center"><sub>9 governors always lie</sub></td>
+<td align="center"><sub>All settlements collapse simultaneously</sub></td>
+</tr>
+</table>
+
+</div>
 
 ---
 
-### Scenario 1: Dutch Disease (Resource Curse)
+### 🏛️ Scenario 1: Dutch Disease (Resource Curse)
 
 > **50,000 gold but zero farmland** — will the richest settlement starve?
 
@@ -135,16 +162,16 @@ All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scal
 
 | Parameter | Value |
 |-----------|-------|
-| Civilians | 5000 |
+| Civilians | 5,000 |
 | Settlements | 62 |
 | Leaders | 20 |
 | Map Size | 176×176 |
 | Duration | 500 ticks |
 | Random Seed | 88 |
 
-- **Richest settlement**: 50,000 gold + 0 food + all farmland degraded
-- **Poor settlements ×61**: 800 food + 50 gold
-- Core question: Can wealth buy food through trade to survive?
+- 🤑 **Richest settlement**: 50,000 gold + 0 food + all farmland degraded
+- 🏚️ **Poor settlements ×61**: 800 food + 50 gold
+- ❓ Core question: Can wealth buy food through trade to survive?
 
 </td><td>
 
@@ -152,58 +179,68 @@ All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scal
 
 | Metric | Value |
 |--------|-------|
-| Richest survived | **Yes** (pop 81→44) |
+| Richest survived | ✅ **Yes** (pop 81→44) |
 | Gold change | 50,000 → **10,613** (78% spent) |
 | Total trades | **2,454** |
 | Trade volume | **36,712** resource units exchanged |
 | Revolutions | **134** (aperiodic outbreaks) |
 | Alliances / Wars | **5** / **4** |
 | Governor/Leader LLM decisions | 264 / 40 |
-| Total time | 505.7s |
+| Total time | ⏱️ 505.7s |
 
-> The richest settlement bought food with gold and survived, burning 78% of its wealth. 134 revolutions erupted aperiodically, with 5 alliances and 4 wars emerging from diplomatic gameplay. Trade networks exploded early, with poor settlements gaining +324 gold on average.
+> 💡 The richest settlement bought food with gold and survived, burning 78% of its wealth. 134 revolutions erupted aperiodically, with 5 alliances and 4 wars emerging from diplomatic gameplay. Trade networks exploded early, with poor settlements gaining +324 gold on average.
 
 </td></tr>
 </table>
 
 <details>
-<summary><b>Richest Settlement Evolution Curves</b></summary>
+<summary>📈 <b>Richest Settlement Evolution Curves</b></summary>
 <br/>
 <img src="scripts/data/scenarios/dutch_disease_5000/chart1_rich_settlement.png" width="800" alt="Rich Settlement Evolution" />
 
-- **Population**: 81 → 44 (tick 30 famine crash to 20 trough) → slow recovery
-- **Gold**: 50,000 → first trade wave consumed massive gold → steady decline to 10,613
-- **Food**: 0 → purchased via trade → maintained at 100+ level
-- **Lifecycle**: Complete Dutch Disease cycle of "wealth → famine → trade survival → gradual recovery"
+| Phase | Description |
+|-------|-------------|
+| **Population** | 81 → 44 (tick 30 famine crash to 20 trough) → slow recovery |
+| **Gold** | 50,000 → first trade wave consumed massive gold → steady decline to 10,613 |
+| **Food** | 0 → purchased via trade → maintained at 100+ level |
+| **Lifecycle** | Complete Dutch Disease cycle: "wealth → famine → trade survival → gradual recovery" |
+
 </details>
 
 <details>
-<summary><b>Emergent Event Timeline</b></summary>
+<summary>🗓️ <b>Emergent Event Timeline</b></summary>
 <br/>
 <img src="scripts/data/scenarios/dutch_disease_5000/chart4_events_timeline.png" width="800" alt="Emergent Event Timeline" />
 
-- **First revolution wave**: Ticks 32-36 triggered Granovetter cascade, multiple settlements revolted simultaneously
-- **Trade early explosion**: Trade network emerged from tick 15, reaching 2,454 total trades
-- **Diplomatic gameplay**: 5 alliances, 4 wars, leader layer actively engaged in diplomacy (40 decisions)
-- **Late-game turmoil**: Ticks 400-500, temperature spiked, revolutions re-intensified (134 total)
-- Revolution intervals fully aperiodic (vs. old fixed 38-tick cycle)
+| Time Period | Event |
+|-------------|-------|
+| tick 32-36 | 🔴 **First revolution wave**: Granovetter cascade, multiple settlements revolted simultaneously |
+| tick 15 onward | 📦 **Trade early explosion**: Trade network emerged, reaching 2,454 total trades |
+| Throughout | 🤝 **Diplomatic gameplay**: 5 alliances, 4 wars, leader layer made 40 decisions |
+| tick 400-500 | 🔥 **Late-game turmoil**: Temperature spiked, revolutions re-intensified |
+
 </details>
 
 <details>
-<summary><b>Global Dynamics & Adaptive Controller</b></summary>
+<summary>🌡️ <b>Global Dynamics & Adaptive Controller</b></summary>
 <br/>
 <img src="scripts/data/scenarios/dutch_disease_5000/chart2_global_dynamics.png" width="800" alt="Global Dynamics" />
 <br/><br/>
 <img src="scripts/data/scenarios/dutch_disease_5000/chart3_adaptive_controller.png" width="800" alt="Adaptive Controller" />
 
-Adaptive P-Controller thermostat dynamic adjustment:
-- Temperature range: 0.21-0.67, active regulation throughout
-- Protest multiplier dropped to 0.50 floor (strong suppression), recovery speed multiplier rose to 1.68 (accelerated recovery)
-- Cooldown multiplier 1.57, effectively lengthening revolution intervals (vs. old 1.0 no effect)
+**Adaptive P-Controller thermostat dynamic adjustment:**
+
+| Parameter | Value | Effect |
+|-----------|-------|--------|
+| Temperature range | 0.21 - 0.67 | Active regulation throughout |
+| Protest multiplier | ↓ to 0.50 floor | Strong protest contagion suppression |
+| Recovery speed multiplier | ↑ to 1.68 | Accelerated satisfaction recovery |
+| Cooldown multiplier | 1.57 | Effectively lengthened revolution intervals |
+
 </details>
 
 <details>
-<summary><b>LLM Governor Decision Example</b></summary>
+<summary>🤖 <b>LLM Governor Decision Example</b></summary>
 
 > **Richest settlement governor** last decision (Tick 480):
 >
@@ -221,7 +258,7 @@ Adaptive P-Controller thermostat dynamic adjustment:
 
 ---
 
-### Scenario 2: Information Cocoon (Fabricated Reports)
+### 🕳️ Scenario 2: Information Cocoon (Fabricated Reports)
 
 > **Governors always report "0% protests, 100% satisfaction"** — leader is deceived, will revolution still erupt?
 
@@ -232,16 +269,16 @@ Adaptive P-Controller thermostat dynamic adjustment:
 
 | Parameter | Value |
 |-----------|-------|
-| Civilians | 5000 |
+| Civilians | 5,000 |
 | Settlements | 62 (9 lying) |
 | Leaders | 20 |
 | Map Size | 176×176 |
 | Duration | 500 ticks |
 | Random Seed | 42 |
 
-- **Lying settlements ×9**: food=10, tax=0.6, security=0.3, governor injected with "fabricate reports" prompt
-- **Honest settlements ×53**: food=500, tax=0.2, security=0.5
-- Leader receives: protest rate=0%, satisfaction=95% (fabricated)
+- 🤥 **Lying settlements ×9**: food=10, tax=0.6, security=0.3, governor injected with "fabricate reports" prompt
+- ✅ **Honest settlements ×53**: food=500, tax=0.2, security=0.5
+- 👁️ Leader receives: protest rate=0%, satisfaction=95% (fabricated)
 
 </td><td>
 
@@ -249,55 +286,63 @@ Adaptive P-Controller thermostat dynamic adjustment:
 
 | Metric | Value |
 |--------|-------|
-| First revolution | **Tick 9** (only 9 ticks!) |
+| First revolution | ⚡ **Tick 9** (only 9 ticks!) |
 | Peak real protest rate | **51.9%** |
-| Leader's perceived protest | **Always 0%** |
+| Leader's perceived protest | 🔇 **Always 0%** |
 | Real minimum satisfaction | **0.005** |
-| Leader's perceived satisfaction | **Always 0.95** |
+| Leader's perceived satisfaction | 🔇 **Always 0.95** |
 | Total revolutions | **156** (aperiodic outbreaks) |
 | Alliances / Wars | **4** / **5** |
 | Total trades | **2,210** (35,284 resource units) |
-| Lying settlements final pop | **3-9 each** (severely depleted but survived) |
+| Lying settlements final pop | ⚠️ **3-9 each** (severely depleted but survived) |
 | Governor/Leader LLM decisions | 264 / 40 |
-| Total time | 582.8s |
+| Total time | ⏱️ 582.8s |
 
-> Information suppression cannot prevent physical reality from erupting. All 9 lying settlements saw population crash from 81 to 3-9, teetering on extinction. FSM civilians are immune to information manipulation — governors can deceive leaders, but they cannot deceive hungry people. 4 alliances and 5 wars emerged from diplomatic gameplay.
+> 💡 Information suppression cannot prevent physical reality from erupting. All 9 lying settlements saw population crash from 81 to 3-9, teetering on extinction. FSM civilians are immune to information manipulation — governors can deceive leaders, but they cannot deceive hungry people.
 
 </td></tr>
 </table>
 
 <details>
-<summary><b>Information Gap Visualization — Real vs. Leader's Perception</b></summary>
+<summary>📊 <b>Information Gap Visualization — Real vs. Leader's Perception</b></summary>
 <br/>
 <img src="scripts/data/scenarios/info_cocoon_5000/chart1_info_gap.png" width="800" alt="Information Gap" />
 
-Pink shaded area = information gap. Top: Real protest rate 17-52%, leader sees 0%. Bottom: Real satisfaction 0.005-71%, leader sees 95%.
+> Pink shaded area = information gap<br/>Top: Real protest rate 17-52%, leader sees 0%<br/>Bottom: Real satisfaction 0.005-71%, leader sees 95%
+
 </details>
 
 <details>
-<summary><b>Lying vs. Honest Settlement Outcomes</b></summary>
+<summary>⚖️ <b>Lying vs. Honest Settlement Outcomes</b></summary>
 <br/>
 <img src="scripts/data/scenarios/info_cocoon_5000/chart2_lying_vs_honest.png" width="800" alt="Outcome Comparison" />
 
-- **Lying settlement population**: 81 → 3-9 (crashed to 21 by tick 30) → recovered then collapsed again in late game
-- **Honest settlement population**: Also experienced turbulence, declined to 4-7 in late game
-- **Lying settlement food**: Started at only 10 → recovered via trade and post-revolution rebuilding → cycled through shortages
-- **Key difference**: Lying governors' fabricated reports meant leaders never issued rescue orders, resulting in more severe population loss
+| Dimension | Lying Settlements | Honest Settlements |
+|-----------|-------------------|-------------------|
+| **Population** | 81 → 3-9 (crashed to 21 by tick 30) → late-game re-collapse | Experienced turbulence, declined to 4-7 in late game |
+| **Food** | Started at only 10 → recovered via trade → cycled through shortages | Started at 500 → steady consumption |
+| **Key Difference** | Fabricated reports meant leaders never issued rescue orders | Leaders received real data, could respond accordingly |
+
 </details>
 
 <details>
-<summary><b>Revolution Timeline & Group Effects</b></summary>
+<summary>🗓️ <b>Revolution Timeline & Group Effects</b></summary>
 <br/>
 <img src="scripts/data/scenarios/info_cocoon_5000/chart4_group_effect.png" width="800" alt="Group Effects" />
 
-- **Red bars** (lying settlements): Tick 9 triggered 8 simultaneous revolutions (Granovetter cascade), ticks 54-81 second wave, ticks 416-471 third wave
-- **Blue bars** (honest settlements): Ticks 21-25 first wave (10+ settlements), then scattered across the timeline
-- **Revolution intervals fully aperiodic**: 9, 54, 67, 81, 416, 442, 445, 453, 455, 456, 457, 464, 471
-- **156 total revolutions** spanning both lying and honest settlements, reflecting real social dynamics
+| Wave | Type | Event |
+|------|------|-------|
+| 1st wave | 🔴 Lying | Tick 9: 8 settlements revolted simultaneously (Granovetter cascade) |
+| 2nd wave | 🔴 Lying | Tick 54-81 cascade spread |
+| 1st wave | 🔵 Honest | Tick 21-25 (10+ settlements) |
+| 3rd wave | 🔴 Lying | Tick 416-471 late-game re-eruption |
+
+**156 total revolutions**, fully aperiodic intervals reflecting real social dynamics.
+
 </details>
 
 <details>
-<summary><b>LLM Lying Governor Decision Example</b></summary>
+<summary>🤖 <b>LLM Lying Governor Decision Example</b></summary>
 
 > **Settlement_2 governor** (real protest rate 22%, satisfaction 0.00) reports:
 >
@@ -312,12 +357,13 @@ Pink shaded area = information gap. Top: Real protest rate 17-52%, leader sees 0
 }
 ```
 
-**Reality**: Food at 10, population starving, revolution erupted 9 ticks later, settlement population eventually dropped to just 3-9.
+> ⚠️ **Reality**: Food at 10, population starving, revolution erupted 9 ticks later, settlement population eventually dropped to just 3-9.
+
 </details>
 
 ---
 
-### Scenario 3: Apocalypse (Total Collapse)
+### ☄️ Scenario 3: Apocalypse (Total Collapse)
 
 > **All settlements simultaneously plunge into extreme crisis** — food only 30, tax 0.5, 50% farmland degraded. Can civilization survive?
 
@@ -328,16 +374,16 @@ Pink shaded area = information gap. Top: Real protest rate 17-52%, leader sees 0
 
 | Parameter | Value |
 |-----------|-------|
-| Civilians | 5000 |
+| Civilians | 5,000 |
 | Settlements | 62 |
 | Leaders | 20 |
 | Map Size | 176×176 |
 | Duration | 500 ticks |
 | Random Seed | 77 |
 
-- **All 62 settlements**: food=30, gold=20, tax=0.5, security=0.2
-- **Farmland degradation**: 51% of farmland fertility reduced to 0.1
-- Core question: When all civilizations collapse simultaneously, can any survive?
+- 💀 **All 62 settlements**: food=30, gold=20, tax=0.5, security=0.2
+- 🏜️ **Farmland degradation**: 51% of farmland fertility reduced to 0.1
+- ❓ Core question: When all civilizations collapse simultaneously, can any survive?
 
 </td><td>
 
@@ -345,57 +391,69 @@ Pink shaded area = information gap. Top: Real protest rate 17-52%, leader sees 0
 
 | Metric | Value |
 |--------|-------|
-| Final survival rate | **6.3%** (5000→317) |
+| Final survival rate | ⚠️ **6.3%** (5000→317) |
 | Population lowest point | **304** (tick 478) |
-| Surviving settlements | **62/62** (none perished) |
+| Surviving settlements | ✅ **62/62** (none perished) |
 | Revolutions | **150** (first wave tick 9, total cascade) |
 | Alliances / Wars | **5** / **3** |
 | Total trades | **2,214** (35,426 resource units) |
 | Governor/Leader LLM decisions | 264 / 40 |
-| Total time | 523.1s |
+| Total time | ⏱️ 523.1s |
 
-> Even facing total collapse, all 62 settlements survived. Population crashed from 5000 to 304 before bouncing back to 317. LLM governors made "tax cut + security reinforcement + capital accumulation" crisis decisions. 5 alliances and 3 wars emerged in the apocalypse.
+> 💡 Even facing total collapse, all 62 settlements survived. Population crashed from 5000 to 304 before bouncing back to 317. LLM governors made "tax cut + security reinforcement + capital accumulation" crisis decisions. 5 alliances and 3 wars emerged in the apocalypse.
 
 </td></tr>
 </table>
 
 <details>
-<summary><b>Population Survival Curve</b></summary>
+<summary>📈 <b>Population Survival Curve</b></summary>
 <br/>
 <img src="scripts/data/scenarios/apocalypse_5000/chart1_survival.png" width="800" alt="Population Survival Curve" />
 
-- **Population**: 5000 → food depleted by tick 3 → crashed to 1279 (26%) by tick 30 → slow recovery to 2579 (52%) by tick 400 → winter famine crashed again to 317
-- **Surviving settlements**: 62/62 throughout, none perished, demonstrating system resilience
-- **Recovery curve**: Complete "total collapse → bottoming out → slow rebuilding → late-game winter re-collapse" cycle
+| Phase | Time | Description |
+|-------|------|-------------|
+| 🔴 Collapse | tick 1-30 | Food depleted by tick 3, population crashed to 1,279 (26%) |
+| 🟡 Rebuild | tick 30-400 | Slow recovery to 2,579 (52%), agriculture gradually restored |
+| 🔴 Re-collapse | tick 400-500 | Winter famine struck, crashed again to 317 (6.3%) |
+| ✅ Survived | Throughout | 62/62 settlements survived, demonstrating system resilience |
+
 </details>
 
 <details>
-<summary><b>Emergent Event Timeline</b></summary>
+<summary>🗓️ <b>Emergent Event Timeline</b></summary>
 <br/>
 <img src="scripts/data/scenarios/apocalypse_5000/chart4_events_timeline.png" width="800" alt="Emergent Event Timeline" />
 
-- **First revolution wave**: Tick 9, all 62 settlements simultaneously revolted (unprecedented Granovetter cascade)
-- **Delayed trade activation**: Trade system activated from tick 60, exploded in ticks 390-500 (30→2,214)
-- **Diplomatic gameplay**: 5 alliances, 3 wars, leader layer actively engaged at tick 480 first decision round
-- **Late-game crisis**: Ticks 400-500, winter arrived, population crashed again from 2579 to 317
+| Time Period | Event |
+|-------------|-------|
+| tick 9 | 🔴 **Total revolution**: All 62 settlements simultaneously revolted (unprecedented Granovetter cascade) |
+| tick 60 onward | 📦 **Delayed trade activation**: Trade exploded in ticks 390-500 (30→2,214) |
+| tick 480 | 🤝 **Leaders step in**: 5 alliances, 3 wars, diplomatic gameplay begins |
+| tick 400-500 | ❄️ **Late-game winter**: Population crashed again from 2,579 to 317 |
+
 </details>
 
 <details>
-<summary><b>Global Dynamics & Adaptive Controller</b></summary>
+<summary>🌡️ <b>Global Dynamics & Adaptive Controller</b></summary>
 <br/>
 <img src="scripts/data/scenarios/apocalypse_5000/chart2_global_dynamics.png" width="800" alt="Global Dynamics" />
 <br/><br/>
 <img src="scripts/data/scenarios/apocalypse_5000/chart3_adaptive_controller.png" width="800" alt="Adaptive Controller" />
 
-Adaptive P-Controller thermostat dynamic adjustment:
-- Temperature range: 0.24-0.66, active regulation throughout
-- Protest multiplier dropped to 0.50 floor (strong suppression), recovery speed multiplier rose to 1.58 (accelerated recovery)
-- Cooldown multiplier 1.49, effectively lengthening revolution intervals
-- 23 active recovery phases, system continuously self-repairing
+**Adaptive P-Controller thermostat dynamic adjustment:**
+
+| Parameter | Value | Effect |
+|-----------|-------|--------|
+| Temperature range | 0.24 - 0.66 | Active regulation throughout |
+| Protest multiplier | ↓ to 0.50 floor | Strong protest contagion suppression |
+| Recovery speed multiplier | ↑ to 1.58 | Accelerated satisfaction recovery |
+| Cooldown multiplier | 1.49 | Effectively lengthened revolution intervals |
+| Active recovery phases | 23 | System continuously self-repairing |
+
 </details>
 
 <details>
-<summary><b>LLM Governor Decision Example</b></summary>
+<summary>🤖 <b>LLM Governor Decision Example</b></summary>
 
 > **Settlement_0 governor** last decision (Tick 480):
 >
@@ -413,29 +471,75 @@ Adaptive P-Controller thermostat dynamic adjustment:
 
 ---
 
-### Scenario Summary
+### 📊 Scenario Summary
 
-| Metric | Dutch Disease | Information Cocoon | Apocalypse |
-|--------|--------------|-------------------|------------|
-| Core validation | Wealth buys survival, costs 78% of gold | Info manipulation deceives leaders, not hungry people | Total collapse: 62/62 settlements survived, 6.3% pop remaining |
-| Emergent behavior | Trade network explosion + aperiodic revolution cascade | Lying settlements near-extinction + Granovetter cascade | Total revolution cascade + apocalypse trade network + population rebound |
-| LLM performance | Governor "tax cut + security + all-in food" crisis decisions | Lying governors generated convincing fabricated reports | Governor "tax + security + capital accumulation" apocalypse decisions |
-| Adaptive controller | Temperature 0.21-0.67 full-range tuning | Temperature 0.24-0.65 maintained system tension | Temperature 0.24-0.66 + 23 active recovery phases |
-| Trade system | 2,454 trades / 36,712 total volume | 2,210 trades / 35,284 total volume | 2,214 trades / 35,426 total volume |
-| Revolution system | 134 (aperiodic) | 156 (aperiodic) | 150 (aperiodic) |
-| Alliances / Wars | 5 / 4 | 4 / 5 | 5 / 3 |
-| Governor/Leader decisions | 264 / 40 | 264 / 40 | 264 / 40 |
-| Total time | 505.7s | 582.8s | 523.1s |
+<table>
+<tr>
+<th align="left">Metric</th>
+<th align="center">🏛️ Dutch Disease</th>
+<th align="center">🕳️ Info Cocoon</th>
+<th align="center">☄️ Apocalypse</th>
+</tr>
+<tr>
+<td><b>Core Validation</b></td>
+<td>Wealth buys survival, costs 78% of gold</td>
+<td>Info manipulation deceives leaders, not hungry people</td>
+<td>Total collapse: 62/62 survived, 6.3% pop remaining</td>
+</tr>
+<tr>
+<td><b>Emergent Behavior</b></td>
+<td>Trade network explosion + aperiodic revolution cascade</td>
+<td>Lying settlements near-extinction + Granovetter cascade</td>
+<td>Total revolution cascade + apocalypse trade + population rebound</td>
+</tr>
+<tr>
+<td><b>LLM Performance</b></td>
+<td>"Tax cut + security + all-in food" crisis decisions</td>
+<td>Lying governors generated convincing fabricated reports</td>
+<td>"Tax + security + capital accumulation" apocalypse decisions</td>
+</tr>
+<tr>
+<td><b>🌡️ Controller</b></td>
+<td>Temperature 0.21-0.67</td>
+<td>Temperature 0.24-0.65</td>
+<td>Temperature 0.24-0.66 + 23 recovery phases</td>
+</tr>
+<tr>
+<td><b>📦 Trade</b></td>
+<td><b>2,454</b> trades / 36,712 vol</td>
+<td><b>2,210</b> trades / 35,284 vol</td>
+<td><b>2,214</b> trades / 35,426 vol</td>
+</tr>
+<tr>
+<td><b>✊ Revolutions</b></td>
+<td><b>134</b> (aperiodic)</td>
+<td><b>156</b> (aperiodic)</td>
+<td><b>150</b> (aperiodic)</td>
+</tr>
+<tr>
+<td><b>🤝 Alliances / ⚔️ Wars</b></td>
+<td>5 / 4</td>
+<td>4 / 5</td>
+<td>5 / 3</td>
+</tr>
+<tr>
+<td><b>⏱️ Total Time</b></td>
+<td>505.7s</td>
+<td>582.8s</td>
+<td>523.1s</td>
+</tr>
+</table>
 
-> **Full reports**: See `scripts/data/scenarios/dutch_disease_5000/report.md`, `scripts/data/scenarios/info_cocoon_5000/report.md`, and `scripts/data/scenarios/apocalypse_5000/report.md`
+> 📄 **Full reports**: See `scripts/data/scenarios/dutch_disease_5000/report.md`, `scripts/data/scenarios/info_cocoon_5000/report.md`, and `scripts/data/scenarios/apocalypse_5000/report.md`
 
 ---
 
-## Configuration & Parameter System
+## ⚙️ Configuration & Parameter System
 
 The simulator uses a **layered configuration system** that controls every aspect of the simulation — from individual civilian behavior to macroscopic economic dynamics. All parameters live in `config.yaml` (copy from `config.example.yaml`) and are validated by [Pydantic](https://docs.pydantic.dev/) models at startup. Total: **31 config models, 207+ individual parameters**.
 
-### Configuration Quick Start
+<details>
+<summary>📋 <b>Configuration Quick Start</b></summary>
 
 ```bash
 # Copy the template and customize
@@ -445,6 +549,7 @@ cp config.example.yaml config.yaml
 # Then run with your custom config
 python scripts/run_simulation.py --ticks 500
 ```
+</details>
 
 ### Parameter Architecture
 
@@ -452,21 +557,22 @@ The config is organized into **4 tiers**, from micro to macro:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Tier 4: Meta-Control          adaptive_controller                  │
+│  🎛️ Tier 4: Meta-Control       adaptive_controller                  │
 │  "How chaotic should the world be?"     target_temperature: 0.30    │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Tier 3: Macro Systems         revolution_params, diplomacy_params  │
+│  ⚖️ Tier 3: Macro Systems      revolution_params, diplomacy_params  │
 │  "When do revolutions/wars happen?"     trade_params, governance    │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Tier 2: Meso Behavior         markov_coefficients                  │
+│  🧠 Tier 2: Meso Behavior      markov_coefficients                  │
 │  "How sensitive are individuals?"       satisfaction_coefficients    │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Tier 1: Micro Foundations     tile_params, season_params            │
+│  🌍 Tier 1: Micro Foundations   tile_params, season_params           │
 │  "What does the physical world look like?" resources, agents        │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Tier 1: Micro — Physical World (~64 params)
+<details>
+<summary>🌍 <b>Tier 1: Micro — Physical World (~64 params)</b></summary>
 
 | Config Section | Params | Controls | Key Parameters |
 |----------------|--------|----------|---------------|
@@ -480,7 +586,10 @@ The config is organized into **4 tiers**, from micro to macro:
 | `event_params` | 12 | Random events | Drought/plague/mine discovery/harvest/bandits trigger probability & effect strength |
 | `resources` | 8 | Resource system | Initial stockpiles, regeneration rates, consumption rates for 4 resource types |
 
-### Tier 2: Meso — Individual Behavior (~55 params)
+</details>
+
+<details>
+<summary>🧠 <b>Tier 2: Meso — Individual Behavior (~55 params)</b></summary>
 
 | Config Section | Params | Controls | Key Parameters |
 |----------------|--------|----------|---------------|
@@ -489,9 +598,12 @@ The config is organized into **4 tiers**, from micro to macro:
 | `satisfaction_coefficients` | 9 | Satisfaction decay/recovery | High/mid scarcity penalty, low scarcity recovery, tax penalty, hunger penalty, police state effect |
 | `civilian_behavior` | 7 | Civilian action output | Work output (food/other), rest recovery, trade income, food satiation, initial satisfaction |
 | `engine_params` | 8 | Engine core params | Profession ratios (farmer/woodcutter/miner/merchant), natural growth rate, famine threshold, neighbor radius |
-| `clock` | 5 | Time system | Tick/day/season/year rhythm, governor interval (seasonal), leader interval (yearly) |
+| `clock` | 5 | Time system | Tick/day/season/year rhythm, governor interval (seasonal), leader interval (semi-annual) |
 
-### Tier 3: Macro — System Mechanics (~62 params)
+</details>
+
+<details>
+<summary>⚖️ <b>Tier 3: Macro — System Mechanics (~62 params)</b></summary>
 
 | Config Section | Params | Controls | Key Parameters |
 |----------------|--------|----------|---------------|
@@ -504,18 +616,23 @@ The config is organized into **4 tiers**, from micro to macro:
 | `settlement_params` | 6 | Settlement properties | Default capacity, infrastructure, tax rate, security, scarcity threshold, starvation factor |
 | `analytics_params` | 2 | Emergence detection | Trade growth threshold, war cascade minimum wars |
 
-### Tier 4: Meta-Control (~8 params)
+</details>
+
+<details>
+<summary>🎛️ <b>Tier 4: Meta-Control (~8 params) & Infrastructure Config (~48 params)</b></summary>
+
+**Meta-Control Layer**
 
 | Config Section | Params | Controls | Key Parameters |
 |----------------|--------|----------|---------------|
 | `adaptive_controller` | 7 | **Adaptive P-controller thermostat** | Enable/disable, update interval, target temperature (0.05=peaceful ~ 0.70+=chaos), adjustment rate, multiplier bounds |
 | `leader_prompt` | 1 | **Leader AI personality** | Full system prompt text, customize leader decision style (default = competitive/aggressive) |
 
-### Infrastructure Config (~48 params)
+**Infrastructure Layer**
 
 | Config Section | Params | Purpose |
 |----------------|--------|---------|
-| `llm` | 24 | LLM gateway, 3 model roles (provider/model/max_tokens/temperature/api_key/base_url), behavior cache |
+| `llm` | 24 | LLM gateway, 3 model roles, behavior cache |
 | `gateway_params` | 3 | LLM retry count, timeout, backoff base |
 | `memory_params` | 2 | Long-term memory importance threshold, decision memory default importance |
 | `mqtt` | 5 | Broker host/port, P2P/settlement/global message topic templates |
@@ -525,26 +642,28 @@ The config is organized into **4 tiers**, from micro to macro:
 | `performance` | 2 | Parallel threshold, profiling toggle |
 | `testing` | 4 | Real LLM toggle, test tick count/civilian count/grid size |
 
-### Quick Tuning Guide
+</details>
+
+### 🎯 Quick Tuning Guide
 
 | Desired Effect | What to Adjust |
 |---------------|---------------|
-| More violent / more peaceful world | `adaptive_controller.target_temperature` |
-| More sensitive / more docile civilians | `markov_coefficients.*` + `satisfaction_coefficients.*` |
-| Easier / harder revolutions | `revolution_params.protest_threshold` ↓↑ + `duration_ticks` |
-| Freer / more restricted trade | `trade_params.trust_threshold` + `refuse_prob_base` |
-| More stable / more chaotic diplomacy | `diplomacy_params.trust_decay_per_tick` + `initial_trust` |
-| More aggressive / more peaceful leaders | `leader_fallback.war_probability` or `leader_prompt.system_prompt` |
-| Richer / scarcer resources | `resources.initial_stockpile.*` + `tile_params.farmland_base_output` |
-| Deadlier winters | `season_params.farm_winter: 0.0` + `food_consumption_winter: 2.0` |
-| More frequent disasters | `event_params.drought_prob` ↑ + `plague_prob` ↑ |
-| Information cocoon | `governor.system_prompt_override` + `leader.report_overrides` |
+| 🔥 More violent / 🕊️ more peaceful world | `adaptive_controller.target_temperature` |
+| 😤 More sensitive / 😌 more docile civilians | `markov_coefficients.*` + `satisfaction_coefficients.*` |
+| ✊ Easier / 🛡️ harder revolutions | `revolution_params.protest_threshold` ↓↑ + `duration_ticks` |
+| 📦 Freer / 🚫 more restricted trade | `trade_params.trust_threshold` + `refuse_prob_base` |
+| 🤝 More stable / 💥 more chaotic diplomacy | `diplomacy_params.trust_decay_per_tick` + `initial_trust` |
+| ⚔️ More aggressive / 🕊️ more peaceful leaders | `leader_fallback.war_probability` or `leader_prompt.system_prompt` |
+| 💰 Richer / 🏜️ scarcer resources | `resources.initial_stockpile.*` + `tile_params.farmland_base_output` |
+| ❄️ Deadlier winters | `season_params.farm_winter: 0.0` + `food_consumption_winter: 2.0` |
+| ⛈️ More frequent disasters | `event_params.drought_prob` ↑ + `plague_prob` ↑ |
+| 🕳️ Information cocoon | `governor.system_prompt_override` + `leader.report_overrides` |
 
-> **Full parameter reference**: See `config.example.yaml` for all available parameters with comments explaining each field.
+> 📄 **Full parameter reference**: See `config.example.yaml` for all available parameters with comments explaining each field.
 
 ---
 
-## Core Algorithms
+## 🧬 Core Algorithms
 
 <table>
 <tr>
@@ -575,15 +694,15 @@ if neighbors_protesting >= threshold:
 ### Revolution Mechanism
 
 **Trigger conditions** (sustained for 8 ticks):
-- Protest rate >= 20%
-- Avg satisfaction <= 40%
+- ✊ Protest rate >= 20%
+- 😞 Avg satisfaction <= 40%
 
 **Consequences:**
-- Tax rate → 0.15
-- Security level −0.4
-- Gold reserves halved
-- Governor dismissed
-- 30-tick cooldown + 40-tick honeymoon
+- 📉 Tax rate → 0.15
+- 🔓 Security level −0.4
+- 💸 Gold reserves halved
+- 🔄 Governor dismissed
+- ⏸️ 30-tick cooldown + 40-tick honeymoon
 
 **Self-correction loop:**
 > High tax → Protests → Revolution → Tax reset → Recovery → Stability
@@ -594,32 +713,32 @@ if neighbors_protesting >= threshold:
 
 ---
 
-## Project Structure
+## 📂 Project Structure
 
 ```
 src/civsim/
-├── world/            # World engine (map gen, clock, tiles)
-├── agents/           # Agents (Civilian FSM, Governor LLM, Leader Opus)
+├── world/            # 🌍 World engine (map gen, clock, tiles)
+├── agents/           # 🧠 Agents (Civilian FSM, Governor LLM, Leader Opus)
 │   └── behaviors/    # Markov chains, Granovetter threshold model
-├── economy/          # Economy (resources, settlements, trade)
-├── politics/         # Politics (governance, diplomacy, revolution)
-├── llm/              # LLM integration (gateway, prompts, memory, cache)
-├── communication/    # Communication (MQTT broker)
-├── data/             # Data (collector, DuckDB, emergence detection)
-└── visualization/    # Visualization (map renderer, dashboard)
+├── economy/          # 💰 Economy (resources, settlements, trade)
+├── politics/         # ⚖️ Politics (governance, diplomacy, revolution)
+├── llm/              # 🤖 LLM integration (gateway, prompts, memory, cache)
+├── communication/    # 📡 Communication (MQTT broker)
+├── data/             # 📊 Data (collector, DuckDB, emergence detection)
+└── visualization/    # 🎨 Visualization (map renderer, dashboard)
 ```
 
 ---
 
-## Roadmap
+## 🗺️ Roadmap
 
 <table>
-<tr><td>&#9745;</td><td><b>Phase 0</b></td><td>Environment setup & project architecture</td></tr>
-<tr><td>&#9745;</td><td><b>Phase 1</b></td><td>World engine MVP — map + resources + Markov civilians</td></tr>
-<tr><td>&#9745;</td><td><b>Phase 2</b></td><td>LLM Governor layer — Haiku/Sonnet governance decisions</td></tr>
-<tr><td>&#9745;</td><td><b>Phase 3</b></td><td>Leader layer & emergence — diplomacy / trade / revolution / war</td></tr>
-<tr><td>&#9745;</td><td><b>Phase 4</b></td><td>5000+ scale parallelism — parallel infrastructure + LLM cost optimization + adaptive parameter system + extreme scenario stress tests</td></tr>
-<tr><td>&#9744;</td><td><b>Phase 5</b></td><td>God Mode & visualization — real-time event injection + Plotly dashboard + leader intervention</td></tr>
+<tr><td>✅</td><td><b>Phase 0</b></td><td>Environment setup & project architecture</td></tr>
+<tr><td>✅</td><td><b>Phase 1</b></td><td>World engine MVP — map + resources + Markov civilians</td></tr>
+<tr><td>✅</td><td><b>Phase 2</b></td><td>LLM Governor layer — Haiku/Sonnet governance decisions</td></tr>
+<tr><td>✅</td><td><b>Phase 3</b></td><td>Leader layer & emergence — diplomacy / trade / revolution / war</td></tr>
+<tr><td>✅</td><td><b>Phase 4</b></td><td>5000+ scale parallelism — parallel infrastructure + LLM cost optimization + adaptive parameter system + extreme scenario stress tests</td></tr>
+<tr><td>🔲</td><td><b>Phase 5</b></td><td>God Mode & visualization — real-time event injection + Plotly dashboard + leader intervention</td></tr>
 </table>
 
 ---
