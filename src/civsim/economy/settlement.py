@@ -89,13 +89,16 @@ class Settlement:
         return actual
 
     def consume_food_for_population(self, per_capita: float) -> int:
-        """为全体人口消耗食物，返回饿死人数。
+        """为全体人口消耗食物，返回应饿死人数。
+
+        注意：本方法只计算死亡人数并扣减食物，
+        不修改 population——由引擎负责移除 Agent 对象。
 
         Args:
             per_capita: 每人每 tick 食物消耗量。
 
         Returns:
-            因饥饿减少的人口数。
+            因饥饿应减少的人口数。
         """
         total_needed = per_capita * self.population
         actual = self.withdraw_food(total_needed)
@@ -104,36 +107,32 @@ class Settlement:
         feed_ratio = actual / total_needed
         if feed_ratio >= 1.0:
             return 0
-        # 按未满足比例计算饿死人数（至少1人）
         unfed_ratio = 1.0 - feed_ratio
         params = self._settlement_params or SettlementParamsConfig()
-        deaths = max(1, int(self.population * unfed_ratio * params.starvation_unfed_factor))
-        self.population = max(0, self.population - deaths)
-        return deaths
+        return max(
+            1,
+            int(self.population * unfed_ratio * params.starvation_unfed_factor),
+        )
 
     def natural_growth(self, rate: float = 0.002) -> int:
-        """自然人口增长（概率性）。
+        """计算自然人口增长量（概率性）。
 
-        当 population * rate < 1 时，使用概率判定是否增长 1 人，
-        避免小人口聚落 max(1,...) 导致的无条件增长。
+        注意：本方法只计算增长人数，
+        不修改 population——由引擎负责创建 Agent 对象。
 
         Args:
             rate: 基础增长率。
 
         Returns:
-            新增人口数。
+            应新增的人口数。
         """
         if self.population >= self.capacity or self.scarcity_index > 0.5:
             return 0
         expected = self.population * rate
-        # 整数部分确定增长，小数部分概率增长
         growth = int(expected)
         fractional = expected - growth
         if fractional > 0:
             import random
             if random.random() < fractional:
                 growth += 1
-        if growth <= 0:
-            return 0
-        self.population = min(self.capacity, self.population + growth)
-        return growth
+        return max(0, min(growth, self.capacity - self.population))

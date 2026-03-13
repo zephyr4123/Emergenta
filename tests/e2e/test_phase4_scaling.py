@@ -33,6 +33,7 @@ class TestParallel100Agents:
         config.world.grid.width = 30
         config.world.grid.height = 30
         config.performance.parallel_threshold = 50
+        config.resources.initial_stockpile.food = 3000
 
         engine = CivilizationEngine(config=config, seed=42)
         engine._coordinator = ParallelCoordinator(batch_size=30)
@@ -63,6 +64,7 @@ class TestFullSystemScaling:
         config.world.grid.height = 40
         config.world.settlement.initial_count = 4
         config.agents.leader.initial_count = 2
+        config.resources.initial_stockpile.food = 5000
 
         engine = CivilizationEngine(
             config=config, seed=42,
@@ -80,7 +82,10 @@ class TestFullSystemScaling:
             engine.step()
 
         civilians = [a for a in engine.agents if isinstance(a, Civilian)]
-        assert len(civilians) > 0
+        # 有真实死亡/出生机制，人口可能波动但食物充足不应全灭
+        assert len(civilians) > 0, (
+            "食物充足条件下 200 tick 后不应全灭"
+        )
         assert all(0.0 <= c.satisfaction <= 1.0 for c in civilians)
 
     def test_500_agents_full_system_parallel(
@@ -94,6 +99,7 @@ class TestFullSystemScaling:
         config.world.settlement.initial_count = 8
         config.agents.leader.initial_count = 3
         config.performance.parallel_threshold = 100
+        config.resources.initial_stockpile.food = 10000
 
         engine = CivilizationEngine(
             config=config, seed=42,
@@ -123,6 +129,7 @@ class TestGracefulDegradation:
         config.agents.civilian.initial_count = 50
         config.world.grid.width = 20
         config.world.grid.height = 20
+        config.resources.initial_stockpile.food = 2000
 
         engine = CivilizationEngine(config=config, seed=42)
 

@@ -254,7 +254,7 @@ class SimulationRunner:
             settlement.stockpile["food"] *= 0.3
         elif event_name == "瘟疫":
             loss = max(1, int(settlement.population * 0.1))
-            settlement.population = max(1, settlement.population - loss)
+            self.engine._kill_civilians(settlement.id, loss)
         elif event_name == "丰收":
             settlement.stockpile["food"] *= 2.0
         elif event_name == "流寇":

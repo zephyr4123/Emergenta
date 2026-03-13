@@ -203,20 +203,22 @@ class TestConsumeFoodForPopulation:
         assert deaths == 0
 
     def test_insufficient_food_causes_deaths(self) -> None:
-        """验证食物不足时产生饿死人口。"""
+        """验证食物不足时返回饿死人数（不修改 population）。"""
         s = Settlement(id=1, name="村", position=(0, 0), population=100)
         s.stockpile["food"] = 10.0  # 需要 50，远不够
         deaths = s.consume_food_for_population(0.5)
         assert deaths >= 1
-        assert s.population < 100
+        # population 不再由本方法修改，由引擎负责移除 Agent
+        assert s.population == 100
 
     def test_no_food_causes_deaths(self) -> None:
-        """验证完全没有食物时产生饿死人口。"""
+        """验证完全没有食物时返回饿死人数（不修改 population）。"""
         s = Settlement(id=1, name="村", position=(0, 0), population=100)
         s.stockpile["food"] = 0.0
         deaths = s.consume_food_for_population(0.5)
         assert deaths >= 1
-        assert s.population < 100
+        # population 不再由本方法修改，由引擎负责移除 Agent
+        assert s.population == 100
 
     def test_population_never_below_zero(self) -> None:
         """验证人口不会降到 0 以下。"""
@@ -244,12 +246,13 @@ class TestNaturalGrowth:
     """测试 natural_growth 自然增长。"""
 
     def test_basic_growth(self) -> None:
-        """验证正常条件下人口增长。"""
+        """验证正常条件下返回增长人数（不修改 population）。"""
         s = Settlement(id=1, name="村", position=(0, 0), population=100, capacity=200)
         s.stockpile["food"] = 1000.0  # 人均 10，稀缺度 0
         growth = s.natural_growth(rate=0.05)
         assert growth >= 1
-        assert s.population == 100 + growth
+        # population 不再由本方法修改，由引擎负责创建 Agent
+        assert s.population == 100
 
     def test_no_growth_at_capacity(self) -> None:
         """验证人口达到容量上限时不再增长。"""

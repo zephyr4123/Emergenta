@@ -70,8 +70,10 @@ def trigger_random_events(
             settlement = settlements[sid]
             applied = apply_event(ev["name"], settlement, tile_grid, event_params=event_params)
             if applied is not None:
-                active_events.append(applied)
                 new_events.append(applied)
+                # 只有持续性事件（含 remaining_ticks）才加入活跃列表
+                if "remaining_ticks" in applied:
+                    active_events.append(applied)
 
     return new_events
 
@@ -108,14 +110,13 @@ def apply_event(
             "remaining_ticks": event_params.drought_duration,
         }
     elif name == "瘟疫":
-        if hasattr(settlement, "population"):
-            settlement.population = max(
-                0,
-                settlement.population - max(
-                    1, int(settlement.population * event_params.plague_pop_loss_ratio)
-                ),
+        plague_deaths = 0
+        if hasattr(settlement, "population") and settlement.population > 0:
+            plague_deaths = max(
+                1,
+                int(settlement.population * event_params.plague_pop_loss_ratio),
             )
-        return None
+        return {"name": "瘟疫", "settlement_id": sid, "deaths": plague_deaths}
     elif name == "丰收":
         return {
             "name": "丰收", "settlement_id": sid,

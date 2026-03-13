@@ -514,12 +514,18 @@ class CivilizationEngine(mesa.Model):
             event_mult = (
                 self.adaptive_controller.coefficients.random_event_multiplier
             )
-        trigger_random_events(
+        new_events = trigger_random_events(
             self.settlements, self.tile_grid,
             self._active_events, self._rng,
             event_multiplier=event_mult,
             event_params=self.config.event_params,
         )
+        # 处理瘟疫等产生人口损失的事件
+        for ev in new_events:
+            deaths = ev.get("deaths", 0)
+            sid = ev.get("settlement_id")
+            if deaths > 0 and sid is not None:
+                self._kill_civilians(sid, deaths)
         if self.diplomacy:
             self.diplomacy.expire_treaties(self.clock.tick)
             self.diplomacy.decay_trust()
@@ -559,9 +565,11 @@ class CivilizationEngine(mesa.Model):
                         .coefficients
                         .revolution_cooldown_multiplier
                     )
-                self.revolution_tracker.apply_revolution(
+                rev_deaths = self.revolution_tracker.apply_revolution(
                     ev, s, penalty_multiplier=cooldown_mult,
                 )
+                if rev_deaths > 0:
+                    self._kill_civilians(ev.settlement_id, rev_deaths)
 
     def _detect_emergence(self) -> None:
         """运行涌现行为检测器。"""
@@ -583,21 +591,115 @@ class CivilizationEngine(mesa.Model):
         # 冬季食物消耗倍率
         per_capita_food *= self.clock.food_consumption_multiplier
         for s in self.settlements.values():
+            # 0. 同步人口计数（确保和实际 Agent 数一致）
+            self._sync_settlement_population(s)
             # 1. 系统性食物消耗（人口 × 人均消耗），不足则饿死
-            s.consume_food_for_population(per_capita_food)
+            starvation_deaths = s.consume_food_for_population(
+                per_capita_food,
+            )
+            if starvation_deaths > 0:
+                self._kill_civilians(s.id, starvation_deaths)
             # 2. 极端稀缺额外减员
             if s.scarcity_index > ep.starvation_scarcity_threshold and s.population > 0:
                 death_rate = (
                     (s.scarcity_index - ep.starvation_scarcity_threshold)
                     * ep.starvation_rate_factor
                 )
-                deaths = max(1, int(s.population * death_rate))
-                s.population = max(0, s.population - deaths)
+                scarcity_deaths = max(1, int(s.population * death_rate))
+                self._kill_civilians(s.id, scarcity_deaths)
             # 3. 自然增长
             growth_rate = ep.natural_growth_rate
             if self.clock.current_season == Season.SPRING:
                 growth_rate *= sp.spring_growth_bonus
-            s.natural_growth(growth_rate)
+            births = s.natural_growth(growth_rate)
+            if births > 0:
+                self._birth_civilians(s.id, births)
+
+    # ------------------------------------------------------------------
+    # Agent 生命周期管理
+    # ------------------------------------------------------------------
+
+    def _sync_settlement_population(self, settlement: object) -> None:
+        """将聚落人口计数与实际 Civilian Agent 数同步。"""
+        actual = sum(
+            1 for a in self.agents
+            if isinstance(a, Civilian) and a.home_settlement_id == settlement.id
+        )
+        settlement.population = actual
+
+    def _kill_civilians(self, settlement_id: int, count: int) -> int:
+        """从指定聚落移除指定数量的平民 Agent。
+
+        优先移除饥饿度最高的平民。
+
+        Args:
+            settlement_id: 目标聚落 ID。
+            count: 要移除的数量。
+
+        Returns:
+            实际移除的数量。
+        """
+        candidates = [
+            a for a in self.agents
+            if isinstance(a, Civilian) and a.home_settlement_id == settlement_id
+        ]
+        # 优先移除饥饿度最高的
+        candidates.sort(key=lambda c: c.hunger, reverse=True)
+        actual = min(count, len(candidates))
+        for i in range(actual):
+            agent = candidates[i]
+            agent.remove()
+        # 同步人口计数
+        settlement = self.settlements.get(settlement_id)
+        if settlement is not None:
+            settlement.population = max(0, settlement.population - actual)
+        return actual
+
+    def _birth_civilians(self, settlement_id: int, count: int) -> int:
+        """在指定聚落创建新平民 Agent。
+
+        Args:
+            settlement_id: 目标聚落 ID。
+            count: 要创建的数量。
+
+        Returns:
+            实际创建的数量。
+        """
+        settlement = self.settlements.get(settlement_id)
+        if settlement is None or count <= 0:
+            return 0
+        dist = self.config.agents.civilian.personality_distribution
+        threshold_cfg = self.config.agents.civilian.revolt_threshold
+        professions = [
+            Profession.FARMER, Profession.WOODCUTTER,
+            Profession.MINER, Profession.MERCHANT,
+        ]
+        created = 0
+        for _ in range(count):
+            # 随机性格
+            r = self._rng.random()
+            if r < dist.compliant:
+                personality = Personality.COMPLIANT
+            elif r < dist.compliant + dist.neutral:
+                personality = Personality.NEUTRAL
+            else:
+                personality = Personality.REBELLIOUS
+            threshold = float(np.clip(
+                self._rng.normal(threshold_cfg.mean, threshold_cfg.std),
+                threshold_cfg.min, threshold_cfg.max,
+            ))
+            profession = professions[created % len(professions)]
+            agent = Civilian(
+                model=self,
+                home_settlement_id=settlement_id,
+                personality=personality,
+                profession=profession,
+                revolt_threshold=threshold,
+            )
+            self.grid.place_agent(agent, settlement.position)
+            settlement.population += 1
+            created += 1
+        return created
 
     def _apply_trade_trust_feedback(self) -> None:
         """将贸易产生的信任增量应用到外交系统。"""

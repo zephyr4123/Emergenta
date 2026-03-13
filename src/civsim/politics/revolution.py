@@ -173,13 +173,16 @@ class RevolutionTracker:
         event: RevolutionEvent,
         settlement: object,
         penalty_multiplier: float = 1.0,
-    ) -> None:
+    ) -> int:
         """应用革命后果到聚落并启动恢复阶段。
 
         Args:
             event: 革命事件。
             settlement: 聚落对象。
             penalty_multiplier: 惩罚乘数（来自自适应控制器）。
+
+        Returns:
+            革命导致的人口损失数（由调用方负责实际移除 Agent）。
         """
         gold_ratio = self._params.resource_penalty_gold
         food_ratio = self._params.resource_penalty_food
@@ -195,14 +198,14 @@ class RevolutionTracker:
         if hasattr(settlement, "tax_rate"):
             settlement.tax_rate = self._params.post_revolution_tax
 
-        # 人口损失（革命不是免费的重置键）
+        # 计算人口损失（由引擎负责移除 Agent 对象）
+        pop_loss_count = 0
         pop_loss = self._params.population_loss_ratio
         if pop_loss > 0 and hasattr(settlement, "population"):
-            lost = max(1, int(settlement.population * pop_loss))
-            settlement.population = max(1, settlement.population - lost)
+            pop_loss_count = max(1, int(settlement.population * pop_loss))
             logger.info(
-                "聚落 %d 革命导致人口损失: -%d (剩余 %d)",
-                event.settlement_id, lost, settlement.population,
+                "聚落 %d 革命导致人口损失: -%d",
+                event.settlement_id, pop_loss_count,
             )
         if hasattr(settlement, "faction_id"):
             event.old_faction_id = settlement.faction_id
@@ -245,6 +248,8 @@ class RevolutionTracker:
                             model.diplomacy.update_trust(
                                 fid, other_fid, -trust_pen,
                             )
+
+        return pop_loss_count
 
     def start_recovery(
         self, settlement_id: int, tick: int,
