@@ -426,7 +426,7 @@ class TestDashApp:
         app = create_app(ss)
         register_callbacks(app)
 
-        assert app.title == "CivSim 造物主面板"
+        assert app.title == "Emergenta — AI Civilization Simulator"
         assert hasattr(app, "shared_state")
 
     def test_app_layout_has_tabs(self) -> None:
