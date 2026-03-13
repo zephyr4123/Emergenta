@@ -306,6 +306,16 @@ class VisualizationConfig(BaseModel):
     export_format: str = "png"
 
 
+class DashboardConfig(BaseModel):
+    """造物主面板配置。"""
+
+    port: int = Field(default=8050, gt=0)
+    refresh_interval_ms: int = Field(default=1000, gt=100)
+    max_history: int = Field(default=5000, gt=100)
+    snapshot_dir: str = "data/snapshots"
+    export_dir: str = "data/exports"
+
+
 class RayConfig(BaseModel):
     """Ray 分布式执行配置。"""
 
@@ -392,6 +402,7 @@ class CivSimConfig(BaseModel):
     leader_prompt: LeaderPromptConfig = Field(
         default_factory=LeaderPromptConfig,
     )
+    dashboard: DashboardConfig = Field(default_factory=DashboardConfig)
 
 
 # ============================================================
