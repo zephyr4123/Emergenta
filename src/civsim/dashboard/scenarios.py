@@ -77,7 +77,11 @@ def apply_scenario(engine: Any, key: str) -> list[str]:
 
 
 def _apply_dutch_disease(engine: Any) -> list[str]:
-    """荷兰病：一个聚落暴富但无粮。"""
+    """荷兰病：一个聚落暴富但无粮。
+
+    同时调整食物经济参数确保非富裕聚落可持续发展，
+    使富裕聚落必须依赖贸易才能获取食物。
+    """
     logs: list[str] = []
     settlements = list(engine.settlements.values())
     if not settlements:
@@ -86,6 +90,18 @@ def _apply_dutch_disease(engine: Any) -> list[str]:
     # 选人口最多的聚落作为"富裕聚落"
     rich = max(settlements, key=lambda s: s.population)
     others = [s for s in settlements if s.id != rich.id]
+
+    # ── 调整食物经济参数：确保农民产出足以养活人口 ──
+    if hasattr(engine, "config"):
+        # 农民产出 2.5→3.5，使 40%农民×45%劳作×3.5=63 > 40消耗
+        engine.config.civilian_behavior.work_output_food = 3.5
+        # 降低饥荒致死速率，给贸易/迁徙更多反应时间
+        engine.config.settlement_params.starvation_unfed_factor = 0.015
+        engine.config.engine_params.starvation_rate_factor = 0.03
+        logs.append(
+            "⚙ 食物经济参数已调整: "
+            "农产3.5, 饥荒致死率↓"
+        )
 
     # ── 富裕聚落：暴金、零粮 ──
     rich.stockpile["gold"] = 50000.0
@@ -107,15 +123,15 @@ def _apply_dutch_disease(engine: Any) -> list[str]:
     if destroyed:
         logs.append(f"🏜 [{rich.name}] {destroyed} 块农田肥力归零")
 
-    # ── 其余聚落：正常粮食、少量金币 ──
+    # ── 其余聚落：充足粮食、少量金币 ──
     for s in others:
-        s.stockpile["food"] = 800.0
+        s.stockpile["food"] = 3000.0
         s.stockpile["gold"] = 50.0
         s.tax_rate = 0.2
         s.security_level = 0.5
     logs.append(
         f"🌾 其余 {len(others)} 个聚落: "
-        f"食物→800, 金币→50, 税率→20%"
+        f"食物→3000, 金币→50, 税率→20%"
     )
 
     logs.insert(0, "🎬 场景预设 [荷兰病] 已应用")
@@ -123,11 +139,22 @@ def _apply_dutch_disease(engine: Any) -> list[str]:
 
 
 def _apply_info_cocoon(engine: Any) -> list[str]:
-    """信息茧房：部分聚落极端困境。"""
+    """信息茧房：部分聚落极端困境。
+
+    同时调整食物经济参数确保正常聚落可持续，
+    困境聚落面临真实生存压力。
+    """
     logs: list[str] = []
     settlements = list(engine.settlements.values())
     if not settlements:
         return ["⚠ 无聚落可配置"]
+
+    # ── 调整食物经济参数 ──
+    if hasattr(engine, "config"):
+        engine.config.civilian_behavior.work_output_food = 3.5
+        engine.config.settlement_params.starvation_unfed_factor = 0.015
+        engine.config.engine_params.starvation_rate_factor = 0.03
+        logs.append("⚙ 食物经济参数已调整: 农产3.5, 饥荒致死率↓")
 
     # ~15% 聚落陷入困境
     n_lying = max(1, int(len(settlements) * 0.15))
@@ -138,7 +165,7 @@ def _apply_info_cocoon(engine: Any) -> list[str]:
 
     # ── 困境聚落：高税、低粮、低治安 ──
     for s in crisis:
-        s.stockpile["food"] = 10.0
+        s.stockpile["food"] = 50.0
         s.stockpile["gold"] = 20.0
         s.tax_rate = 0.6
         s.security_level = 0.3
@@ -147,17 +174,17 @@ def _apply_info_cocoon(engine: Any) -> list[str]:
     suffix = f"等{len(crisis)}个" if len(crisis) > 5 else ""
     logs.append(
         f"🔴 困境聚落 [{crisis_names}{suffix}]: "
-        f"食物→10, 税率→60%, 治安→30%"
+        f"食物→50, 税率→60%, 治安→30%"
     )
 
     # ── 正常聚落 ──
     for s in honest:
-        s.stockpile["food"] = 500.0
+        s.stockpile["food"] = 2000.0
         s.tax_rate = 0.2
         s.security_level = 0.5
     logs.append(
         f"🟢 正常聚落 ({len(honest)}个): "
-        f"食物→500, 税率→20%, 治安→50%"
+        f"食物→2000, 税率→20%, 治安→50%"
     )
 
     logs.insert(0, "🎬 场景预设 [信息茧房] 已应用")
@@ -165,15 +192,25 @@ def _apply_info_cocoon(engine: Any) -> list[str]:
 
 
 def _apply_apocalypse(engine: Any) -> list[str]:
-    """世界末日：全局极端危机。"""
+    """世界末日：全局极端危机。
+
+    同时调整死亡速率，确保文明有机会缓慢恢复而非瞬间灭亡。
+    """
     logs: list[str] = []
     settlements = list(engine.settlements.values())
     if not settlements:
         return ["⚠ 无聚落可配置"]
 
+    # ── 调整食物经济参数 ──
+    if hasattr(engine, "config"):
+        engine.config.civilian_behavior.work_output_food = 3.5
+        engine.config.settlement_params.starvation_unfed_factor = 0.01
+        engine.config.engine_params.starvation_rate_factor = 0.02
+        logs.append("⚙ 食物经济参数已调整: 农产3.5, 饥荒致死率↓↓")
+
     # ── 所有聚落：极端匮乏 ──
     for s in settlements:
-        s.stockpile["food"] = 30.0
+        s.stockpile["food"] = 100.0
         s.stockpile["gold"] = 20.0
         s.stockpile["wood"] = 10.0
         s.stockpile["ore"] = 5.0
@@ -181,7 +218,7 @@ def _apply_apocalypse(engine: Any) -> list[str]:
         s.security_level = 0.2
     logs.append(
         f"💀 全部 {len(settlements)} 个聚落: "
-        f"食物→30, 金→20, 木→10, 矿→5, 税→50%, 治安→20%"
+        f"食物→100, 金→20, 木→10, 矿→5, 税→50%, 治安→20%"
     )
 
     # ── 摧毁 50% 农田 ──
