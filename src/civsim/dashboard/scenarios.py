@@ -76,6 +76,70 @@ def apply_scenario(engine: Any, key: str) -> list[str]:
     return handler(engine)
 
 
+# ── 场景 Prompt 注入 ─────────────────────────────────────────
+
+
+def _inject_scenario_prompts(
+    engine: Any,
+    scenario_desc: str,
+) -> str:
+    """将场景背景信息注入所有 LLM Agent 的 system prompt。
+
+    Args:
+        engine: CivilizationEngine 实例。
+        scenario_desc: 场景背景描述（中文）。
+
+    Returns:
+        日志消息。
+    """
+    gov_count = 0
+    leader_count = 0
+
+    gov_prompt = (
+        "你是一个文明模拟器中的聚落镇长AI。你有自己的执政风格。\n"
+        "你可能贪婪、铁腕、仁慈或投机。\n"
+        "你的首要目标是让你管辖的聚落在与其他聚落的竞争中存活并壮大。\n\n"
+        f"【当前场景】{scenario_desc}\n"
+        "你应当根据此场景背景，结合当前聚落数据做出决策。\n\n"
+        "决策原则：\n"
+        "1. 当资源紧张时，你可以选择囤积不贸易，甚至提高税率以应急\n"
+        "2. 当其他聚落虚弱时，你可以建议首领发动战争掠夺\n"
+        "3. 治安投入有代价——过高的治安会引发民众更强烈的反感\n"
+        "4. 单次税率调整幅度不应超过 0.1\n"
+        "5. 治安投入变化幅度不应超过 0.15\n"
+        "6. 不要总是降税和提高治安，这种策略长期不可持续\n"
+    )
+
+    leader_prompt = (
+        "你是一个文明模拟器中的阵营首领AI。你统领多个聚落。\n"
+        "你的核心目标是：扩张势力、获取资源、削弱对手。\n\n"
+        f"【当前场景】{scenario_desc}\n"
+        "你应当根据此场景背景，制定战略决策。\n\n"
+        "决策范围：\n"
+        "1. 外交行动：propose_alliance / propose_trade / declare_war / "
+        "offer_peace / break_treaty / trade_embargo / none\n"
+        "2. 政策指令：向下属聚落发布税率/治安/资源重点调整指令\n"
+        "3. 军事命令：对敌对阵营发起攻击或防御\n\n"
+        "决策原则：\n"
+        "1. 当你总人口 > 对手 1.3 倍时，考虑宣战掠夺\n"
+        "2. 当盟友变弱或威胁到你时，考虑背叛\n"
+        "3. 当内部满意度低时，可以对外宣战来转嫁矛盾\n"
+        "4. 联盟是暂时的工具，战争是资源再分配的手段\n"
+    )
+
+    if hasattr(engine, "get_governors"):
+        for gov in engine.get_governors():
+            gov.system_prompt_override = gov_prompt
+            gov_count += 1
+
+    if hasattr(engine, "leaders"):
+        for leader in engine.leaders:
+            leader.system_prompt_override = leader_prompt
+            leader_count += 1
+
+    return f"🧠 场景 Prompt 已注入: {gov_count} 镇长, {leader_count} 首领"
+
+
 # ── 生存保障参数包（三场景共用）──────────────────────────────
 
 
@@ -178,6 +242,13 @@ def _apply_dutch_disease(engine: Any) -> list[str]:
         f"食物→5000, 金币→50, 税率→15%"
     )
 
+    logs.append(_inject_scenario_prompts(
+        engine,
+        "荷兰病（资源诅咒）— 你管辖的文明中，有一个聚落因发现大量黄金而暴富，"
+        "但其农田已荒废、粮食储备为零。该聚落必须通过贸易用金币换取食物才能存活。"
+        "其他聚落拥有充足的粮食但金币稀少。"
+        "你需要关注贸易依赖关系、粮食安全、以及资源不平等带来的社会动荡。",
+    ))
     logs.insert(0, "🎬 场景预设 [荷兰病] 已应用")
     return logs
 
@@ -231,6 +302,14 @@ def _apply_info_cocoon(engine: Any) -> list[str]:
         f"食物→3000, 税率→15%, 治安→50%"
     )
 
+    logs.append(_inject_scenario_prompts(
+        engine,
+        "信息茧房（虚假繁荣）— 你管辖的文明中，约15%的聚落处于极端困境"
+        "（高税收、低粮食、低治安），而其余聚落相对正常。"
+        "困境聚落的民众极度不满，随时可能爆发革命。"
+        "你需要关注聚落间的差距、是否应该援助困境聚落、"
+        "以及虚假繁荣表象下的真实危机。",
+    ))
     logs.insert(0, "🎬 场景预设 [信息茧房] 已应用")
     return logs
 
@@ -286,6 +365,14 @@ def _apply_apocalypse(engine: Any) -> list[str]:
         f"肥力降至 0.1"
     )
 
+    logs.append(_inject_scenario_prompts(
+        engine,
+        "世界末日（全球危机）— 所有聚落同时陷入极端资源匮乏，"
+        "50%的农田被毁坏，食物、木材、矿石、金币储备都降至最低。"
+        "文明正处于灭绝边缘。你需要在极端逆境中做出艰难抉择："
+        "是优先保障粮食安全，还是维持治安防止暴乱，"
+        "还是通过外交合作共度难关。每一个决策都关乎文明的存亡。",
+    ))
     logs.insert(0, "🎬 场景预设 [世界末日] 已应用")
     return logs
 

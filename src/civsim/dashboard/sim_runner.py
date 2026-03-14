@@ -430,6 +430,7 @@ class SimulationRunner:
         # 应用后立即更新快照，使 UI 立即反映变化
         self.state.update_from_engine(self.engine)
 
+
     def _handle_reset(self, params: dict[str, Any]) -> None:
         """重置仿真到初始状态。"""
         self.state.add_event("🔄 正在重置仿真...")

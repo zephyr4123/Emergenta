@@ -7,7 +7,6 @@ Prompt textarea 使用独立按钮触发回调。
 from __future__ import annotations
 
 import json
-from datetime import datetime
 
 from dash import ALL, Input, Output, State, callback_context, no_update
 from dash.exceptions import PreventUpdate
