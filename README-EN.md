@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/LLM-Claude_Opus/Sonnet/Haiku-D97757?style=for-the-badge&logo=anthropic&logoColor=white" />
   <img src="https://img.shields.io/badge/Framework-Mesa_3.x-2ECC71?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Status-Active_Development-FF6B35?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Status-Stable_Iterating-2ECC71?style=for-the-badge" />
 </p>
 
 <p><i>A cost-efficient framework for macroscopic social emergence.</i></p>
@@ -120,7 +120,10 @@ cp .env.example .env
 # 4. Run simulation
 python scripts/run_simulation.py --ticks 200 --civilians 100
 
-# 5. Run 5000-agent extreme scenarios
+# 5. Launch God Mode dashboard (real-time Web UI)
+python scripts/run_dashboard.py
+
+# 6. Run 5000-agent extreme scenarios
 python scripts/run_dutch_disease_5000.py
 python scripts/run_info_cocoon_5000.py
 python scripts/run_apocalypse_5000.py
@@ -725,7 +728,8 @@ src/civsim/
 ├── llm/              # 🤖 LLM integration (gateway, prompts, memory, cache)
 ├── communication/    # 📡 Communication (MQTT broker)
 ├── data/             # 📊 Data (collector, DuckDB, emergence detection)
-└── visualization/    # 🎨 Visualization (map renderer, dashboard)
+├── dashboard/        # 🖥️ God Mode panel (Dash Web UI, live charts, god mode)
+└── visualization/    # 🎨 Visualization (map renderer, static charts)
 ```
 
 ---
@@ -738,7 +742,7 @@ src/civsim/
 <tr><td>✅</td><td><b>Phase 2</b></td><td>LLM Governor layer — Haiku/Sonnet governance decisions</td></tr>
 <tr><td>✅</td><td><b>Phase 3</b></td><td>Leader layer & emergence — diplomacy / trade / revolution / war</td></tr>
 <tr><td>✅</td><td><b>Phase 4</b></td><td>5000+ scale parallelism — parallel infrastructure + LLM cost optimization + adaptive parameter system + extreme scenario stress tests</td></tr>
-<tr><td>🔲</td><td><b>Phase 5</b></td><td>God Mode & visualization — real-time event injection + Plotly dashboard + leader intervention</td></tr>
+<tr><td>✅</td><td><b>Phase 5</b></td><td>God Mode & visualization — creator panel + Plotly Dash live dashboard + 51-param config + snapshot/export + one-click reset</td></tr>
 </table>
 
 ---

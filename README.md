@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/LLM-Claude_Opus/Sonnet/Haiku-D97757?style=for-the-badge&logo=anthropic&logoColor=white" />
   <img src="https://img.shields.io/badge/Framework-Mesa_3.x-2ECC71?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Status-Active_Development-FF6B35?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Status-Stable_Iterating-2ECC71?style=for-the-badge" />
 </p>
 
 <p><i>低成本实现宏观社会涌现的仿真框架</i></p>
@@ -120,7 +120,10 @@ cp .env.example .env
 # 4. 运行模拟
 python scripts/run_simulation.py --ticks 200 --civilians 100
 
-# 5. 运行 5000 Agent 极端场景
+# 5. 启动造物主面板（实时 Web 仪表盘）
+python scripts/run_dashboard.py
+
+# 6. 运行 5000 Agent 极端场景
 python scripts/run_dutch_disease_5000.py
 python scripts/run_info_cocoon_5000.py
 python scripts/run_apocalypse_5000.py
@@ -725,7 +728,8 @@ src/civsim/
 ├── llm/              # 🤖 LLM 集成（网关、提示词、记忆、缓存）
 ├── communication/    # 📡 通信（MQTT broker）
 ├── data/             # 📊 数据（采集器、DuckDB、涌现检测）
-└── visualization/    # 🎨 可视化（地图渲染、仪表盘）
+├── dashboard/        # 🖥️ 造物主面板（Dash Web UI、实时图表、上帝模式）
+└── visualization/    # 🎨 可视化（地图渲染、静态图表）
 ```
 
 ---
@@ -738,7 +742,7 @@ src/civsim/
 <tr><td>✅</td><td><b>Phase 2</b></td><td>LLM 镇长层 — Haiku/Sonnet 治理决策</td></tr>
 <tr><td>✅</td><td><b>Phase 3</b></td><td>首领层与涌现 — 外交 / 贸易 / 革命 / 战争</td></tr>
 <tr><td>✅</td><td><b>Phase 4</b></td><td>5000+ 规模并行 — 并行基础设施 + LLM 成本优化 + 自适应参数系统 + 极端场景压力测试</td></tr>
-<tr><td>🔲</td><td><b>Phase 5</b></td><td>上帝模式与可视化 — 实时事件注入 + Plotly 仪表盘 + 领袖内政干预</td></tr>
+<tr><td>✅</td><td><b>Phase 5</b></td><td>上帝模式与可视化 — 造物主面板 + Plotly Dash 实时仪表盘 + 51 参数配置 + 快照/导出 + 一键重置</td></tr>
 </table>
 
 ---
