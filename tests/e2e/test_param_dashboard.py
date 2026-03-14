@@ -73,8 +73,8 @@ class TestDashAppCreation:
                 break
 
         assert tabs_component is not None, "未找到 tabs 组件"
-        assert len(tabs_component.children) == 7, (
-            f"期望 7 个标签页，实际 {len(tabs_component.children)}"
+        assert len(tabs_component.children) == 8, (
+            f"期望 8 个标签页，实际 {len(tabs_component.children)}"
         )
 
     def test_param_tab_present(self) -> None:

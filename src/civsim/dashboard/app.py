@@ -131,6 +131,60 @@ def _build_tab_adaptive() -> dbc.Tab:
     )
 
 
+def _build_tab_live_map() -> dbc.Tab:
+    """标签页：实时地图 + 马尔可夫转移滚动。"""
+    return dbc.Tab(
+        label="实时地图",
+        tab_id="tab-live-map",
+        children=dbc.Container(
+            [
+                dbc.Row(
+                    [
+                        # 左侧：实时地图
+                        dbc.Col(
+                            dcc.Graph(
+                                id="chart-live-map",
+                                style={"height": "calc(100vh - 200px)"},
+                                config={
+                                    "scrollZoom": True,
+                                    "displayModeBar": True,
+                                    "modeBarButtonsToRemove": [
+                                        "select2d", "lasso2d",
+                                    ],
+                                },
+                            ),
+                            md=8,
+                        ),
+                        # 右侧：马尔可夫转移滚动
+                        dbc.Col(
+                            dbc.Card(
+                                [
+                                    dbc.CardHeader(
+                                        "马尔可夫状态转移 (实时抽样)",
+                                    ),
+                                    dbc.CardBody(
+                                        html.Div(
+                                            id="markov-scroll",
+                                            style={
+                                                "maxHeight": (
+                                                    "calc(100vh - 260px)"
+                                                ),
+                                                "overflowY": "auto",
+                                            },
+                                        ),
+                                    ),
+                                ],
+                            ),
+                            md=4,
+                        ),
+                    ],
+                ),
+            ],
+            fluid=True,
+        ),
+    )
+
+
 def _build_tab_speeches() -> dbc.Tab:
     """标签页：AI 发言 — 实时展示 LLM 决策发言。"""
     return dbc.Tab(
@@ -339,6 +393,7 @@ def create_app(shared_state: SharedState) -> dash.Dash:
             dbc.Tabs(
                 [
                     _build_tab_overview(),
+                    _build_tab_live_map(),
                     _build_tab_settlements(),
                     _build_tab_diplomacy(),
                     _build_tab_adaptive(),
@@ -351,6 +406,8 @@ def create_app(shared_state: SharedState) -> dash.Dash:
             ),
             # 自动刷新定时器
             dcc.Interval(id="interval-refresh", interval=1000, n_intervals=0),
+            # 参数同步存储（服务端 → 前端，版本号驱动）
+            dcc.Store(id="param-sync-store", data={"version": 0, "values": {}}),
         ],
         className="main-viewport",
     )

@@ -65,6 +65,35 @@ class LLMSpeech:
 
 
 @dataclass
+class MarkovTransition:
+    """单次马尔可夫状态转移记录（用于滚动展示）。
+
+    Attributes:
+        tick: 发生的 tick。
+        agent_id: Agent 唯一 ID。
+        personality: 性格标签。
+        prev_state: 转移前状态名。
+        next_state: 转移后状态名。
+        probability: 该转移的概率值。
+        hunger: 转移时的饥饿度。
+        satisfaction: 转移时的满意度。
+        factors: 影响因子描述列表，如 ["饥饿+48%", "税率+27%"]。
+        granovetter_triggered: 是否触发了 Granovetter 传染。
+    """
+
+    tick: int
+    agent_id: int
+    personality: str
+    prev_state: str
+    next_state: str
+    probability: float
+    hunger: float
+    satisfaction: float
+    factors: list[str] = field(default_factory=list)
+    granovetter_triggered: bool = False
+
+
+@dataclass
 class TickSnapshot:
     """单个 tick 的聚合快照。
 
@@ -87,6 +116,11 @@ class TickSnapshot:
         faction_count: 阵营数。
         events: 本 tick 发生的事件列表。
         adaptive_info: 自适应控制器信息。
+        agent_positions: Agent 坐标列表 [(x, y), ...]。
+        agent_states: Agent 状态索引列表 [0-6, ...]。
+        tile_grid: 地块类型矩阵（二维列表，值为 TileType 序号）。
+        grid_width: 网格宽度。
+        grid_height: 网格高度。
     """
 
     tick: int = 0
@@ -107,6 +141,11 @@ class TickSnapshot:
     faction_count: int = 0
     events: list[str] = field(default_factory=list)
     adaptive_info: dict[str, Any] = field(default_factory=dict)
+    agent_positions: list[tuple[int, int]] = field(default_factory=list)
+    agent_states: list[int] = field(default_factory=list)
+    tile_grid: list[list[int]] = field(default_factory=list)
+    grid_width: int = 0
+    grid_height: int = 0
 
 
 # 季节中文映射
@@ -136,6 +175,12 @@ class SharedState:
         self._trade_routes: list[dict[str, Any]] = []
         self._diplomacy_data: dict[str, Any] = {}
         self._llm_speeches: deque[LLMSpeech] = deque(maxlen=100)
+        self._markov_transitions: deque[MarkovTransition] = deque(maxlen=60)
+        self._tile_grid_cache: list[list[int]] = []
+        self._grid_width: int = 0
+        self._grid_height: int = 0
+        self._param_version: int = 0
+        self._current_params: dict[str, Any] = {}
 
     # ------------------------------------------------------------------
     # 仿真线程写入接口
@@ -167,6 +212,26 @@ class SharedState:
             state_counts[s.name] = sum(
                 1 for c in civilians if c.state == s
             )
+
+        # Agent 位置与状态（实时地图用）
+        agent_positions: list[tuple[int, int]] = []
+        agent_states: list[int] = []
+        for c in civilians:
+            pos = c.pos if c.pos is not None else (0, 0)
+            agent_positions.append(pos)
+            agent_states.append(int(c.state))
+
+        # 地块网格（首次或变化时缓存）
+        tile_grid = self._tile_grid_cache
+        grid_w = self._grid_width
+        grid_h = self._grid_height
+        if not tile_grid and hasattr(engine, "tile_grid"):
+            tile_grid, grid_w, grid_h = self._serialize_tile_grid(
+                engine.tile_grid,
+            )
+            self._tile_grid_cache = tile_grid
+            self._grid_width = grid_w
+            self._grid_height = grid_h
 
         # 资源汇总
         resources: dict[str, float] = {
@@ -292,6 +357,11 @@ class SharedState:
             war_count=war_count,
             faction_count=len(faction_ids),
             adaptive_info=adaptive_info,
+            agent_positions=agent_positions,
+            agent_states=agent_states,
+            tile_grid=tile_grid,
+            grid_width=grid_w,
+            grid_height=grid_h,
         )
 
     def _update_trade_routes(self, engine: Any) -> None:
@@ -415,8 +485,78 @@ class SharedState:
         with self._lock:
             return list(self._llm_speeches)[-n:]
 
+    # ------------------------------------------------------------------
+    # 马尔可夫转移滚动缓冲
+    # ------------------------------------------------------------------
+
+    def add_markov_transition(self, t: MarkovTransition) -> None:
+        """追加一条马尔可夫转移记录。"""
+        with self._lock:
+            self._markov_transitions.append(t)
+
+    def get_markov_transitions(self, n: int = 30) -> list[MarkovTransition]:
+        """返回最近 n 条马尔可夫转移记录。"""
+        with self._lock:
+            return list(self._markov_transitions)[-n:]
+
+    # ------------------------------------------------------------------
+    # 地块网格序列化
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _serialize_tile_grid(
+        tile_grid: list[list[Any]],
+    ) -> tuple[list[list[int]], int, int]:
+        """将 Tile 对象网格转换为整数类型矩阵。
+
+        Returns:
+            (grid, width, height)
+        """
+        _TYPE_INDEX = {
+            "farmland": 0, "forest": 1, "mine": 2,
+            "water": 3, "mountain": 4, "barren": 5, "settlement": 6,
+        }
+        if not tile_grid:
+            return [], 0, 0
+        width = len(tile_grid)
+        height = len(tile_grid[0]) if tile_grid else 0
+        grid: list[list[int]] = []
+        for col in tile_grid:
+            row_data: list[int] = []
+            for tile in col:
+                tt = getattr(tile, "tile_type", None)
+                val = tt.value if tt else "barren"
+                row_data.append(_TYPE_INDEX.get(val, 5))
+            grid.append(row_data)
+        return grid, width, height
+
+    # ------------------------------------------------------------------
+    # 参数同步（服务端 → 前端）
+    # ------------------------------------------------------------------
+
+    def bump_param_version(self, params: dict[str, Any]) -> None:
+        """递增参数版本号并存储当前参数快照。
+
+        Args:
+            params: 所有注册参数的当前值 {config_path: value}。
+        """
+        with self._lock:
+            self._param_version += 1
+            self._current_params = params.copy()
+
+    @property
+    def param_version(self) -> int:
+        """参数版本号（每次服务端批量修改参数后递增）。"""
+        with self._lock:
+            return self._param_version
+
+    def get_current_params(self) -> dict[str, Any]:
+        """返回最新参数快照。"""
+        with self._lock:
+            return dict(self._current_params)
+
     def reset(self) -> None:
-        """重置所有状态数据（保留事件日志）。"""
+        """重置所有状态数据（保留事件日志和参数版本号）。"""
         with self._lock:
             self._latest = TickSnapshot()
             self._history.clear()
@@ -424,6 +564,10 @@ class SharedState:
             self._trade_routes = []
             self._diplomacy_data = {}
             self._llm_speeches.clear()
+            self._markov_transitions.clear()
+            self._tile_grid_cache = []
+            self._grid_width = 0
+            self._grid_height = 0
 
     # ------------------------------------------------------------------
     # 上帝模式操作队列

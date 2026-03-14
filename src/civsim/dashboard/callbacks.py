@@ -26,6 +26,7 @@ def register_callbacks(app: object) -> None:
     """
     _register_status_bar(app)
     _register_overview_charts(app)
+    _register_live_map(app)
     _register_settlement_chart(app)
     _register_diplomacy_charts(app)
     _register_adaptive_chart(app)
@@ -97,6 +98,33 @@ def _register_overview_charts(app: object) -> None:
             charts.build_resource_chart(history),
             charts.build_satisfaction_chart(history),
             charts.build_revolution_timeline(history),
+        )
+
+
+# ------------------------------------------------------------------
+# 实时地图 + 马尔可夫转移滚动
+# ------------------------------------------------------------------
+
+def _register_live_map(app: object) -> None:
+    @app.callback(  # type: ignore[union-attr]
+        [
+            Output("chart-live-map", "figure"),
+            Output("markov-scroll", "children"),
+        ],
+        Input("interval-refresh", "n_intervals"),
+    )
+    def update_live_map(_n: int) -> tuple:
+        from civsim.dashboard.charts_map import (
+            build_interactive_map,
+            build_markov_cards,
+        )
+
+        ss = _get_state(app)
+        snap = ss.get_latest()
+        transitions = ss.get_markov_transitions(30)
+        return (
+            build_interactive_map(snap),
+            build_markov_cards(transitions),
         )
 
 

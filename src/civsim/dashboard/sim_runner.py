@@ -62,6 +62,7 @@ class SimulationRunner:
         self._step_event = threading.Event()
         # 初始快照
         self.state.update_from_engine(self.engine)
+        self._sync_params_to_frontend()
         self.state.add_event(
             f"仿真初始化完成: {len(list(self.engine.agents))} 个Agent, "
             f"{len(self.engine.settlements)} 个聚落"
@@ -147,6 +148,7 @@ class SimulationRunner:
             self.state.update_from_engine(self.engine)
             self._log_tick_events(tick_before)
             self._log_llm_speeches()
+            self._sample_markov_transitions()
         except Exception:
             logger.exception("tick %d 执行异常", self.engine.clock.tick)
             self.state.add_event(
@@ -242,6 +244,138 @@ class SimulationRunner:
                     reasoning=leader.last_speech_text,
                     decision_summary=summary,
                 ))
+
+    # ------------------------------------------------------------------
+    # 马尔可夫转移抽样（实时滚动展示）
+    # ------------------------------------------------------------------
+
+    def _sample_markov_transitions(self) -> None:
+        """每 tick 随机抽样 3 个平民的马尔可夫转移信息。"""
+        import random
+
+        from civsim.agents.behaviors.fsm import STATE_NAMES, CivilianState
+        from civsim.agents.behaviors.granovetter import compute_protest_ratio
+        from civsim.agents.behaviors.markov import (
+            Personality,
+            compute_transition_matrix,
+        )
+        from civsim.agents.civilian import Civilian
+        from civsim.dashboard.shared_state import MarkovTransition
+
+        civilians = [a for a in self.engine.agents if isinstance(a, Civilian)]
+        if not civilians:
+            return
+
+        sample_size = min(3, len(civilians))
+        sampled = random.sample(civilians, sample_size)
+        tick = self.engine.clock.tick
+
+        # 获取配置
+        coefficients = None
+        protest_mult = 1.0
+        granovetter_mult = 1.0
+        if hasattr(self.engine, "config"):
+            coefficients = self.engine.config.markov_coefficients
+        if self.engine.adaptive_controller:
+            ctrl = self.engine.adaptive_controller
+            protest_mult = ctrl.coefficients.markov_protest_multiplier
+            granovetter_mult = ctrl.coefficients.granovetter_burst_multiplier
+
+        _PERSONALITY_CN = {
+            Personality.COMPLIANT: "顺从",
+            Personality.NEUTRAL: "中立",
+            Personality.REBELLIOUS: "叛逆",
+        }
+
+        for civ in sampled:
+            # 获取环境参数
+            settlement = self.engine.settlements.get(civ.home_settlement_id)
+            tax_rate = settlement.tax_rate if settlement else 0.1
+            security = settlement.security_level if settlement else 0.5
+
+            # 获取邻居抗议率
+            protest_ratio = 0.0
+            if hasattr(self.engine, "grid") and civ.pos is not None:
+                radius = 3
+                if hasattr(self.engine, "config"):
+                    radius = self.engine.config.engine_params.neighbor_radius
+                neighbors = self.engine.grid.iter_neighbors(
+                    civ.pos, moore=True, include_center=False, radius=radius,
+                )
+                neighbor_states = [
+                    n.state for n in neighbors if isinstance(n, Civilian)
+                ]
+                protest_ratio = compute_protest_ratio(neighbor_states)
+
+            # 计算转移矩阵
+            matrix = compute_transition_matrix(
+                personality=civ.personality,
+                hunger=civ.hunger,
+                tax_rate=tax_rate,
+                security=security,
+                protest_ratio=protest_ratio,
+                revolt_threshold=civ.revolt_threshold,
+                coefficients=coefficients,
+                protest_multiplier=protest_mult,
+                granovetter_multiplier=granovetter_mult,
+            )
+
+            prev_state = civ.state
+            prob_row = matrix[int(prev_state)]
+
+            # 构建影响因子描述
+            factors: list[str] = []
+            if civ.hunger > 0.3:
+                factors.append(f"饥饿 {civ.hunger:.0%}")
+            if tax_rate > 0.2:
+                factors.append(f"税率 {tax_rate:.0%}")
+            granovetter_triggered = (
+                protest_ratio >= civ.revolt_threshold
+            )
+            if granovetter_triggered:
+                factors.append(
+                    f"传染! 邻居{protest_ratio:.0%}"
+                    f">=阈值{civ.revolt_threshold:.0%}"
+                )
+            if security < 0.3:
+                factors.append(f"低治安 {security:.0%}")
+
+            self.state.add_markov_transition(MarkovTransition(
+                tick=tick,
+                agent_id=civ.unique_id,
+                personality=_PERSONALITY_CN.get(civ.personality, "?"),
+                prev_state=STATE_NAMES.get(prev_state, "?"),
+                next_state=STATE_NAMES.get(civ.state, "?"),
+                probability=float(prob_row[int(civ.state)]),
+                hunger=civ.hunger,
+                satisfaction=civ.satisfaction,
+                factors=factors,
+                granovetter_triggered=granovetter_triggered,
+            ))
+
+    # ------------------------------------------------------------------
+    # 参数同步（服务端 → 前端）
+    # ------------------------------------------------------------------
+
+    def _sync_params_to_frontend(self) -> None:
+        """将所有注册参数的当前值快照推送到 SharedState。
+
+        前端通过版本号检测变化后拉取最新值，实现事件驱动的参数同步。
+        """
+        from civsim.dashboard.param_registry import (
+            PARAM_REGISTRY,
+            get_config_by_path,
+        )
+
+        current: dict[str, Any] = {}
+        for spec in PARAM_REGISTRY:
+            try:
+                current[spec.config_path] = get_config_by_path(
+                    self.config, spec.config_path,
+                )
+            except (AttributeError, TypeError):
+                current[spec.config_path] = spec.default
+        self.state.bump_param_version(current)
 
     # ------------------------------------------------------------------
     # 上帝模式操作处理
@@ -429,6 +563,8 @@ class SimulationRunner:
             self.state.add_event(msg)
         # 应用后立即更新快照，使 UI 立即反映变化
         self.state.update_from_engine(self.engine)
+        # 同步参数到前端控件（场景预设会批量修改参数）
+        self._sync_params_to_frontend()
 
 
     def _handle_reset(self, params: dict[str, Any]) -> None:
@@ -452,6 +588,8 @@ class SimulationRunner:
         self.state.update_from_engine(self.engine)
         self.state.speed = 1
         self.state.is_paused = True
+        # 同步重置后的参数到前端控件
+        self._sync_params_to_frontend()
         self.state.add_event(
             f"✅ 仿真已重置: {len(list(self.engine.agents))} 个Agent, "
             f"{len(self.engine.settlements)} 个聚落"
