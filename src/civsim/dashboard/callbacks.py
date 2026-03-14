@@ -163,8 +163,6 @@ def _register_god_mode(app: object) -> None:
             Input("btn-step", "n_clicks"),
             Input("slider-speed", "value"),
             Input("btn-inject-event", "n_clicks"),
-            Input("slider-temperature", "value"),
-            Input("slider-food-regen", "value"),
             Input("btn-force-diplomacy", "n_clicks"),
             Input("btn-apply-scenario", "n_clicks"),
         ],
@@ -184,8 +182,6 @@ def _register_god_mode(app: object) -> None:
         step_clicks: int | None,
         speed: int | None,
         inject_clicks: int | None,
-        temperature: float | None,
-        food_regen: float | None,
         diplo_clicks: int | None,
         scenario_clicks: int | None,
         event_name: str | None,
@@ -226,26 +222,6 @@ def _register_god_mode(app: object) -> None:
                         },
                     ),
                 )
-        elif trigger_id == "slider-temperature" and temperature is not None:
-            ss.enqueue_action(
-                GodModeAction(
-                    action=GodAction.SET_PARAMETER,
-                    params={
-                        "param_name": "target_temperature",
-                        "value": temperature,
-                    },
-                ),
-            )
-        elif trigger_id == "slider-food-regen" and food_regen is not None:
-            ss.enqueue_action(
-                GodModeAction(
-                    action=GodAction.SET_PARAMETER,
-                    params={
-                        "param_name": "food_regen",
-                        "value": food_regen,
-                    },
-                ),
-            )
         elif trigger_id == "btn-force-diplomacy":
             if faction_a is not None and faction_b is not None and diplo_status:
                 ss.enqueue_action(

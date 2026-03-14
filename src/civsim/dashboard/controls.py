@@ -18,23 +18,26 @@ def build_god_mode_controls() -> dbc.Card:
             dbc.Select(
                 id="select-scenario",
                 options=get_preset_options(),
-                placeholder="选择场景模板…",
+                placeholder="选择场景模板...",
                 className="mb-2",
             ),
             dbc.Button(
                 "一键应用场景", id="btn-apply-scenario",
-                color="danger", size="sm", className="mb-2",
+                color="danger", className="mb-2 w-100",
             ),
-            html.Small(id="scenario-description", className="text-muted d-block mb-2"),
+            html.Small(
+                id="scenario-description",
+                className="text-muted d-block mb-2",
+            ),
             html.Hr(),
             # 时间控制
             html.H6("时间控制"),
             dbc.ButtonGroup([
-                dbc.Button("▶ 运行", id="btn-play", color="success", size="sm"),
-                dbc.Button("⏸ 暂停", id="btn-pause", color="warning", size="sm"),
-                dbc.Button("⏭ 单步", id="btn-step", color="info", size="sm"),
-            ], className="mb-2"),
-            html.Label("速度倍率"),
+                dbc.Button("运行", id="btn-play", color="success"),
+                dbc.Button("暂停", id="btn-pause", color="warning"),
+                dbc.Button("单步", id="btn-step", color="info"),
+            ], className="mb-3 w-100"),
+            html.Label("速度倍率", className="small"),
             dcc.Slider(
                 id="slider-speed", min=1, max=20, step=1, value=1,
                 marks={1: "1x", 5: "5x", 10: "10x", 20: "20x"},
@@ -59,20 +62,7 @@ def build_god_mode_controls() -> dbc.Card:
             ),
             dbc.Button(
                 "注入事件", id="btn-inject-event",
-                color="danger", size="sm", className="mb-3",
-            ),
-            html.Hr(),
-            # 参数调整
-            html.H6("参数调整"),
-            html.Label("目标温度"),
-            dcc.Slider(
-                id="slider-temperature", min=0.0, max=1.0, step=0.05, value=0.45,
-                marks={0: "0", 0.5: "0.5", 1: "1"},
-            ),
-            html.Label("食物再生率"),
-            dcc.Slider(
-                id="slider-food-regen", min=0.0, max=5.0, step=0.1, value=0.8,
-                marks={0: "0", 1: "1", 3: "3", 5: "5"},
+                color="danger", className="mb-3 w-100",
             ),
             html.Hr(),
             # 外交干预
@@ -100,7 +90,12 @@ def build_god_mode_controls() -> dbc.Card:
             ], className="mb-2"),
             dbc.Button(
                 "执行外交操作", id="btn-force-diplomacy",
-                color="primary", size="sm",
+                color="primary", className="w-100",
+            ),
+            html.Div(className="mt-3"),
+            html.Small(
+                "更多参数调整请前往「参数配置」标签页",
+                className="text-muted d-block text-center",
             ),
             # 隐藏的 callback 输出占位
             html.Div(id="god-mode-feedback", style={"display": "none"}),
