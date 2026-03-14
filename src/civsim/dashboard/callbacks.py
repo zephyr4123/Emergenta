@@ -32,6 +32,7 @@ def register_callbacks(app: object) -> None:
     _register_event_log(app)
     _register_settlement_dropdown(app)
     _register_scenario_description(app)
+    _register_reset(app)
     register_param_callbacks(app)
 
 
@@ -297,4 +298,22 @@ def _register_scenario_description(app: object) -> None:
         for p in SCENARIO_REGISTRY:
             if p.key == key:
                 return p.description
+        return ""
+
+
+# ------------------------------------------------------------------
+# 重置仿真
+# ------------------------------------------------------------------
+
+def _register_reset(app: object) -> None:
+    @app.callback(  # type: ignore[union-attr]
+        Output("god-mode-feedback", "children", allow_duplicate=True),
+        Input("btn-reset-sim", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def handle_reset(n_clicks: int | None) -> str:
+        if not n_clicks:
+            raise PreventUpdate
+        ss = _get_state(app)
+        ss.enqueue_action(GodModeAction(action=GodAction.RESET))
         return ""

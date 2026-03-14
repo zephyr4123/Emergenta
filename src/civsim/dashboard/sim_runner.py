@@ -44,6 +44,10 @@ class SimulationRunner:
         enable_db: bool = False,
     ) -> None:
         self.config = config or load_config(config_path)
+        self._init_seed = seed
+        self._init_governors = enable_governors
+        self._init_leaders = enable_leaders
+        self._init_db = enable_db
         self.state = SharedState()
         self.engine = CivilizationEngine(
             config=self.config,
@@ -374,6 +378,32 @@ class SimulationRunner:
         # 应用后立即更新快照，使 UI 立即反映变化
         self.state.update_from_engine(self.engine)
 
+    def _handle_reset(self, params: dict[str, Any]) -> None:
+        """重置仿真到初始状态。"""
+        self.state.add_event("🔄 正在重置仿真...")
+        was_paused = self.state.is_paused
+        self.state.is_paused = True
+
+        # 重建配置和引擎
+        self.config = load_config()
+        self.engine = CivilizationEngine(
+            config=self.config,
+            seed=self._init_seed,
+            enable_governors=self._init_governors,
+            enable_leaders=self._init_leaders,
+            enable_db=self._init_db,
+        )
+
+        # 重置共享状态（保留事件日志中的重置消息）
+        self.state.reset()
+        self.state.update_from_engine(self.engine)
+        self.state.speed = 1
+        self.state.is_paused = True
+        self.state.add_event(
+            f"✅ 仿真已重置: {len(list(self.engine.agents))} 个Agent, "
+            f"{len(self.engine.settlements)} 个聚落"
+        )
+
 
 # 操作类型 → 处理器映射
 _GOD_ACTION_HANDLERS: dict = {
@@ -387,4 +417,5 @@ _GOD_ACTION_HANDLERS: dict = {
     GodAction.FORCE_DIPLOMACY: SimulationRunner._handle_force_diplomacy,
     GodAction.REPLACE_LEADER: SimulationRunner._handle_replace_leader,
     GodAction.APPLY_SCENARIO: SimulationRunner._handle_apply_scenario,
+    GodAction.RESET: SimulationRunner._handle_reset,
 }

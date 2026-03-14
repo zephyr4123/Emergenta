@@ -198,8 +198,9 @@ def create_app(shared_state: SharedState) -> dash.Dash:
         'background:linear-gradient(135deg,#3498db 0%,#2ecc71 100%);'
         '-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:0}'
         '.brand-sub{font-size:11px;color:#7f8c8d;letter-spacing:1px;margin:0}'
-        '.brand-divider{flex:1}.brand-badge{font-size:10px;color:#3498db;'
-        'border:1px solid #3498db;border-radius:4px;padding:2px 8px}'
+        '.brand-divider{flex:1}'
+        '.btn-outline-secondary{color:#e74c3c!important;border-color:#e74c3c!important}'
+        '.btn-outline-secondary:hover{background-color:#e74c3c!important;color:#fff!important}'
         # 组件主题
         '.status-bar{background:#16213e;border-radius:8px}'
         '.status-item{text-align:center;font-weight:bold;color:#ecf0f1;font-size:13px;padding:4px}'
@@ -268,7 +269,10 @@ def create_app(shared_state: SharedState) -> dash.Dash:
                         html.P("AI Civilization Simulator", className="brand-sub"),
                     ]),
                     html.Div(className="brand-divider"),
-                    html.Span("v0.1", className="brand-badge"),
+                    dbc.Button(
+                        "重置仿真", id="btn-reset-sim",
+                        color="outline-secondary", size="sm",
+                    ),
                 ],
                 className="brand-bar",
             ),

@@ -27,6 +27,7 @@ class GodAction(Enum):
     PAUSE = "pause"
     RESUME = "resume"
     STEP = "step"
+    RESET = "reset"
 
 
 @dataclass
@@ -377,6 +378,15 @@ class SharedState:
         """返回最近 n 条事件日志。"""
         with self._lock:
             return list(self._event_log)[-n:]
+
+    def reset(self) -> None:
+        """重置所有状态数据（保留事件日志）。"""
+        with self._lock:
+            self._latest = TickSnapshot()
+            self._history.clear()
+            self._pending_actions.clear()
+            self._trade_routes = []
+            self._diplomacy_data = {}
 
     # ------------------------------------------------------------------
     # 上帝模式操作队列
