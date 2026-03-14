@@ -124,7 +124,7 @@ def _register_param_log(app: object) -> None:
     )
     def _update_param_log(_n: int) -> str:
         state = _get_state(app)
-        events = state.get_events()
+        events = state.get_event_log(50)
         # 过滤参数相关事件
         param_events = [e for e in events if any(
             kw in e for kw in ("→", "已同步", "参数", "Prompt", "温度")
