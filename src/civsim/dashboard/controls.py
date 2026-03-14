@@ -40,7 +40,12 @@ def build_god_mode_controls() -> dbc.Card:
             html.Label("速度倍率", className="small"),
             dcc.Slider(
                 id="slider-speed", min=1, max=20, step=1, value=1,
-                marks={1: "1x", 5: "5x", 10: "10x", 20: "20x"},
+                marks={
+                    1: {"label": "1x", "style": {"color": "#ecf0f1"}},
+                    5: {"label": "5x", "style": {"color": "#ecf0f1"}},
+                    10: {"label": "10x", "style": {"color": "#ecf0f1"}},
+                    20: {"label": "20x", "style": {"color": "#ecf0f1"}},
+                },
             ),
             html.Hr(),
             # 事件注入

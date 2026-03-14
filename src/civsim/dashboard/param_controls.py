@@ -15,23 +15,30 @@ from civsim.dashboard.param_registry import (
 )
 
 
+_MARK_STYLE: dict = {"color": "#ecf0f1", "fontSize": "11px"}
+
+
+def _styled_marks(values: dict[float, str]) -> dict:
+    """为 marks 添加亮色内联样式。"""
+    return {k: {"label": v, "style": _MARK_STYLE} for k, v in values.items()}
+
+
 def _build_slider_control(spec: ParamSpec) -> dbc.Col:
     """构建 slider 类型控件。"""
     min_v = spec.min_val if spec.min_val is not None else 0.0
     max_v = spec.max_val if spec.max_val is not None else 1.0
     step = spec.step if spec.step is not None else 0.01
-    marks = {min_v: str(min_v), max_v: str(max_v)}
+    raw_marks: dict[float, str] = {min_v: str(min_v), max_v: str(max_v)}
     mid = round((min_v + max_v) / 2, 4)
     if mid != min_v and mid != max_v:
-        marks[mid] = str(mid)
+        raw_marks[mid] = str(mid)
     return dbc.Col([
         html.Label(spec.label, className="small fw-bold"),
         dcc.Slider(
             id={"type": "param-input", "path": spec.config_path},
             min=min_v, max=max_v, step=step,
             value=spec.default,
-            marks=marks,
-            tooltip={"placement": "bottom", "always_visible": False},
+            marks=_styled_marks(raw_marks),
         ),
         html.Small(spec.description, className="text-muted d-block mb-2"),
     ], md=12, className="mb-2")
