@@ -49,7 +49,8 @@ scripts/data/scenarios/**/*.png
 scripts/data/scenarios/**/*.log
 scripts/data/scenarios/**/*.json
 
-# === Ruff ===
+# === 工具缓存 ===
+.serena/
 .ruff_cache/
 
 # === 日志 ===
