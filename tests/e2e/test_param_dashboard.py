@@ -56,8 +56,8 @@ class TestSetParameterViaRunner:
 class TestDashAppCreation:
     """验证 Dash app 创建不报错。"""
 
-    def test_app_has_six_tabs(self) -> None:
-        """App 布局包含 6 个标签页。"""
+    def test_app_has_seven_tabs(self) -> None:
+        """App 布局包含 7 个标签页。"""
         from civsim.dashboard.app import create_app
         from civsim.dashboard.shared_state import SharedState
 
@@ -73,8 +73,8 @@ class TestDashAppCreation:
                 break
 
         assert tabs_component is not None, "未找到 tabs 组件"
-        assert len(tabs_component.children) == 6, (
-            f"期望 6 个标签页，实际 {len(tabs_component.children)}"
+        assert len(tabs_component.children) == 7, (
+            f"期望 7 个标签页，实际 {len(tabs_component.children)}"
         )
 
     def test_param_tab_present(self) -> None:

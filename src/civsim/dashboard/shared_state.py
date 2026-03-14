@@ -44,6 +44,27 @@ class GodModeAction:
 
 
 @dataclass
+class LLMSpeech:
+    """LLM Agent 的一次决策发言记录。
+
+    Attributes:
+        tick: 发言所在 tick。
+        agent_type: Agent 类型（"governor" | "leader"）。
+        agent_id: Agent 唯一 ID。
+        agent_name: 显示名称（聚落名 或 "阵营 X"）。
+        reasoning: 完整 reasoning 文本（不截断）。
+        decision_summary: 一行决策摘要。
+    """
+
+    tick: int
+    agent_type: str
+    agent_id: int
+    agent_name: str
+    reasoning: str
+    decision_summary: str
+
+
+@dataclass
 class TickSnapshot:
     """单个 tick 的聚合快照。
 
@@ -114,6 +135,7 @@ class SharedState:
         self._event_log: deque[str] = deque(maxlen=500)
         self._trade_routes: list[dict[str, Any]] = []
         self._diplomacy_data: dict[str, Any] = {}
+        self._llm_speeches: deque[LLMSpeech] = deque(maxlen=100)
 
     # ------------------------------------------------------------------
     # 仿真线程写入接口
@@ -379,6 +401,20 @@ class SharedState:
         with self._lock:
             return list(self._event_log)[-n:]
 
+    # ------------------------------------------------------------------
+    # LLM 发言记录
+    # ------------------------------------------------------------------
+
+    def add_speech(self, speech: LLMSpeech) -> None:
+        """追加一条 LLM 发言记录。"""
+        with self._lock:
+            self._llm_speeches.append(speech)
+
+    def get_speeches(self, n: int = 30) -> list[LLMSpeech]:
+        """返回最近 n 条 LLM 发言记录。"""
+        with self._lock:
+            return list(self._llm_speeches)[-n:]
+
     def reset(self) -> None:
         """重置所有状态数据（保留事件日志）。"""
         with self._lock:
@@ -387,6 +423,7 @@ class SharedState:
             self._pending_actions.clear()
             self._trade_routes = []
             self._diplomacy_data = {}
+            self._llm_speeches.clear()
 
     # ------------------------------------------------------------------
     # 上帝模式操作队列

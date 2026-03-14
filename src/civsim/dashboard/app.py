@@ -131,6 +131,51 @@ def _build_tab_adaptive() -> dbc.Tab:
     )
 
 
+def _build_tab_speeches() -> dbc.Tab:
+    """标签页：AI 发言 — 实时展示 LLM 决策发言。"""
+    return dbc.Tab(
+        label="AI 发言",
+        tab_id="tab-speeches",
+        children=dbc.Container(
+            [
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dbc.ButtonGroup(
+                                [
+                                    dbc.Button(
+                                        "全部", id="btn-speech-all",
+                                        color="info", size="sm", active=True,
+                                    ),
+                                    dbc.Button(
+                                        "镇长", id="btn-speech-governor",
+                                        color="info", size="sm", outline=True,
+                                    ),
+                                    dbc.Button(
+                                        "首领", id="btn-speech-leader",
+                                        color="info", size="sm", outline=True,
+                                    ),
+                                ],
+                            ),
+                            md=12,
+                            className="mb-3",
+                        ),
+                    ],
+                ),
+                html.Div(
+                    id="speech-cards",
+                    style={
+                        "maxHeight": "calc(100vh - 230px)",
+                        "overflowY": "auto",
+                    },
+                ),
+                dcc.Store(id="speech-filter", data="all"),
+            ],
+            fluid=True,
+        ),
+    )
+
+
 def _build_tab_god_mode() -> dbc.Tab:
     """标签页5：造物主面板。"""
     return dbc.Tab(
@@ -254,6 +299,18 @@ def create_app(shared_state: SharedState) -> dash.Dash:
         '.accordion-body{background-color:#16213e!important;padding:12px 16px}'
         # 造物主面板内滚动
         '.god-controls{max-height:calc(100vh - 180px);overflow-y:auto}'
+        # AI 发言卡片
+        '.speech-card{background:#16213e;border-left:4px solid #3498db;'
+        'border-radius:6px;padding:12px 16px;margin-bottom:10px}'
+        '.speech-card.leader{border-left-color:#9b59b6}'
+        '.speech-card-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}'
+        '.speech-card-icon{font-size:18px}'
+        '.speech-card-name{font-weight:700;color:#ecf0f1;font-size:14px}'
+        '.speech-card-tick{color:#7f8c8d;font-size:11px;margin-left:auto}'
+        '.speech-card-body{color:#bdc3c7;font-size:13px;line-height:1.6;'
+        'white-space:pre-wrap;word-break:break-word}'
+        '.speech-card-summary{color:#95a5a6;font-size:11px;margin-top:6px;'
+        'border-top:1px solid #2c3e6b;padding-top:6px}'
         '</style></head><body>'
         '{%app_entry%}<footer>{%config%}{%scripts%}{%renderer%}</footer>'
         '</body></html>'
@@ -286,6 +343,7 @@ def create_app(shared_state: SharedState) -> dash.Dash:
                     _build_tab_diplomacy(),
                     _build_tab_adaptive(),
                     _build_tab_god_mode(),
+                    _build_tab_speeches(),
                     build_param_tab(),
                 ],
                 id="tabs",

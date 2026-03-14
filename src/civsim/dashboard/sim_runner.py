@@ -15,6 +15,7 @@ from civsim.config import CivSimConfig, load_config
 from civsim.dashboard.shared_state import (
     GodAction,
     GodModeAction,
+    LLMSpeech,
     SharedState,
 )
 from civsim.world.engine import CivilizationEngine
@@ -145,6 +146,7 @@ class SimulationRunner:
             self.engine.step()
             self.state.update_from_engine(self.engine)
             self._log_tick_events(tick_before)
+            self._log_llm_speeches()
         except Exception:
             logger.exception("tick %d 执行异常", self.engine.clock.tick)
             self.state.add_event(
@@ -190,6 +192,56 @@ class SimulationRunner:
                     self.state.add_event(
                         f"[Tick {tick}] 🌐 {ev.description}"
                     )
+
+    def _log_llm_speeches(self) -> None:
+        """轮询镇长/首领的最新 LLM 发言并推送到共享状态。"""
+        current_tick = self.engine.clock.tick
+
+        # 镇长发言
+        for gov in self.engine.get_governors():
+            if (
+                gov.last_speech_tick == current_tick
+                and gov.last_speech_text
+            ):
+                settlement = self.engine.settlements.get(gov.settlement_id)
+                name = settlement.name if settlement else f"聚落#{gov.settlement_id}"
+                # 构建决策摘要
+                d = gov.last_decision or {}
+                tc = d.get("tax_rate_change", 0)
+                sc = d.get("security_change", 0)
+                focus = d.get("resource_focus", "balanced")
+                summary = f"税率{tc:+.0%}, 治安{sc:+.0%}, 重点:{focus}"
+                self.state.add_speech(LLMSpeech(
+                    tick=current_tick,
+                    agent_type="governor",
+                    agent_id=gov.unique_id,
+                    agent_name=name,
+                    reasoning=gov.last_speech_text,
+                    decision_summary=summary,
+                ))
+
+        # 首领发言
+        for leader in self.engine.get_leaders():
+            if (
+                leader.last_speech_tick == current_tick
+                and leader.last_speech_text
+            ):
+                name = f"阵营 {leader.faction_id}"
+                d = leader.last_decision or {}
+                strategy = d.get("overall_strategy", "")
+                diplo = d.get("diplomatic_actions", [])
+                actions_desc = ", ".join(
+                    a.get("action", "") for a in diplo[:3]
+                ) if diplo else "无"
+                summary = f"战略:{strategy}, 外交:{actions_desc}"
+                self.state.add_speech(LLMSpeech(
+                    tick=current_tick,
+                    agent_type="leader",
+                    agent_id=leader.unique_id,
+                    agent_name=name,
+                    reasoning=leader.last_speech_text,
+                    decision_summary=summary,
+                ))
 
     # ------------------------------------------------------------------
     # 上帝模式操作处理

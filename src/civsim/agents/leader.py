@@ -122,6 +122,8 @@ class Leader(BaseAgent):
         self._rng = np.random.default_rng(self.unique_id)
         self.report_overrides: dict[int, dict] | None = None
         self.system_prompt_override: str | None = None
+        self.last_speech_text: str | None = None
+        self.last_speech_tick: int = -1
 
     def step(self) -> None:
         """每 tick 执行。仅在年度开始时进行决策。"""
@@ -260,6 +262,8 @@ class Leader(BaseAgent):
 
         try:
             raw = self._gateway.call_json("leader", messages)
+            self.last_speech_text = str(raw.get("reasoning", ""))
+            self.last_speech_tick = self.model.clock.tick
             return validate_leader_decision(raw)
         except Exception as e:
             logger.warning(
@@ -666,6 +670,8 @@ class Leader(BaseAgent):
 
         try:
             raw = await self._gateway.acall_json("leader", messages)
+            self.last_speech_text = str(raw.get("reasoning", ""))
+            self.last_speech_tick = self.model.clock.tick
             return validate_leader_decision(raw)
         except Exception as e:
             logger.warning(

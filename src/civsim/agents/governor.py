@@ -131,6 +131,8 @@ class Governor(BaseAgent):
         self.decision_count: int = 0
         self._prev_perception: GovernorPerception | None = None
         self.system_prompt_override: str | None = None
+        self.last_speech_text: str | None = None
+        self.last_speech_tick: int = -1
         # C1 修复：随机决策偏移，避免全局同步
         rng = np.random.default_rng(settlement_id)
         season_ticks = 120
@@ -299,6 +301,8 @@ class Governor(BaseAgent):
 
         try:
             raw = self._gateway.call_json("governor", messages)
+            self.last_speech_text = str(raw.get("reasoning", ""))
+            self.last_speech_tick = self.model.clock.tick
             return validate_governor_decision(raw)
         except Exception as e:
             logger.warning("镇长 %d LLM 决策失败: %s，使用回退策略", self.unique_id, e)
@@ -535,6 +539,8 @@ class Governor(BaseAgent):
 
         try:
             raw = await self._gateway.acall_json("governor", messages)
+            self.last_speech_text = str(raw.get("reasoning", ""))
+            self.last_speech_tick = self.model.clock.tick
             return validate_governor_decision(raw)
         except Exception as e:
             logger.warning(

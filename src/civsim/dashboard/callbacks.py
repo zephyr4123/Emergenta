@@ -15,6 +15,7 @@ from civsim.dashboard.shared_state import (
     GodModeAction,
     SharedState,
 )
+from civsim.dashboard.speech_callbacks import register_speech_callbacks
 
 
 def register_callbacks(app: object) -> None:
@@ -32,6 +33,7 @@ def register_callbacks(app: object) -> None:
     _register_event_log(app)
     _register_settlement_dropdown(app)
     _register_scenario_description(app)
+    register_speech_callbacks(app)
     _register_reset(app)
     register_param_callbacks(app)
 
