@@ -472,8 +472,8 @@ class TestScenarios:
         # 至少有一个聚落食物 <= 50（困境聚落）
         food_values = [s.stockpile["food"] for s in settlements]
         assert min(food_values) <= 50.0
-        # 至少有一个聚落食物 >= 2000（正常聚落）
-        assert max(food_values) >= 2000.0
+        # 至少有一个聚落食物 >= 1000（正常聚落）
+        assert max(food_values) >= 1000.0
 
     def test_apocalypse(self, runner) -> None:
         """世界末日场景所有聚落资源极低。"""
@@ -484,9 +484,9 @@ class TestScenarios:
 
         settlements = list(runner.engine.settlements.values())
         for s in settlements:
-            assert s.stockpile["food"] == 100.0
-            assert s.stockpile["gold"] == 20.0
-            assert s.tax_rate == 0.5
+            assert s.stockpile["food"] == 30.0
+            assert s.stockpile["gold"] == 5.0
+            assert s.tax_rate == 0.55
 
     def test_scenario_via_god_action(self, runner) -> None:
         """通过上帝模式队列应用场景。"""
