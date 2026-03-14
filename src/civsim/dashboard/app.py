@@ -185,7 +185,7 @@ def create_app(shared_state: SharedState) -> dash.Dash:
     )
 
     app.index_string = (
-        '<!DOCTYPE html><html><head>{%metas%}{%title%}{%favicon%}{%css%}<style>'
+        '<!DOCTYPE html><html><head>{%metas%}<title>Emergenta</title>{%favicon%}{%css%}<style>'
         # 视口锁定 — 页面不滚动，内容在面板内滚动
         'html,body{height:100%;margin:0;overflow:hidden;background-color:#1a1a2e;color:#ecf0f1}'
         '#react-entry-point{height:100%}'
@@ -226,6 +226,14 @@ def create_app(shared_state: SharedState) -> dash.Dash:
         'font-size:12px;padding:3px 8px;border-radius:4px;min-width:auto;'
         'box-shadow:0 2px 8px rgba(0,0,0,0.4)}'
         '.rc-slider-tooltip-arrow{border-top-color:#3498db!important}'
+        # Slider 直接输入框 — 全局兜底所有 number input
+        'input[type="number"]{background-color:#2c3e50!important;'
+        'color:#ecf0f1!important;border:1px solid #4a6785!important;'
+        'border-radius:4px!important;font-size:12px!important;'
+        'text-align:center!important;padding:2px 4px!important}'
+        'input[type="number"]:focus{border-color:#3498db!important;'
+        'outline:none!important;color:#ecf0f1!important;'
+        'box-shadow:0 0 0 2px rgba(52,152,219,0.3)!important}'
         # 按钮美化
         '.btn{border-radius:6px;font-weight:500;letter-spacing:0.3px;transition:all 0.2s}'
         '.btn-sm{padding:5px 14px}'
