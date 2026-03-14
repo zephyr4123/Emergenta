@@ -237,6 +237,46 @@ PARAM_REGISTRY: list[ParamSpec] = [
         "聚落与人口", "slider", 0.02, "每tick饥饿度自然增长",
         0.0, 0.1, 0.005,
     ),
+    # ---- 迁徙与再分配 ----
+    ParamSpec(
+        "migration_params.reassignment_base_prob", "迁徙再分配基础概率",
+        "聚落与人口", "slider", 0.3, "踏入他方领地时加入新聚落的基础概率",
+        0.0, 1.0, 0.05,
+    ),
+    ParamSpec(
+        "migration_params.scarcity_push_weight", "稀缺推力权重",
+        "聚落与人口", "slider", 1.5, "家乡稀缺度对迁出概率的推力权重",
+        0.0, 5.0, 0.1,
+    ),
+    ParamSpec(
+        "migration_params.food_pull_weight", "食物吸引力权重",
+        "聚落与人口", "slider", 1.0, "目标聚落食物充裕度对迁入概率的拉力权重",
+        0.0, 5.0, 0.1,
+    ),
+    ParamSpec(
+        "migration_params.directed_hunger_threshold", "定向迁徙饥饿阈值",
+        "聚落与人口", "slider", 0.5, "饥饿度超此值时朝食物充裕聚落定向迁徙",
+        0.0, 1.0, 0.05,
+    ),
+    ParamSpec(
+        "migration_params.directed_search_radius", "定向迁徙搜索半径",
+        "聚落与人口", "number", 15, "定向迁徙时搜索目标聚落的网格半径",
+        5, 50, 1,
+    ),
+    ParamSpec(
+        "migration_params.pioneer_seed_enabled", "先驱播种开关",
+        "聚落与人口", "switch", True, "空聚落是否自动从附近获得先驱居民",
+    ),
+    ParamSpec(
+        "migration_params.pioneer_seed_count", "先驱播种人数",
+        "聚落与人口", "number", 2, "每次播种迁移的先驱居民人数",
+        1, 10, 1,
+    ),
+    ParamSpec(
+        "migration_params.pioneer_source_min_pop", "播种来源最低人口",
+        "聚落与人口", "number", 10, "来源聚落触发播种的最低人口门槛",
+        2, 50, 1,
+    ),
     # ---- 自适应控制器 ----
     ParamSpec(
         "adaptive_controller.target_temperature", "目标温度",

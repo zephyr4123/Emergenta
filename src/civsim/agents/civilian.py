@@ -209,15 +209,60 @@ class Civilian(BaseAgent):
                 settlement.deposit({"gold": gold_output * trade_multiplier})
 
     def _do_migrate(self) -> None:
-        """迁徙：在网格上移动。"""
+        """迁徙：定向或随机移动，踏入他方领地时可能更换归属聚落。"""
         if not hasattr(self.model, "grid") or self.pos is None:
             return
-        neighbors = self.model.grid.get_neighborhood(
-            self.pos, moore=True, include_center=False
+
+        engine = self.model
+        has_migration = (
+            hasattr(engine, "config")
+            and hasattr(engine, "settlements")
+            and hasattr(engine, "tile_grid")
         )
-        if neighbors:
-            new_pos = self._rng.choice(len(neighbors))
-            self.model.grid.move_agent(self, neighbors[new_pos])
+        if not has_migration:
+            # 回退：简单随机游走
+            neighbors = engine.grid.get_neighborhood(
+                self.pos, moore=True, include_center=False,
+            )
+            if neighbors:
+                new_pos = self._rng.choice(len(neighbors))
+                engine.grid.move_agent(self, neighbors[new_pos])
+            return
+
+        from civsim.agents.behaviors.migration import (
+            pick_migration_cell,
+            try_reassign_settlement,
+        )
+
+        params = engine.config.migration_params
+        w = engine.config.world.grid.width
+        h = engine.config.world.grid.height
+
+        # 选择移动坐标（饥饿→定向，否则→随机）
+        new_pos = pick_migration_cell(
+            pos=self.pos,
+            grid_width=w,
+            grid_height=h,
+            hunger=self.hunger,
+            settlements=engine.settlements,
+            params=params,
+            home_settlement_id=self.home_settlement_id,
+            rng=self._rng,
+        )
+        engine.grid.move_agent(self, new_pos)
+
+        # 尝试聚落再分配
+        new_sid = try_reassign_settlement(
+            pos=new_pos,
+            tile_grid=engine.tile_grid,
+            home_settlement_id=self.home_settlement_id,
+            settlements=engine.settlements,
+            params=params,
+            rng=self._rng,
+        )
+        if new_sid is not None and new_sid != self.home_settlement_id:
+            old_sid = self.home_settlement_id
+            self.home_settlement_id = new_sid
 
     def _update_needs(self) -> None:
         """更新饥饿度和满意度。"""

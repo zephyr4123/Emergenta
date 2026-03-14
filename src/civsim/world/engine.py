@@ -623,6 +623,9 @@ class CivilizationEngine(mesa.Model):
             if births > 0:
                 self._birth_civilians(s.id, births)
 
+        # 4. 先驱播种：空聚落从附近有人聚落获得少量先驱
+        self._seed_empty_settlements()
+
     # ------------------------------------------------------------------
     # Agent 生命周期管理
     # ------------------------------------------------------------------
@@ -708,6 +711,62 @@ class CivilizationEngine(mesa.Model):
             settlement.population += 1
             created += 1
         return created
+
+    def _seed_empty_settlements(self) -> None:
+        """为零人口聚落从附近有人聚落播种先驱居民。"""
+        mp = self.config.migration_params
+        if not mp.pioneer_seed_enabled:
+            return
+
+        empty = [s for s in self.settlements.values() if s.population <= 0]
+        if not empty:
+            return
+
+        populated = [
+            s for s in self.settlements.values()
+            if s.population >= mp.pioneer_source_min_pop
+        ]
+        if not populated:
+            return
+
+        for target in empty:
+            # 找最近的有足够人口的聚落
+            best_source: Settlement | None = None
+            best_dist = float("inf")
+            for src in populated:
+                dist = abs(src.position[0] - target.position[0]) + abs(
+                    src.position[1] - target.position[1]
+                )
+                if dist <= mp.pioneer_seed_distance and dist < best_dist:
+                    best_dist = dist
+                    best_source = src
+
+            if best_source is None:
+                continue
+
+            # 从来源聚落迁移先驱
+            pioneers = min(mp.pioneer_seed_count, best_source.population - 1)
+            if pioneers <= 0:
+                continue
+
+            # 选取来源聚落中满意度最低的平民迁移
+            candidates = [
+                a for a in self.agents
+                if isinstance(a, Civilian)
+                and a.home_settlement_id == best_source.id
+            ]
+            candidates.sort(key=lambda c: c.satisfaction)
+            moved = 0
+            for c in candidates[:pioneers]:
+                c.home_settlement_id = target.id
+                self.grid.move_agent(c, target.position)
+                moved += 1
+
+            if moved > 0:
+                logger.info(
+                    "先驱播种: %d 人从聚落 %d → 聚落 %d",
+                    moved, best_source.id, target.id,
+                )
 
     def _apply_trade_trust_feedback(self) -> None:
         """将贸易产生的信任增量应用到外交系统。"""

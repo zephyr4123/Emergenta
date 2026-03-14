@@ -31,6 +31,7 @@ from civsim.config_params_ext import (
     LeaderFallbackConfig,
     MapSuitabilityConfig,
     MemoryParamsConfig,
+    MigrationParamsConfig,
     SeasonParamsConfig,
     SettlementParamsConfig,
     TileParamsConfig,
@@ -399,6 +400,9 @@ class CivSimConfig(BaseModel):
     )
     memory_params: MemoryParamsConfig = Field(
         default_factory=MemoryParamsConfig,
+    )
+    migration_params: MigrationParamsConfig = Field(
+        default_factory=MigrationParamsConfig,
     )
     leader_prompt: LeaderPromptConfig = Field(
         default_factory=LeaderPromptConfig,

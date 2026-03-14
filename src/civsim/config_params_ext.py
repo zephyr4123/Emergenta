@@ -189,6 +189,20 @@ class GatewayParamsConfig(BaseModel):
     )
 
 
+class MigrationParamsConfig(BaseModel):
+    """迁徙与聚落再分配参数。"""
+
+    reassignment_base_prob: float = Field(default=0.3, ge=0.0, le=1.0)
+    scarcity_push_weight: float = Field(default=1.5, ge=0.0)
+    food_pull_weight: float = Field(default=1.0, ge=0.0)
+    directed_hunger_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    directed_search_radius: int = Field(default=15, gt=0)
+    pioneer_seed_enabled: bool = True
+    pioneer_seed_distance: int = Field(default=20, gt=0)
+    pioneer_seed_count: int = Field(default=2, gt=0)
+    pioneer_source_min_pop: int = Field(default=10, gt=0)
+
+
 class MemoryParamsConfig(BaseModel):
     """记忆系统参数。"""
 
