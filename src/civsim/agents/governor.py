@@ -271,11 +271,7 @@ class Governor(BaseAgent):
         # 构建上季决策效果
         decision_outcomes = self._compute_decision_outcomes(perception)
 
-        system_msg = (
-            self.system_prompt_override
-            if self.system_prompt_override
-            else build_governor_system_prompt()
-        )
+        system_msg = build_governor_system_prompt(self.system_prompt_override)
         user_msg = build_governor_perception_prompt(
             settlement_name=perception.settlement_name,
             population=perception.population,
@@ -511,11 +507,7 @@ class Governor(BaseAgent):
         global_context = self._build_global_context()
         decision_outcomes = self._compute_decision_outcomes(perception)
 
-        system_msg = (
-            self.system_prompt_override
-            if self.system_prompt_override
-            else build_governor_system_prompt()
-        )
+        system_msg = build_governor_system_prompt(self.system_prompt_override)
         user_msg = build_governor_perception_prompt(
             settlement_name=perception.settlement_name,
             population=perception.population,

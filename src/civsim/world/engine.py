@@ -249,6 +249,14 @@ class CivilizationEngine(mesa.Model):
                 gateway=self.llm_gateway,
                 memory_limit=mem, cache_enabled=cache_on,
             )
+            # 注入镇长 Prompt 配置
+            if (
+                hasattr(self, "config")
+                and self.config.governor_prompt.system_prompt
+            ):
+                gov.system_prompt_override = (
+                    self.config.governor_prompt.system_prompt
+                )
             settlement.governor_id = gov.unique_id
             self.grid.place_agent(gov, settlement.position)
         logger.info("已创建 %d 个镇长 Agent", len(self.settlements))

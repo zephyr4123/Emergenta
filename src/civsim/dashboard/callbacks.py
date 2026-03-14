@@ -9,6 +9,7 @@ from dash import Input, Output, State, callback_context, no_update
 from dash.exceptions import PreventUpdate
 
 from civsim.dashboard import charts
+from civsim.dashboard.param_callbacks import register_param_callbacks
 from civsim.dashboard.shared_state import (
     GodAction,
     GodModeAction,
@@ -31,6 +32,7 @@ def register_callbacks(app: object) -> None:
     _register_event_log(app)
     _register_settlement_dropdown(app)
     _register_scenario_description(app)
+    register_param_callbacks(app)
 
 
 def _get_state(app: object) -> SharedState:

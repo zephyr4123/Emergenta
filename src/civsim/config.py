@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from civsim.config_params import (
     AdaptiveControllerConfig,
+    GovernorPromptConfig,
     LeaderPromptConfig,
     MarkovCoefficientsConfig,
     RevolutionParamsConfig,
@@ -401,6 +402,9 @@ class CivSimConfig(BaseModel):
     )
     leader_prompt: LeaderPromptConfig = Field(
         default_factory=LeaderPromptConfig,
+    )
+    governor_prompt: GovernorPromptConfig = Field(
+        default_factory=GovernorPromptConfig,
     )
     dashboard: DashboardConfig = Field(default_factory=DashboardConfig)
 

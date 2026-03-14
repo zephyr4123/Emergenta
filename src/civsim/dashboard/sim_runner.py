@@ -263,27 +263,46 @@ class SimulationRunner:
             settlement.stockpile["ore"] += 200
 
     def _handle_set_parameter(self, params: dict[str, Any]) -> None:
-        """动态调整运行时参数。"""
+        """动态调整运行时参数（通用版本）。"""
+        from civsim.dashboard.param_registry import (
+            SPECIAL_HANDLERS,
+            apply_special_handler,
+            get_param_spec,
+            resolve_legacy_param,
+            set_config_by_path,
+        )
+
         param_name = params.get("param_name", "")
         value = params.get("value")
         if value is None:
             return
 
-        if param_name == "target_temperature" and self.engine.adaptive_controller:
-            self.engine.adaptive_controller.config.target_temperature = float(
-                value,
-            )
-            self.state.add_event(
-                f"🌡 目标温度调整为 {value}"
-            )
-        elif param_name == "food_regen":
-            self.config.resources.regeneration.farmland_per_tick = float(value)
-            self.state.add_event(f"🌾 食物再生率 → {value}")
-        elif param_name == "food_consumption":
-            self.config.resources.consumption.food_per_civilian_per_tick = float(
-                value,
-            )
-            self.state.add_event(f"🍽 食物消耗率 → {value}")
+        # 兼容旧参数名
+        path = resolve_legacy_param(param_name)
+
+        # 写入 Pydantic 配置
+        try:
+            set_config_by_path(self.config, path, value)
+        except (AttributeError, TypeError) as e:
+            logger.warning("参数设置失败 %s: %s", path, e)
+            return
+
+        # 执行特殊传播处理器
+        spec = get_param_spec(path)
+        if spec and spec.special_handler:
+            apply_special_handler(spec.special_handler, self.engine, value)
+
+        # 自适应控制器实时同步
+        if (
+            path.startswith("adaptive_controller.")
+            and self.engine.adaptive_controller
+        ):
+            ac = self.engine.adaptive_controller
+            attr = path.split(".")[-1]
+            if hasattr(ac.config, attr):
+                setattr(ac.config, attr, value)
+
+        self.state.add_event(f"参数 {path} → {value}")
 
     def _handle_settlement_intervene(
         self, params: dict[str, Any],

@@ -7,6 +7,7 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 
 from civsim.dashboard.controls import build_god_mode_controls
+from civsim.dashboard.param_controls import build_param_tab
 from civsim.dashboard.shared_state import SharedState
 
 
@@ -247,6 +248,7 @@ def create_app(shared_state: SharedState) -> dash.Dash:
                     _build_tab_diplomacy(),
                     _build_tab_adaptive(),
                     _build_tab_god_mode(),
+                    build_param_tab(),
                 ],
                 id="tabs",
                 active_tab="tab-overview",

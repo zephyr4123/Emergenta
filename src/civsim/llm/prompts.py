@@ -5,14 +5,20 @@
 """
 
 
-def build_governor_system_prompt() -> str:
+def build_governor_system_prompt(override: str | None = None) -> str:
     """构建镇长的系统 Prompt。
 
     注入多样化执政风格，避免千篇一律的"维稳"策略。
+    支持从外部配置覆盖默认 Prompt。
+
+    Args:
+        override: 外部配置的自定义 Prompt，非 None 时替代默认值。
 
     Returns:
         系统角色描述文本。
     """
+    if override:
+        return override
     return (
         "你是一个文明模拟器中的聚落镇长AI。你有自己的执政风格。"
         "你可能贪婪（倾向高税积累资源）、铁腕（倾向高治安镇压异议）、"
