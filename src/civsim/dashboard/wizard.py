@@ -10,8 +10,7 @@ from __future__ import annotations
 import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
-from tkinter import font as tkfont
-from tkinter import messagebox, ttk
+from tkinter import messagebox
 from typing import Any
 
 import yaml
@@ -38,19 +37,106 @@ class LaunchConfig:
     cancelled: bool = False
 
 
-# ── 颜色主题（与 Dashboard 暗色主题一致）──────────────────────
+# ── 颜色主题 ─────────────────────────────────────────────────
 
-_BG = "#1a1a2e"
-_BG2 = "#16213e"
-_FG = "#ecf0f1"
-_FG_DIM = "#95a5a6"
-_ACCENT = "#3498db"
-_ACCENT_HOVER = "#2980b9"
-_GREEN = "#2ecc71"
-_RED = "#e74c3c"
-_ORANGE = "#f39c12"
-_ENTRY_BG = "#2c3e50"
-_BORDER = "#4a6785"
+_BG = "#0f1019"
+_BG_CARD = "#171b2d"
+_BG_INPUT = "#0c0e18"
+_FG = "#ffffff"
+_FG_DIM = "#6b7280"
+_FG_LABEL = "#9ca3af"
+_ACCENT = "#3b82f6"
+_GREEN = "#22c55e"
+_RED = "#ef4444"
+_ORANGE = "#f59e0b"
+_BORDER = "#1e293b"
+_BORDER_INPUT = "#334155"
+
+
+# ── 通用组件 ─────────────────────────────────────────────────
+
+
+def _make_entry(
+    parent: tk.Widget,
+    var: tk.Variable,
+    width: int = 10,
+    show: str = "",
+) -> tk.Entry:
+    """创建统一风格的输入框。"""
+    entry = tk.Entry(
+        parent,
+        textvariable=var,
+        width=width,
+        show=show,
+        bg=_BG_INPUT,
+        fg=_FG,
+        insertbackground=_ACCENT,
+        relief="flat",
+        font=("SF Mono, Menlo, Consolas", 11),
+        highlightthickness=1,
+        highlightcolor=_ACCENT,
+        highlightbackground=_BORDER_INPUT,
+        selectbackground=_ACCENT,
+        selectforeground="#fff",
+    )
+    entry.configure(borderwidth=0)
+    return entry
+
+
+def _make_btn(
+    parent: tk.Widget,
+    text: str,
+    command: Any,
+    bg: str = _ACCENT,
+    fg: str = "#fff",
+    font_size: int = 11,
+    bold: bool = True,
+    padx: int = 20,
+    pady: int = 7,
+) -> tk.Label:
+    """创建可点击的现代按钮（用 Label 模拟，避免 tk.Button 丑陋边框）。"""
+    weight = "bold" if bold else "normal"
+    btn = tk.Label(
+        parent,
+        text=text,
+        bg=bg,
+        fg=fg,
+        font=("", font_size, weight),
+        cursor="hand2",
+        padx=padx,
+        pady=pady,
+    )
+
+    def on_enter(_e: tk.Event) -> None:
+        btn.configure(bg=_darken(bg, 0.15))
+
+    def on_leave(_e: tk.Event) -> None:
+        btn.configure(bg=bg)
+
+    def on_click(_e: tk.Event) -> None:
+        command()
+
+    btn.bind("<Enter>", on_enter)
+    btn.bind("<Leave>", on_leave)
+    btn.bind("<Button-1>", on_click)
+    return btn
+
+
+def _darken(hex_color: str, factor: float) -> str:
+    """将颜色变暗。"""
+    c = hex_color.lstrip("#")
+    r, g, b = int(c[:2], 16), int(c[2:4], 16), int(c[4:], 16)
+    r = max(0, int(r * (1 - factor)))
+    g = max(0, int(g * (1 - factor)))
+    b = max(0, int(b * (1 - factor)))
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def _center_window(win: tk.Tk, w: int, h: int) -> None:
+    """将窗口居中显示。"""
+    sx = (win.winfo_screenwidth() - w) // 2
+    sy = (win.winfo_screenheight() - h) // 2
+    win.geometry(f"{w}x{h}+{sx}+{sy}")
 
 
 # ── LLM 配置检测 ─────────────────────────────────────────────
@@ -69,11 +155,7 @@ def _find_config_path() -> Path | None:
 
 
 def _check_llm_config(config_path: Path) -> dict[str, Any]:
-    """检查 LLM 配置是否完整。
-
-    Returns:
-        {"ok": bool, "api_key": str, "base_url": str, "models": dict}
-    """
+    """检查 LLM 配置是否完整。"""
     with open(config_path, encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
 
@@ -82,14 +164,12 @@ def _check_llm_config(config_path: Path) -> dict[str, Any]:
     base_url = llm.get("default_base_url", "")
     models = llm.get("models", {})
 
-    # 环境变量占位符视为空
-    if api_key.startswith("${"):
+    if isinstance(api_key, str) and api_key.startswith("${"):
         import os
         api_key = os.environ.get(api_key[2:-1], "")
 
-    ok = bool(api_key) and bool(models)
     return {
-        "ok": ok,
+        "ok": bool(api_key) and bool(models),
         "api_key": api_key,
         "base_url": base_url,
         "models": models,
@@ -102,12 +182,10 @@ def _save_llm_config(
     """将 LLM API 配置写回 config.yaml。"""
     with open(config_path, encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
-
     if "llm" not in raw:
         raw["llm"] = {}
     raw["llm"]["default_api_key"] = api_key
     raw["llm"]["default_base_url"] = base_url
-
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(raw, f, allow_unicode=True, default_flow_style=False)
 
@@ -116,85 +194,49 @@ def _save_llm_config(
 
 
 def _show_llm_setup(config_path: Path, existing: dict) -> bool:
-    """弹出 LLM 配置窗口。
-
-    Args:
-        config_path: config.yaml 路径。
-        existing: 已有的 LLM 配置。
-
-    Returns:
-        True=用户完成配置，False=用户取消。
-    """
+    """弹出 LLM 配置窗口。"""
     result = {"ok": False}
-
     win = tk.Tk()
-    win.title("LLM API 配置")
+    win.title("Emergenta")
     win.configure(bg=_BG)
     win.resizable(False, False)
-
-    # 居中
-    w, h = 520, 340
-    sx = (win.winfo_screenwidth() - w) // 2
-    sy = (win.winfo_screenheight() - h) // 2
-    win.geometry(f"{w}x{h}+{sx}+{sy}")
+    _center_window(win, 500, 360)
 
     # 标题
     tk.Label(
-        win, text="LLM API 配置",
-        bg=_BG, fg=_ACCENT, font=("", 16, "bold"),
-    ).pack(pady=(16, 4))
-
+        win, text="LLM API 配置", bg=_BG, fg=_FG,
+        font=("", 18, "bold"),
+    ).pack(pady=(24, 4))
     tk.Label(
-        win,
-        text="镇长和首领的决策需要 LLM 支持，请配置 API 连接信息",
+        win, text="镇长和首领的决策需要 LLM 支持",
         bg=_BG, fg=_FG_DIM, font=("", 11),
-    ).pack(pady=(0, 12))
+    ).pack(pady=(0, 16))
 
-    # 表单区域
-    form = tk.Frame(win, bg=_BG)
-    form.pack(padx=30, fill="x")
+    # 表单卡片
+    card = tk.Frame(win, bg=_BG_CARD, highlightthickness=1,
+                    highlightbackground=_BORDER)
+    card.pack(padx=32, fill="x")
+    inner = tk.Frame(card, bg=_BG_CARD)
+    inner.pack(padx=20, pady=16, fill="x")
 
-    tk.Label(
-        form, text="API Key", bg=_BG, fg=_FG,
-        font=("", 11, "bold"), anchor="w",
-    ).pack(fill="x")
-    tk.Label(
-        form,
-        text="OpenAI / Anthropic / 中转站的 API 密钥",
-        bg=_BG, fg=_FG_DIM, font=("", 9),
-    ).pack(fill="x")
+    tk.Label(inner, text="API Key", bg=_BG_CARD, fg=_FG_LABEL,
+             font=("", 10), anchor="w").pack(fill="x")
     api_key_var = tk.StringVar(value=existing.get("api_key", ""))
-    api_entry = tk.Entry(
-        form, textvariable=api_key_var, show="*",
-        bg=_ENTRY_BG, fg=_FG, insertbackground=_FG,
-        relief="flat", font=("", 11),
-        highlightthickness=1, highlightcolor=_ACCENT,
-        highlightbackground=_BORDER,
+    _make_entry(inner, api_key_var, width=40, show="*").pack(
+        fill="x", pady=(4, 12), ipady=5,
     )
-    api_entry.pack(fill="x", pady=(2, 10), ipady=4)
 
-    tk.Label(
-        form, text="Base URL (可选)", bg=_BG, fg=_FG,
-        font=("", 11, "bold"), anchor="w",
-    ).pack(fill="x")
-    tk.Label(
-        form,
-        text="API 端点地址，使用中转站或自部署时填写",
-        bg=_BG, fg=_FG_DIM, font=("", 9),
-    ).pack(fill="x")
+    tk.Label(inner, text="Base URL  (可选，中转站/自部署时填写)",
+             bg=_BG_CARD, fg=_FG_LABEL, font=("", 10),
+             anchor="w").pack(fill="x")
     base_url_var = tk.StringVar(value=existing.get("base_url", ""))
-    url_entry = tk.Entry(
-        form, textvariable=base_url_var,
-        bg=_ENTRY_BG, fg=_FG, insertbackground=_FG,
-        relief="flat", font=("", 11),
-        highlightthickness=1, highlightcolor=_ACCENT,
-        highlightbackground=_BORDER,
+    _make_entry(inner, base_url_var, width=40).pack(
+        fill="x", pady=(4, 0), ipady=5,
     )
-    url_entry.pack(fill="x", pady=(2, 16), ipady=4)
 
-    # 按钮区
-    btn_frame = tk.Frame(win, bg=_BG)
-    btn_frame.pack(pady=(0, 16))
+    # 按钮
+    btn_row = tk.Frame(win, bg=_BG)
+    btn_row.pack(pady=(20, 0))
 
     def on_save() -> None:
         key = api_key_var.get().strip()
@@ -205,21 +247,13 @@ def _show_llm_setup(config_path: Path, existing: dict) -> bool:
         result["ok"] = True
         win.destroy()
 
-    def on_skip() -> None:
-        result["ok"] = True
-        win.destroy()
-
-    tk.Button(
-        btn_frame, text="保存并继续", bg=_ACCENT, fg="#fff",
-        font=("", 11, "bold"), relief="flat", padx=20, pady=6,
-        cursor="hand2", command=on_save,
-    ).pack(side="left", padx=8)
-
-    tk.Button(
-        btn_frame, text="跳过（不启用 LLM）", bg=_BG2, fg=_FG_DIM,
-        font=("", 10), relief="flat", padx=14, pady=6,
-        cursor="hand2", command=on_skip,
-    ).pack(side="left", padx=8)
+    _make_btn(btn_row, "  保存并继续  ", on_save).pack(
+        side="left", padx=6,
+    )
+    _make_btn(
+        btn_row, "跳过", lambda: (result.update(ok=True), win.destroy()),
+        bg=_BG_CARD, fg=_FG_DIM, bold=False, font_size=10,
+    ).pack(side="left", padx=6)
 
     win.protocol("WM_DELETE_WINDOW", lambda: (
         result.update({"ok": False}), win.destroy(),
@@ -230,223 +264,232 @@ def _show_llm_setup(config_path: Path, existing: dict) -> bool:
 
 # ── 仿真配置向导窗口 ─────────────────────────────────────────
 
-# 预设规模
 _PRESETS: list[dict[str, Any]] = [
     {
         "name": "小型演示",
         "agents": 100,
-        "desc": "100 平民 · 快速启动\n适合首次体验和功能探索",
+        "icon": "100",
+        "desc": "快速启动 · 首次体验",
         "color": _GREEN,
     },
     {
         "name": "中型仿真",
         "agents": 500,
-        "desc": "500 平民 · 均衡体验\n涌现行为明显，运行流畅",
+        "icon": "500",
+        "desc": "涌现明显 · 推荐",
         "color": _ACCENT,
     },
     {
         "name": "大型仿真",
         "agents": 2000,
-        "desc": "2000 平民 · 深度模拟\n贸易/外交/革命网络丰富",
+        "icon": "2K",
+        "desc": "深度模拟 · 网络丰富",
         "color": _ORANGE,
     },
     {
         "name": "极限压测",
         "agents": 5000,
-        "desc": "5000 平民 · 全系统压力\n需较强硬件，含真实 LLM 调用",
+        "icon": "5K",
+        "desc": "全系统压力 · 需强硬件",
         "color": _RED,
     },
 ]
 
 
 def _show_sim_setup(llm_ok: bool) -> LaunchConfig:
-    """弹出仿真参数配置窗口。
-
-    Args:
-        llm_ok: LLM 是否已配置。
-
-    Returns:
-        用户配置的启动参数。
-    """
+    """弹出仿真参数配置窗口。"""
     config = LaunchConfig(cancelled=True)
 
     win = tk.Tk()
-    win.title("Emergenta — 启动配置")
+    win.title("Emergenta")
     win.configure(bg=_BG)
     win.resizable(False, False)
+    _center_window(win, 540, 530)
 
-    w, h = 560, 560
-    sx = (win.winfo_screenwidth() - w) // 2
-    sy = (win.winfo_screenheight() - h) // 2
-    win.geometry(f"{w}x{h}+{sx}+{sy}")
-
-    # 标题
-    title_font = tkfont.Font(family="", size=20, weight="bold")
+    # ── 标题 ──
     tk.Label(
-        win, text="EMERGENTA",
-        bg=_BG, fg=_ACCENT, font=title_font,
-    ).pack(pady=(16, 0))
+        win, text="EMERGENTA", bg=_BG, fg=_FG,
+        font=("", 22, "bold"),
+    ).pack(pady=(20, 0))
     tk.Label(
         win, text="AI Civilization Simulator",
         bg=_BG, fg=_FG_DIM, font=("", 10),
-    ).pack(pady=(0, 12))
+    ).pack(pady=(2, 6))
 
-    # LLM 状态指示
-    llm_text = "LLM 已配置" if llm_ok else "LLM 未配置（镇长/首领使用规则回退）"
+    # LLM 状态
+    llm_text = "LLM 已配置" if llm_ok else "LLM 未配置 — 使用规则回退"
     llm_color = _GREEN if llm_ok else _ORANGE
     tk.Label(
-        win, text=f"● {llm_text}",
-        bg=_BG, fg=llm_color, font=("", 10),
-    ).pack(pady=(0, 8))
+        win, text=f"●  {llm_text}", bg=_BG, fg=llm_color,
+        font=("", 10),
+    ).pack(pady=(0, 12))
 
     # ── 规模预设 ──
     tk.Label(
-        win, text="选择仿真规模",
-        bg=_BG, fg=_FG, font=("", 12, "bold"), anchor="w",
-    ).pack(fill="x", padx=30, pady=(4, 6))
+        win, text="仿真规模", bg=_BG, fg=_FG_LABEL,
+        font=("", 10), anchor="w",
+    ).pack(fill="x", padx=32, pady=(0, 6))
 
     preset_frame = tk.Frame(win, bg=_BG)
-    preset_frame.pack(fill="x", padx=30)
+    preset_frame.pack(fill="x", padx=32)
 
     agents_var = tk.IntVar(value=500)
-    selected_preset = tk.IntVar(value=1)  # 默认中型
+    selected_idx = tk.IntVar(value=1)
+
+    preset_cards: list[tk.Frame] = []
+    num_labels: list[tk.Label] = []
+    name_labels: list[tk.Label] = []
+    desc_labels: list[tk.Label] = []
 
     def select_preset(idx: int) -> None:
-        selected_preset.set(idx)
+        selected_idx.set(idx)
         agents_var.set(_PRESETS[idx]["agents"])
-        # 更新按钮样式
-        for i, btn in enumerate(preset_btns):
-            if i == idx:
-                btn.configure(
-                    bg=_PRESETS[i]["color"], fg="#fff",
-                    relief="solid",
-                )
-            else:
-                btn.configure(bg=_BG2, fg=_FG_DIM, relief="flat")
+        for i in range(len(_PRESETS)):
+            is_sel = i == idx
+            c = _PRESETS[i]["color"] if is_sel else _BG_CARD
+            border = _PRESETS[i]["color"] if is_sel else _BORDER
+            fg_num = "#fff" if is_sel else _FG_DIM
+            fg_name = "#fff" if is_sel else _FG_LABEL
+            fg_desc = (
+                "rgba(255,255,255,0.7)" if is_sel else _FG_DIM
+            )
+            preset_cards[i].configure(
+                bg=c, highlightbackground=border,
+            )
+            num_labels[i].configure(bg=c, fg=fg_num)
+            name_labels[i].configure(bg=c, fg=fg_name)
+            desc_labels[i].configure(bg=c, fg=_FG_DIM)
 
-    preset_btns: list[tk.Button] = []
     for i, p in enumerate(_PRESETS):
-        frame = tk.Frame(preset_frame, bg=_BG)
-        frame.pack(side="left", expand=True, fill="x", padx=3)
+        is_default = i == 1
+        bg = p["color"] if is_default else _BG_CARD
+        border = p["color"] if is_default else _BORDER
 
-        btn = tk.Button(
-            frame, text=f"{p['name']}\n{p['agents']}人",
-            bg=_BG2 if i != 1 else p["color"],
-            fg=_FG_DIM if i != 1 else "#fff",
-            font=("", 9, "bold"),
-            relief="flat" if i != 1 else "solid",
+        card = tk.Frame(
+            preset_frame, bg=bg,
+            highlightthickness=1, highlightbackground=border,
             cursor="hand2",
-            width=10, height=2,
-            command=lambda idx=i: select_preset(idx),
         )
-        btn.pack(fill="x")
-        preset_btns.append(btn)
+        card.pack(side="left", expand=True, fill="both", padx=3)
 
-    # 预设描述
-    desc_label = tk.Label(
-        win, text=_PRESETS[1]["desc"],
-        bg=_BG, fg=_FG_DIM, font=("", 9),
-        justify="center",
-    )
-    desc_label.pack(pady=(6, 0))
+        num_lbl = tk.Label(
+            card, text=p["icon"], bg=bg,
+            fg="#fff" if is_default else _FG_DIM,
+            font=("", 18, "bold"),
+        )
+        num_lbl.pack(pady=(10, 0))
 
-    def update_desc(*_args: Any) -> None:
-        idx = selected_preset.get()
-        desc_label.configure(text=_PRESETS[idx]["desc"])
+        n_lbl = tk.Label(
+            card, text=p["name"], bg=bg,
+            fg="#fff" if is_default else _FG_LABEL,
+            font=("", 9, "bold"),
+        )
+        n_lbl.pack(pady=(2, 0))
 
-    selected_preset.trace_add("write", update_desc)
+        d_lbl = tk.Label(
+            card, text=p["desc"], bg=bg, fg=_FG_DIM,
+            font=("", 8), wraplength=100,
+        )
+        d_lbl.pack(pady=(1, 10))
 
-    # ── 高级选项 ──
-    sep = tk.Frame(win, bg=_BORDER, height=1)
-    sep.pack(fill="x", padx=30, pady=12)
+        preset_cards.append(card)
+        num_labels.append(num_lbl)
+        name_labels.append(n_lbl)
+        desc_labels.append(d_lbl)
 
-    adv = tk.Frame(win, bg=_BG)
-    adv.pack(fill="x", padx=30)
+        # 绑定点击（card + 所有子组件）
+        for widget in (card, num_lbl, n_lbl, d_lbl):
+            widget.bind(
+                "<Button-1>", lambda _e, idx=i: select_preset(idx),
+            )
 
-    tk.Label(
-        adv, text="高级选项", bg=_BG, fg=_FG,
-        font=("", 11, "bold"),
-    ).grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 8))
-
-    # 自定义 Agent 数
-    tk.Label(
-        adv, text="平民数量:", bg=_BG, fg=_FG, font=("", 10),
-    ).grid(row=1, column=0, sticky="w")
-    agent_entry = tk.Entry(
-        adv, textvariable=agents_var, width=8,
-        bg=_ENTRY_BG, fg=_FG, insertbackground=_FG,
-        relief="flat", font=("", 10),
-        highlightthickness=1, highlightcolor=_ACCENT,
+    # ── 高级选项卡片 ──
+    adv_card = tk.Frame(
+        win, bg=_BG_CARD, highlightthickness=1,
         highlightbackground=_BORDER,
     )
-    agent_entry.grid(row=1, column=1, sticky="w", padx=(4, 16), ipady=2)
+    adv_card.pack(fill="x", padx=32, pady=(14, 0))
 
-    # 随机种子
+    adv_inner = tk.Frame(adv_card, bg=_BG_CARD)
+    adv_inner.pack(padx=16, pady=12, fill="x")
+
+    # 行 1: 平民数 + 种子
+    row1 = tk.Frame(adv_inner, bg=_BG_CARD)
+    row1.pack(fill="x", pady=(0, 8))
+
     tk.Label(
-        adv, text="随机种子:", bg=_BG, fg=_FG, font=("", 10),
-    ).grid(row=1, column=2, sticky="w")
+        row1, text="平民数量", bg=_BG_CARD, fg=_FG_LABEL,
+        font=("", 10), anchor="w",
+    ).pack(side="left")
+    _make_entry(row1, agents_var, width=7).pack(
+        side="left", padx=(6, 20), ipady=4,
+    )
+
+    tk.Label(
+        row1, text="随机种子", bg=_BG_CARD, fg=_FG_LABEL,
+        font=("", 10), anchor="w",
+    ).pack(side="left")
     seed_var = tk.StringVar(value="")
-    seed_entry = tk.Entry(
-        adv, textvariable=seed_var, width=8,
-        bg=_ENTRY_BG, fg=_FG, insertbackground=_FG,
-        relief="flat", font=("", 10),
-        highlightthickness=1, highlightcolor=_ACCENT,
-        highlightbackground=_BORDER,
+    _make_entry(row1, seed_var, width=7).pack(
+        side="left", padx=(6, 6), ipady=4,
     )
-    seed_entry.grid(row=1, column=3, sticky="w", padx=(4, 0), ipady=2)
+    tk.Label(
+        row1, text="空=随机", bg=_BG_CARD, fg=_FG_DIM,
+        font=("", 8),
+    ).pack(side="left")
+
+    # 行 2: 端口 + 开关
+    row2 = tk.Frame(adv_inner, bg=_BG_CARD)
+    row2.pack(fill="x")
 
     tk.Label(
-        adv, text="留空=随机", bg=_BG, fg=_FG_DIM, font=("", 8),
-    ).grid(row=2, column=2, columnspan=2, sticky="w", padx=(0, 0))
-
-    # 端口
-    tk.Label(
-        adv, text="端口:", bg=_BG, fg=_FG, font=("", 10),
-    ).grid(row=3, column=0, sticky="w", pady=(8, 0))
+        row2, text="端口", bg=_BG_CARD, fg=_FG_LABEL,
+        font=("", 10), anchor="w",
+    ).pack(side="left")
     port_var = tk.IntVar(value=8050)
-    port_entry = tk.Entry(
-        adv, textvariable=port_var, width=8,
-        bg=_ENTRY_BG, fg=_FG, insertbackground=_FG,
-        relief="flat", font=("", 10),
-        highlightthickness=1, highlightcolor=_ACCENT,
-        highlightbackground=_BORDER,
+    _make_entry(row2, port_var, width=7).pack(
+        side="left", padx=(6, 20), ipady=4,
     )
-    port_entry.grid(row=3, column=1, sticky="w", padx=(4, 16), pady=(8, 0), ipady=2)
 
-    # 镇长/首领开关
+    # 自定义开关（用 Label 模拟 toggle）
     gov_var = tk.BooleanVar(value=True)
     lead_var = tk.BooleanVar(value=True)
 
-    style = ttk.Style()
-    style.configure(
-        "Dark.TCheckbutton",
-        background=_BG, foreground=_FG,
-    )
+    def _make_toggle(
+        parent: tk.Widget, text: str, var: tk.BooleanVar,
+    ) -> tk.Frame:
+        frame = tk.Frame(parent, bg=_BG_CARD)
 
-    gov_cb = ttk.Checkbutton(
-        adv, text="启用镇长 (LLM 治理决策)",
-        variable=gov_var, style="Dark.TCheckbutton",
-    )
-    gov_cb.grid(row=3, column=2, columnspan=2, sticky="w", pady=(8, 0))
+        dot = tk.Label(
+            frame, text="●", bg=_BG_CARD,
+            fg=_GREEN, font=("", 8),
+        )
+        dot.pack(side="left", padx=(0, 3))
 
-    lead_cb = ttk.Checkbutton(
-        adv, text="启用首领 (LLM 战略决策)",
-        variable=lead_var, style="Dark.TCheckbutton",
-    )
-    lead_cb.grid(row=4, column=2, columnspan=2, sticky="w", pady=(2, 0))
+        lbl = tk.Label(
+            frame, text=text, bg=_BG_CARD, fg=_FG_LABEL,
+            font=("", 9), cursor="hand2",
+        )
+        lbl.pack(side="left")
 
-    # 自适应提示
-    auto_label = tk.Label(
-        win,
-        text="地图大小、聚落数量、首领数量将根据平民数自动计算",
+        def toggle(_e: tk.Event | None = None) -> None:
+            var.set(not var.get())
+            dot.configure(fg=_GREEN if var.get() else _FG_DIM)
+
+        lbl.bind("<Button-1>", toggle)
+        dot.bind("<Button-1>", toggle)
+        return frame
+
+    _make_toggle(row2, "镇长", gov_var).pack(side="left", padx=(0, 10))
+    _make_toggle(row2, "首领", lead_var).pack(side="left")
+
+    # 提示
+    tk.Label(
+        win, text="地图·聚落·首领数量 根据平民数自动计算",
         bg=_BG, fg=_FG_DIM, font=("", 9),
-    )
-    auto_label.pack(pady=(10, 0))
+    ).pack(pady=(10, 0))
 
     # ── 启动按钮 ──
-    btn_frame = tk.Frame(win, bg=_BG)
-    btn_frame.pack(pady=(14, 16))
-
     def on_start() -> None:
         try:
             n = agents_var.get()
@@ -456,10 +499,9 @@ def _show_sim_setup(llm_ok: bool) -> LaunchConfig:
         except tk.TclError:
             messagebox.showwarning("提示", "请输入有效的平民数量")
             return
-
         config.agents = n
-        seed_str = seed_var.get().strip()
-        config.seed = int(seed_str) if seed_str else None
+        s = seed_var.get().strip()
+        config.seed = int(s) if s else None
         config.enable_governors = gov_var.get()
         config.enable_leaders = lead_var.get()
         try:
@@ -469,14 +511,11 @@ def _show_sim_setup(llm_ok: bool) -> LaunchConfig:
         config.cancelled = False
         win.destroy()
 
-    start_btn = tk.Button(
-        btn_frame, text="  启动仿真  ",
-        bg=_ACCENT, fg="#fff",
-        font=("", 13, "bold"), relief="flat",
-        padx=30, pady=8, cursor="hand2",
-        command=on_start,
+    start_btn = _make_btn(
+        win, "  启动仿真  ", on_start,
+        font_size=14, padx=40, pady=10,
     )
-    start_btn.pack()
+    start_btn.pack(pady=(14, 16))
 
     win.protocol("WM_DELETE_WINDOW", win.destroy)
     win.mainloop()
@@ -508,7 +547,6 @@ def run_wizard() -> LaunchConfig:
             user_ok = _show_llm_setup(config_path, llm_info)
             if not user_ok:
                 return LaunchConfig(cancelled=True)
-            # 重新检测
             llm_info = _check_llm_config(config_path)
             llm_ok = llm_info["ok"]
 
