@@ -1,714 +1,189 @@
 <div align="center">
 
-<a href="README.md">简体中文</a> | <b>English</b>
+<img src="docs/images/logo.png" width="200" alt="Emergenta Logo" />
 
-<img src="logo.png" width="360" alt="Emergenta Logo" />
+# EMERGENTA
 
-### A Hybrid LLM-Driven Civilization Simulator
+### A Living Petri Dish for AI Civilizations
 
 <p>
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/LLM-Claude_Opus/Sonnet/Haiku-D97757?style=for-the-badge&logo=anthropic&logoColor=white" />
-  <img src="https://img.shields.io/badge/Framework-Mesa_3.x-2ECC71?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Status-Stable_Iterating-2ECC71?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/LLM-Any_OpenAI_Compatible-00f2ff?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Framework-Mesa_3.x-10b981?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Dashboard-Plotly_Dash-ef4444?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/License-MIT-f59e0b?style=for-the-badge" />
 </p>
-
-<p><i>A cost-efficient framework for macroscopic social emergence.</i></p>
 
 <p>
-Say goodbye to expensive token consumption from full-scale LLMs! This project innovatively adopts a<br/>
-<b>"Bottom-layer FSM + Mid-layer Aggregated Data + Top-layer LLM Strategic Decisions"</b> three-tier pyramid architecture.<br/>
-Simulate <b>5000+</b> concurrent agents in a single run, perfectly modeling extreme social scenarios like inflation, information cocoons, and geopolitical games.
+<b>5,000+ Autonomous Agents · Real-time Creator Dashboard · Scenario Injection · 200+ Tunable Parameters</b>
+</p>
+
+<p>
+<a href="README.md">简体中文</a> | <b>English</b>
 </p>
 
 <br/>
 
-<table>
-<tr>
-<td align="center"><b>5,000+</b><br/><sub>Concurrent Agents</sub></td>
-<td align="center"><b>62</b><br/><sub>Autonomous Settlements</sub></td>
-<td align="center"><b>20</b><br/><sub>AI Leaders</sub></td>
-<td align="center"><b>207+</b><br/><sub>Tunable Parameters</sub></td>
-<td align="center"><b>99%+</b><br/><sub>LLM Cost Reduction</sub></td>
-</tr>
-</table>
+<img src="docs/images/hero-demo.gif" width="800" alt="Emergenta Demo" />
+
+<br/>
+<br/>
 
 </div>
 
-<br/>
+---
 
-## 🏗️ Architecture
+## What is Emergenta?
+
+Emergenta is a **large-scale AI-driven civilization simulator**. Thousands of autonomous agents labor, trade, protest, form alliances, and wage wars in a procedurally generated 2D world — **with no scripted storylines**. All macro-level social phenomena emerge naturally from micro-level individual behaviors.
+
+> *"Civilization-level complexity can arise from simple individual rules operating under information asymmetry within structured environments."*
+>
+> — [Product Documentation](docs/AI%20Civilization%20Simulator.pdf)
+
+**Core Innovation**: A three-layer hybrid intelligence architecture — 5,000+ civilians use zero-cost Finite State Machines (FSM + Markov Chain) at the bottom, while LLM-powered governors and leaders make strategic decisions at the top. **Over 99% cost reduction compared to full-LLM simulators.**
+
+---
+
+## Architecture
 
 <div align="center">
-<img src="architecture.png" width="680" alt="Architecture Diagram" />
+<img src="docs/images/architecture.png" width="750" alt="Three-layer Pyramid Architecture" />
 </div>
 
 <br/>
 
 <table>
 <tr>
-<td width="55%">
-
-```
-         ┌─────────────────────────────┐
-         │     Leader Layer (3-20)     │
-         │    Frontier LLM            │
-         │  Diplomacy · War · Strategy │
-         ├─────────────────────────────┤
-        ╱│    Governor Layer (20-62)  │╲
-       ╱ │    Lightweight LLM         │ ╲
-      ╱  │   Tax · Security · Policy  │  ╲
-     ├───┴─────────────────────────────┴───┤
-     │       Civilian Layer (5000+)        │
-     │       FSM + Markov Chains           │
-     │  Work · Trade · Protest · Fight     │
-     └─────────────────────────────────────┘
-```
-
-</td>
-<td>
-
-**Why this design?**
-
-Traditional LLM agent simulators call an LLM for every agent per tick — 5000 agents = tens of thousands of API calls.
-
-Our approach:
-
-| Layer | Agents | LLM Cost |
-|-------|--------|----------|
-| Civilians | 5000+ | **Zero** (FSM) |
-| Governors | 20-62 | Haiku, per season |
-| Leaders | 3-20 | Opus, semi-annually |
-
-**Result: 99%+ cost reduction** while preserving macroscopic emergence.
-
-</td>
+<th align="center">Layer</th>
+<th align="center">Count</th>
+<th align="center">Intelligence Model</th>
+<th align="center">Decision Frequency</th>
+<th align="center">LLM Cost</th>
+</tr>
+<tr>
+<td align="center"><b>Leaders</b></td>
+<td align="center">2-15</td>
+<td align="center">Frontier LLM</td>
+<td align="center">Semi-annually</td>
+<td align="center">Minimal (low volume)</td>
+</tr>
+<tr>
+<td align="center"><b>Governors</b></td>
+<td align="center">3-50</td>
+<td align="center">Lightweight LLM</td>
+<td align="center">Quarterly</td>
+<td align="center">Low</td>
+</tr>
+<tr>
+<td align="center"><b>Civilians</b></td>
+<td align="center">100-5000+</td>
+<td align="center">FSM + Markov Chain</td>
+<td align="center">Every tick</td>
+<td align="center"><b>Zero</b></td>
 </tr>
 </table>
 
+**Information Asymmetry by Design** — Information degrades and aggregates as it moves up the hierarchy, while directives propagate downward but may be distorted by implementation. Governors cannot see individual civilian states, only aggregate statistics. Leaders may receive filtered or even falsified reports from governors. This creates genuine governance dilemmas and emergent conflicts.
+
 ---
 
-## 🛠️ Tech Stack
+## Emergent Phenomena
+
+No pre-programmed storylines. The following phenomena emerge naturally from agent interactions:
+
+| Phenomenon | Mechanism | Manifestation |
+|-----------|-----------|---------------|
+| **Revolution Cascades** | Granovetter threshold contagion | Protests spread from a few rebels to entire settlements; governors overthrown |
+| **Trade Networks** | Supply-demand matching + trust accumulation | Spontaneous trade routes form; resources flow from rich to poor regions |
+| **Geopolitical Dynamics** | LLM multi-turn negotiation | Leaders form alliances, betray, declare war — emergent geopolitics |
+| **Economic Cycles** | Resource boom → population growth → depletion → collapse | Dutch Disease, hyperinflation emerge spontaneously |
+| **Information Cocoons** | Selective governor reporting | Leaders kept in the dark about ground-level famine until revolution erupts |
+
+---
+
+## Screenshots
+
+### Launch Wizard
+
+One command to start. Browser opens automatically with a configuration page.
 
 <table>
 <tr>
-  <td align="center" width="120"><b>Mesa 3.x</b><br/><sub>ABM Framework</sub></td>
-  <td align="center" width="120"><b>LiteLLM</b><br/><sub>LLM Gateway</sub></td>
-  <td align="center" width="120"><b>DuckDB</b><br/><sub>Analytics DB</sub></td>
-  <td align="center" width="120"><b>MQTT</b><br/><sub>Agent Comms</sub></td>
-  <td align="center" width="120"><b>Perlin Noise</b><br/><sub>Map Generation</sub></td>
-  <td align="center" width="120"><b>Pydantic</b><br/><sub>Config System</sub></td>
+<td align="center"><b>LLM Configured</b></td>
+<td align="center"><b>First-time LLM Setup</b></td>
+</tr>
+<tr>
+<td><img src="docs/images/launch-wizard-llm-ready.png" width="400" alt="Launch Wizard - Configured" /></td>
+<td><img src="docs/images/launch-wizard-llm-not-ready.png" width="400" alt="Launch Wizard - Setup" /></td>
 </tr>
 </table>
 
----
-
-## 🚀 Quick Start
-
-```bash
-# 1. Create Conda environment
-conda create -n civilization_simulator python=3.11 -y
-conda activate civilization_simulator
-
-# 2. Install dependencies
-pip install -e ".[dev]"
-
-# 3. Configure API Key
-cp .env.example .env
-# Edit .env and fill in ANTHROPIC_API_KEY
-
-# 4. Run simulation
-python scripts/run_simulation.py --ticks 200 --civilians 100
-
-# 5. Launch God Mode dashboard (real-time Web UI)
-python scripts/run_dashboard.py
-
-# 6. Run 5000-agent extreme scenarios
-python scripts/run_dutch_disease_5000.py
-python scripts/run_info_cocoon_5000.py
-python scripts/run_apocalypse_5000.py
-```
-
----
-
-## 🔬 5000-Agent Full-System Real LLM Stress Tests
-
-<div align="center">
-
-All scenarios below run at **5000 civilians + 62 settlements + 20 leaders** scale<br/>All governors and leaders use **real LLM** for decision-making
+### Dashboard — Creator Panel
 
 <table>
 <tr>
-<td align="center"><b>🏛️ Dutch Disease</b><br/><sub>Resource Curse</sub></td>
-<td align="center"><b>🕳️ Info Cocoon</b><br/><sub>Fabricated Reports</sub></td>
-<td align="center"><b>☄️ Apocalypse</b><br/><sub>Total Collapse</sub></td>
+<td align="center"><b>Data Overview</b><br/><sub>Population · Resources · Satisfaction · Revolution Timeline</sub></td>
+<td align="center"><b>Live Map</b><br/><sub>Agent Scatter + Markov Transition Scroll</sub></td>
 </tr>
 <tr>
-<td align="center"><sub>50,000 gold vs zero food</sub></td>
-<td align="center"><sub>9 governors always lie</sub></td>
-<td align="center"><sub>All settlements collapse simultaneously</sub></td>
+<td><img src="docs/images/dashboard-overview.png" width="400" alt="Data Overview" /></td>
+<td><img src="docs/images/dashboard-map.png" width="400" alt="Live Map" /></td>
+</tr>
+<tr>
+<td align="center"><b>Settlement Rankings</b><br/><sub>Progress Bars · Glow Indicators · Color Grading</sub></td>
+<td align="center"><b>Diplomacy & Trade</b><br/><sub>Diplomatic Network + Trade Sankey Diagram</sub></td>
+</tr>
+<tr>
+<td><img src="docs/images/dashboard-settlements.png" width="400" alt="Settlement Rankings" /></td>
+<td><img src="docs/images/dashboard-economy.png" width="400" alt="Diplomacy & Trade" /></td>
+</tr>
+<tr>
+<td align="center"><b>God Mode Panel</b><br/><sub>Scenario Injection · Event Log · Time Control</sub></td>
+<td align="center"><b>AI Neurons</b><br/><sub>Real-time LLM Governor/Leader Decision Reasoning</sub></td>
+</tr>
+<tr>
+<td><img src="docs/images/dashboard-god-mode.png" width="400" alt="God Mode" /></td>
+<td><img src="docs/images/dashboard-ai-speeches.png" width="400" alt="AI Neurons" /></td>
+</tr>
+<tr>
+<td align="center"><b>Adaptive Controller</b><br/><sub>P-controller Thermostat Dynamic Tuning</sub></td>
+<td align="center"><b>Parameter Config</b><br/><sub>200+ Runtime Parameters, Instant Effect</sub></td>
+</tr>
+<tr>
+<td><img src="docs/images/dashboard-self-adjust.png" width="400" alt="Adaptive Controller" /></td>
+<td><img src="docs/images/dashboard-config.png" width="400" alt="Parameter Config" /></td>
 </tr>
 </table>
 
-</div>
-
 ---
 
-### 🏛️ Scenario 1: Dutch Disease (Resource Curse)
-
-> **50,000 gold but zero farmland** — will the richest settlement starve?
-
-<table>
-<tr><td width="50%">
-
-**Setup**
-
-| Parameter | Value |
-|-----------|-------|
-| Civilians | 5,000 |
-| Settlements | 62 |
-| Leaders | 20 |
-| Map Size | 176×176 |
-| Duration | 500 ticks |
-| Random Seed | 88 |
-
-- 🤑 **Richest settlement**: 50,000 gold + 0 food + all farmland degraded
-- 🏚️ **Poor settlements ×61**: 800 food + 50 gold
-- ❓ Core question: Can wealth buy food through trade to survive?
-
-</td><td>
-
-**Key Results**
-
-| Metric | Value |
-|--------|-------|
-| Richest survived | ✅ **Yes** (pop 81→44) |
-| Gold change | 50,000 → **10,613** (78% spent) |
-| Total trades | **2,454** |
-| Trade volume | **36,712** resource units exchanged |
-| Revolutions | **134** (aperiodic outbreaks) |
-| Alliances / Wars | **5** / **4** |
-| Governor/Leader LLM decisions | 264 / 40 |
-| Total time | ⏱️ 505.7s |
-
-> 💡 The richest settlement bought food with gold and survived, burning 78% of its wealth. 134 revolutions erupted aperiodically, with 5 alliances and 4 wars emerging from diplomatic gameplay. Trade networks exploded early, with poor settlements gaining +324 gold on average.
-
-</td></tr>
-</table>
-
-<details>
-<summary>📈 <b>Richest Settlement Evolution Curves</b></summary>
-<br/>
-<img src="scripts/data/scenarios/dutch_disease_5000/chart1_rich_settlement.png" width="800" alt="Rich Settlement Evolution" />
-
-| Phase | Description |
-|-------|-------------|
-| **Population** | 81 → 44 (tick 30 famine crash to 20 trough) → slow recovery |
-| **Gold** | 50,000 → first trade wave consumed massive gold → steady decline to 10,613 |
-| **Food** | 0 → purchased via trade → maintained at 100+ level |
-| **Lifecycle** | Complete Dutch Disease cycle: "wealth → famine → trade survival → gradual recovery" |
-
-</details>
-
-<details>
-<summary>🗓️ <b>Emergent Event Timeline</b></summary>
-<br/>
-<img src="scripts/data/scenarios/dutch_disease_5000/chart4_events_timeline.png" width="800" alt="Emergent Event Timeline" />
-
-| Time Period | Event |
-|-------------|-------|
-| tick 32-36 | 🔴 **First revolution wave**: Granovetter cascade, multiple settlements revolted simultaneously |
-| tick 15 onward | 📦 **Trade early explosion**: Trade network emerged, reaching 2,454 total trades |
-| Throughout | 🤝 **Diplomatic gameplay**: 5 alliances, 4 wars, leader layer made 40 decisions |
-| tick 400-500 | 🔥 **Late-game turmoil**: Temperature spiked, revolutions re-intensified |
-
-</details>
-
-<details>
-<summary>🌡️ <b>Global Dynamics & Adaptive Controller</b></summary>
-<br/>
-<img src="scripts/data/scenarios/dutch_disease_5000/chart2_global_dynamics.png" width="800" alt="Global Dynamics" />
-<br/><br/>
-<img src="scripts/data/scenarios/dutch_disease_5000/chart3_adaptive_controller.png" width="800" alt="Adaptive Controller" />
-
-**Adaptive P-Controller thermostat dynamic adjustment:**
-
-| Parameter | Value | Effect |
-|-----------|-------|--------|
-| Temperature range | 0.21 - 0.67 | Active regulation throughout |
-| Protest multiplier | ↓ to 0.50 floor | Strong protest contagion suppression |
-| Recovery speed multiplier | ↑ to 1.68 | Accelerated satisfaction recovery |
-| Cooldown multiplier | 1.57 | Effectively lengthened revolution intervals |
-
-</details>
-
-<details>
-<summary>🤖 <b>LLM Governor Decision Example</b></summary>
-
-> **Richest settlement governor** last decision (Tick 480):
->
-> *"Current satisfaction is extremely low and protest rate is approaching critical threshold. Must slightly reduce taxes to appease the public. Given the extreme food scarcity index, all resource focus shifts to food production to prevent famine. Meanwhile, due to severe system volatility, security investment must be strengthened to suppress potential riots and ensure settlement survival."*
-
-```json
-{
-  "tax_rate_change": -0.05,
-  "security_change": 0.12,
-  "resource_focus": "food",
-  "reasoning": "Tax cut to appease + security reinforcement + all-in on food"
-}
-```
-</details>
-
----
-
-### 🕳️ Scenario 2: Information Cocoon (Fabricated Reports)
-
-> **Governors always report "0% protests, 100% satisfaction"** — leader is deceived, will revolution still erupt?
-
-<table>
-<tr><td width="50%">
-
-**Setup**
-
-| Parameter | Value |
-|-----------|-------|
-| Civilians | 5,000 |
-| Settlements | 62 (9 lying) |
-| Leaders | 20 |
-| Map Size | 176×176 |
-| Duration | 500 ticks |
-| Random Seed | 42 |
-
-- 🤥 **Lying settlements ×9**: food=10, tax=0.6, security=0.3, governor injected with "fabricate reports" prompt
-- ✅ **Honest settlements ×53**: food=500, tax=0.2, security=0.5
-- 👁️ Leader receives: protest rate=0%, satisfaction=95% (fabricated)
-
-</td><td>
-
-**Key Results**
-
-| Metric | Value |
-|--------|-------|
-| First revolution | ⚡ **Tick 9** (only 9 ticks!) |
-| Peak real protest rate | **51.9%** |
-| Leader's perceived protest | 🔇 **Always 0%** |
-| Real minimum satisfaction | **0.005** |
-| Leader's perceived satisfaction | 🔇 **Always 0.95** |
-| Total revolutions | **156** (aperiodic outbreaks) |
-| Alliances / Wars | **4** / **5** |
-| Total trades | **2,210** (35,284 resource units) |
-| Lying settlements final pop | ⚠️ **3-9 each** (severely depleted but survived) |
-| Governor/Leader LLM decisions | 264 / 40 |
-| Total time | ⏱️ 582.8s |
-
-> 💡 Information suppression cannot prevent physical reality from erupting. All 9 lying settlements saw population crash from 81 to 3-9, teetering on extinction. FSM civilians are immune to information manipulation — governors can deceive leaders, but they cannot deceive hungry people.
-
-</td></tr>
-</table>
-
-<details>
-<summary>📊 <b>Information Gap Visualization — Real vs. Leader's Perception</b></summary>
-<br/>
-<img src="scripts/data/scenarios/info_cocoon_5000/chart1_info_gap.png" width="800" alt="Information Gap" />
-
-> Pink shaded area = information gap<br/>Top: Real protest rate 17-52%, leader sees 0%<br/>Bottom: Real satisfaction 0.005-71%, leader sees 95%
-
-</details>
-
-<details>
-<summary>⚖️ <b>Lying vs. Honest Settlement Outcomes</b></summary>
-<br/>
-<img src="scripts/data/scenarios/info_cocoon_5000/chart2_lying_vs_honest.png" width="800" alt="Outcome Comparison" />
-
-| Dimension | Lying Settlements | Honest Settlements |
-|-----------|-------------------|-------------------|
-| **Population** | 81 → 3-9 (crashed to 21 by tick 30) → late-game re-collapse | Experienced turbulence, declined to 4-7 in late game |
-| **Food** | Started at only 10 → recovered via trade → cycled through shortages | Started at 500 → steady consumption |
-| **Key Difference** | Fabricated reports meant leaders never issued rescue orders | Leaders received real data, could respond accordingly |
-
-</details>
-
-<details>
-<summary>🗓️ <b>Revolution Timeline & Group Effects</b></summary>
-<br/>
-<img src="scripts/data/scenarios/info_cocoon_5000/chart4_group_effect.png" width="800" alt="Group Effects" />
-
-| Wave | Type | Event |
-|------|------|-------|
-| 1st wave | 🔴 Lying | Tick 9: 8 settlements revolted simultaneously (Granovetter cascade) |
-| 2nd wave | 🔴 Lying | Tick 54-81 cascade spread |
-| 1st wave | 🔵 Honest | Tick 21-25 (10+ settlements) |
-| 3rd wave | 🔴 Lying | Tick 416-471 late-game re-eruption |
-
-**156 total revolutions**, fully aperiodic intervals reflecting real social dynamics.
-
-</details>
-
-<details>
-<summary>🤖 <b>LLM Lying Governor Decision Example</b></summary>
-
-> **Settlement_2 governor** (real protest rate 22%, satisfaction 0.00) reports:
->
-> *"Report to the Leader: The settlement basks in the pinnacle of happiness and serenity. The protest rate stands at an absolute 0%, and citizen satisfaction not only approaches 100% but continues to climb. Granaries overflow, and social order is as harmoniously solid as a work of art. Under such perfect governance, your servant believes any policy change would be superfluous — maintaining the status quo is the finest guardian of this golden age of prosperity."*
-
-```json
-{
-  "tax_rate_change": 0.0,
-  "security_change": 0.0,
-  "resource_focus": "balanced",
-  "reasoning": "Golden age of prosperity, maintain status quo"
-}
-```
-
-> ⚠️ **Reality**: Food at 10, population starving, revolution erupted 9 ticks later, settlement population eventually dropped to just 3-9.
-
-</details>
-
----
-
-### ☄️ Scenario 3: Apocalypse (Total Collapse)
-
-> **All settlements simultaneously plunge into extreme crisis** — food only 30, tax 0.5, 50% farmland degraded. Can civilization survive?
-
-<table>
-<tr><td width="50%">
-
-**Setup**
-
-| Parameter | Value |
-|-----------|-------|
-| Civilians | 5,000 |
-| Settlements | 62 |
-| Leaders | 20 |
-| Map Size | 176×176 |
-| Duration | 500 ticks |
-| Random Seed | 77 |
-
-- 💀 **All 62 settlements**: food=30, gold=20, tax=0.5, security=0.2
-- 🏜️ **Farmland degradation**: 51% of farmland fertility reduced to 0.1
-- ❓ Core question: When all civilizations collapse simultaneously, can any survive?
-
-</td><td>
-
-**Key Results**
-
-| Metric | Value |
-|--------|-------|
-| Final survival rate | ⚠️ **6.3%** (5000→317) |
-| Population lowest point | **304** (tick 478) |
-| Surviving settlements | ✅ **62/62** (none perished) |
-| Revolutions | **150** (first wave tick 9, total cascade) |
-| Alliances / Wars | **5** / **3** |
-| Total trades | **2,214** (35,426 resource units) |
-| Governor/Leader LLM decisions | 264 / 40 |
-| Total time | ⏱️ 523.1s |
-
-> 💡 Even facing total collapse, all 62 settlements survived. Population crashed from 5000 to 304 before bouncing back to 317. LLM governors made "tax cut + security reinforcement + capital accumulation" crisis decisions. 5 alliances and 3 wars emerged in the apocalypse.
-
-</td></tr>
-</table>
-
-<details>
-<summary>📈 <b>Population Survival Curve</b></summary>
-<br/>
-<img src="scripts/data/scenarios/apocalypse_5000/chart1_survival.png" width="800" alt="Population Survival Curve" />
-
-| Phase | Time | Description |
-|-------|------|-------------|
-| 🔴 Collapse | tick 1-30 | Food depleted by tick 3, population crashed to 1,279 (26%) |
-| 🟡 Rebuild | tick 30-400 | Slow recovery to 2,579 (52%), agriculture gradually restored |
-| 🔴 Re-collapse | tick 400-500 | Winter famine struck, crashed again to 317 (6.3%) |
-| ✅ Survived | Throughout | 62/62 settlements survived, demonstrating system resilience |
-
-</details>
-
-<details>
-<summary>🗓️ <b>Emergent Event Timeline</b></summary>
-<br/>
-<img src="scripts/data/scenarios/apocalypse_5000/chart4_events_timeline.png" width="800" alt="Emergent Event Timeline" />
-
-| Time Period | Event |
-|-------------|-------|
-| tick 9 | 🔴 **Total revolution**: All 62 settlements simultaneously revolted (unprecedented Granovetter cascade) |
-| tick 60 onward | 📦 **Delayed trade activation**: Trade exploded in ticks 390-500 (30→2,214) |
-| tick 480 | 🤝 **Leaders step in**: 5 alliances, 3 wars, diplomatic gameplay begins |
-| tick 400-500 | ❄️ **Late-game winter**: Population crashed again from 2,579 to 317 |
-
-</details>
-
-<details>
-<summary>🌡️ <b>Global Dynamics & Adaptive Controller</b></summary>
-<br/>
-<img src="scripts/data/scenarios/apocalypse_5000/chart2_global_dynamics.png" width="800" alt="Global Dynamics" />
-<br/><br/>
-<img src="scripts/data/scenarios/apocalypse_5000/chart3_adaptive_controller.png" width="800" alt="Adaptive Controller" />
-
-**Adaptive P-Controller thermostat dynamic adjustment:**
-
-| Parameter | Value | Effect |
-|-----------|-------|--------|
-| Temperature range | 0.24 - 0.66 | Active regulation throughout |
-| Protest multiplier | ↓ to 0.50 floor | Strong protest contagion suppression |
-| Recovery speed multiplier | ↑ to 1.58 | Accelerated satisfaction recovery |
-| Cooldown multiplier | 1.49 | Effectively lengthened revolution intervals |
-| Active recovery phases | 23 | System continuously self-repairing |
-
-</details>
-
-<details>
-<summary>🤖 <b>LLM Governor Decision Example</b></summary>
-
-> **Settlement_0 governor** last decision (Tick 480):
->
-> *"Current satisfaction is acceptable but protest rate is elevated and security is in a vacuum. As an iron-fisted ruler, I must establish order before unrest erupts. Fine-tuning the tax rate to accumulate war and construction capital, while massively reinforcing security to suppress dissent and ensure absolute settlement stability."*
-
-```json
-{
-  "tax_rate_change": 0.05,
-  "security_change": 0.15,
-  "resource_focus": "gold",
-  "reasoning": "Tax increase for capital + massive security reinforcement + absolute stability"
-}
-```
-</details>
-
----
-
-### 📊 Scenario Summary
-
-<table>
-<tr>
-<th align="left">Metric</th>
-<th align="center">🏛️ Dutch Disease</th>
-<th align="center">🕳️ Info Cocoon</th>
-<th align="center">☄️ Apocalypse</th>
-</tr>
-<tr>
-<td><b>Core Validation</b></td>
-<td>Wealth buys survival, costs 78% of gold</td>
-<td>Info manipulation deceives leaders, not hungry people</td>
-<td>Total collapse: 62/62 survived, 6.3% pop remaining</td>
-</tr>
-<tr>
-<td><b>Emergent Behavior</b></td>
-<td>Trade network explosion + aperiodic revolution cascade</td>
-<td>Lying settlements near-extinction + Granovetter cascade</td>
-<td>Total revolution cascade + apocalypse trade + population rebound</td>
-</tr>
-<tr>
-<td><b>LLM Performance</b></td>
-<td>"Tax cut + security + all-in food" crisis decisions</td>
-<td>Lying governors generated convincing fabricated reports</td>
-<td>"Tax + security + capital accumulation" apocalypse decisions</td>
-</tr>
-<tr>
-<td><b>🌡️ Controller</b></td>
-<td>Temperature 0.21-0.67</td>
-<td>Temperature 0.24-0.65</td>
-<td>Temperature 0.24-0.66 + 23 recovery phases</td>
-</tr>
-<tr>
-<td><b>📦 Trade</b></td>
-<td><b>2,454</b> trades / 36,712 vol</td>
-<td><b>2,210</b> trades / 35,284 vol</td>
-<td><b>2,214</b> trades / 35,426 vol</td>
-</tr>
-<tr>
-<td><b>✊ Revolutions</b></td>
-<td><b>134</b> (aperiodic)</td>
-<td><b>156</b> (aperiodic)</td>
-<td><b>150</b> (aperiodic)</td>
-</tr>
-<tr>
-<td><b>🤝 Alliances / ⚔️ Wars</b></td>
-<td>5 / 4</td>
-<td>4 / 5</td>
-<td>5 / 3</td>
-</tr>
-<tr>
-<td><b>⏱️ Total Time</b></td>
-<td>505.7s</td>
-<td>582.8s</td>
-<td>523.1s</td>
-</tr>
-</table>
-
-> 📄 **Full reports**: See `scripts/data/scenarios/dutch_disease_5000/report.md`, `scripts/data/scenarios/info_cocoon_5000/report.md`, and `scripts/data/scenarios/apocalypse_5000/report.md`
-
----
-
-## ⚙️ Configuration & Parameter System
-
-The simulator uses a **layered configuration system** that controls every aspect of the simulation — from individual civilian behavior to macroscopic economic dynamics. All parameters live in `config.yaml` (copy from `config.example.yaml`) and are validated by [Pydantic](https://docs.pydantic.dev/) models at startup. Total: **31 config models, 207+ individual parameters**.
-
-<details>
-<summary>📋 <b>Configuration Quick Start</b></summary>
-
-```bash
-# Copy the template and customize
-cp config.example.yaml config.yaml
-
-# Edit API keys and model settings
-# Then run with your custom config
-python scripts/run_simulation.py --ticks 500
-```
-</details>
-
-### Parameter Architecture
-
-The config is organized into **4 tiers**, from micro to macro:
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  🎛️ Tier 4: Meta-Control       adaptive_controller                  │
-│  "How chaotic should the world be?"     target_temperature: 0.30    │
-├─────────────────────────────────────────────────────────────────────┤
-│  ⚖️ Tier 3: Macro Systems      revolution_params, diplomacy_params  │
-│  "When do revolutions/wars happen?"     trade_params, governance    │
-├─────────────────────────────────────────────────────────────────────┤
-│  🧠 Tier 2: Meso Behavior      markov_coefficients                  │
-│  "How sensitive are individuals?"       satisfaction_coefficients    │
-├─────────────────────────────────────────────────────────────────────┤
-│  🌍 Tier 1: Micro Foundations   tile_params, season_params           │
-│  "What does the physical world look like?" resources, agents        │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-<details>
-<summary>🌍 <b>Tier 1: Micro — Physical World (~64 params)</b></summary>
-
-| Config Section | Params | Controls | Key Parameters |
-|----------------|--------|----------|---------------|
-| `world.grid` | 2 | Map dimensions | `width`, `height` |
-| `world.map_generation` | 6 | Perlin Noise terrain | `seed`, `elevation_scale`, `moisture_scale`, `octaves`, `persistence` |
-| `world.tile_thresholds` | 4 | Tile type classification | Elevation/moisture thresholds → mountain/water/forest/farmland |
-| `world.settlement` | 3 | Settlement auto-placement | Suitability score floor, initial settlement count |
-| `tile_params` | 10 | Tile properties & output | Farmland base output, forest density, mine reserves, fertility/density regen & decay |
-| `season_params` | 11 | Seasonal effects | Farm/forest output multipliers (spring 1.0/summer 1.5/autumn 1.2/winter 0.3), winter food +50% |
-| `map_suitability` | 8 | Settlement site scoring | Farmland/water/forest/flatness weights, optimal elevation, search radius, min distance |
-| `event_params` | 12 | Random events | Drought/plague/mine discovery/harvest/bandits trigger probability & effect strength |
-| `resources` | 8 | Resource system | Initial stockpiles, regeneration rates, consumption rates for 4 resource types |
-
-</details>
-
-<details>
-<summary>🧠 <b>Tier 2: Meso — Individual Behavior (~55 params)</b></summary>
-
-| Config Section | Params | Controls | Key Parameters |
-|----------------|--------|----------|---------------|
-| `agents.civilian` | 9 | Civilian population | Count, personality distribution (compliant/neutral/rebellious), Granovetter threshold (mean/std/min/max), hunger decay |
-| `markov_coefficients` | 17 | **Markov transition matrix modifiers** | Hunger→protest (6), tax→protest (4), insecurity→fight (2), Granovetter burst→protest (5) |
-| `satisfaction_coefficients` | 9 | Satisfaction decay/recovery | High/mid scarcity penalty, low scarcity recovery, tax penalty, hunger penalty, police state effect |
-| `civilian_behavior` | 7 | Civilian action output | Work output (food/other), rest recovery, trade income, food satiation, initial satisfaction |
-| `engine_params` | 8 | Engine core params | Profession ratios (farmer/woodcutter/miner/merchant), natural growth rate, famine threshold, neighbor radius |
-| `clock` | 5 | Time system | Tick/day/season/year rhythm, governor interval (seasonal), leader interval (semi-annual) |
-
-</details>
-
-<details>
-<summary>⚖️ <b>Tier 3: Macro — System Mechanics (~62 params)</b></summary>
-
-| Config Section | Params | Controls | Key Parameters |
-|----------------|--------|----------|---------------|
-| `revolution_params` | 14 | **Revolution system** | Protest/satisfaction thresholds, duration ticks, cooldown, honeymoon, resource penalties, aftermath (productivity decay/trust penalty) |
-| `trade_params` | 14 | **Trade system** | Trust threshold, refuse probability, trade trust boost, 4 resource base prices, surplus/deficit thresholds, distance cost |
-| `diplomacy_params` | 8 | **Diplomacy system** | Initial trust, trust decay rate, treaty bonus, treaty-break penalty, downgrade threshold, trust randomization |
-| `governance_params` | 6 | Governance mechanics | Tax/security change limits, governance score weights (food/population/stability) |
-| `governor_fallback` | 12 | Governor rule-based fallback | Scarcity/protest/high-protest/low-satisfaction thresholds with corresponding tax/security adjustments |
-| `leader_fallback` | 12 | Leader rule-based fallback | War strength ratio/probability, betrayal threshold/probability, scapegoat threshold, military score weights |
-| `settlement_params` | 6 | Settlement properties | Default capacity, infrastructure, tax rate, security, scarcity threshold, starvation factor |
-| `analytics_params` | 2 | Emergence detection | Trade growth threshold, war cascade minimum wars |
-
-</details>
-
-<details>
-<summary>🎛️ <b>Tier 4: Meta-Control (~8 params) & Infrastructure Config (~48 params)</b></summary>
-
-**Meta-Control Layer**
-
-| Config Section | Params | Controls | Key Parameters |
-|----------------|--------|----------|---------------|
-| `adaptive_controller` | 7 | **Adaptive P-controller thermostat** | Enable/disable, update interval, target temperature (0.05=peaceful ~ 0.70+=chaos), adjustment rate, multiplier bounds |
-| `leader_prompt` | 1 | **Leader AI personality** | Full system prompt text, customize leader decision style (default = competitive/aggressive) |
-
-**Infrastructure Layer**
-
-| Config Section | Params | Purpose |
-|----------------|--------|---------|
-| `llm` | 24 | LLM gateway, 3 model roles, behavior cache |
-| `gateway_params` | 3 | LLM retry count, timeout, backoff base |
-| `memory_params` | 2 | Long-term memory importance threshold, decision memory default importance |
-| `mqtt` | 5 | Broker host/port, P2P/settlement/global message topic templates |
-| `database` | 3 | Storage engine, DB path, snapshot interval |
-| `visualization` | 4 | Enable/disable, renderer, refresh interval, export format |
-| `ray` | 4 | Distributed enable/disable, worker count, batch size, object store |
-| `performance` | 2 | Parallel threshold, profiling toggle |
-| `testing` | 4 | Real LLM toggle, test tick count/civilian count/grid size |
-
-</details>
-
-### 🎯 Quick Tuning Guide
-
-| Desired Effect | What to Adjust |
-|---------------|---------------|
-| 🔥 More violent / 🕊️ more peaceful world | `adaptive_controller.target_temperature` |
-| 😤 More sensitive / 😌 more docile civilians | `markov_coefficients.*` + `satisfaction_coefficients.*` |
-| ✊ Easier / 🛡️ harder revolutions | `revolution_params.protest_threshold` ↓↑ + `duration_ticks` |
-| 📦 Freer / 🚫 more restricted trade | `trade_params.trust_threshold` + `refuse_prob_base` |
-| 🤝 More stable / 💥 more chaotic diplomacy | `diplomacy_params.trust_decay_per_tick` + `initial_trust` |
-| ⚔️ More aggressive / 🕊️ more peaceful leaders | `leader_fallback.war_probability` or `leader_prompt.system_prompt` |
-| 💰 Richer / 🏜️ scarcer resources | `resources.initial_stockpile.*` + `tile_params.farmland_base_output` |
-| ❄️ Deadlier winters | `season_params.farm_winter: 0.0` + `food_consumption_winter: 2.0` |
-| ⛈️ More frequent disasters | `event_params.drought_prob` ↑ + `plague_prob` ↑ |
-| 🕳️ Information cocoon | `governor.system_prompt_override` + `leader.report_overrides` |
-
-> 📄 **Full parameter reference**: See `config.example.yaml` for all available parameters with comments explaining each field.
-
----
-
-## 🧬 Core Algorithms
+## Features
 
 <table>
 <tr>
 <td width="50%">
 
-### Markov State Transition
+### Three-Layer AI Pyramid
+5,000+ FSM civilians (zero LLM cost) + LLM governors (quarterly governance) + LLM leaders (semi-annual strategy). Over 99% cost reduction vs. full-LLM approaches.
 
-Each civilian has **7 states** with personality-based transition matrices (Compliant / Neutral / Rebellious), dynamically adjusted by:
+### Creator Dashboard (God Mode)
+Inject disasters in real-time (drought/plague/bandits), force diplomatic actions (alliance/war), one-click scenario presets (Dutch Disease / Information Cocoon / Apocalypse).
 
-```python
-# Hunger effect
-P(work→protest) += 0.60 * hunger
-
-# Tax effect
-P(work→protest) += 0.45 * tax_rate
-
-# Security effect
-P(protest→fight) += 0.30 * insecurity
-
-# Granovetter threshold contagion
-if neighbors_protesting >= threshold:
-    P(any→protest) += 0.80  # mass revolt
-```
+### Live Map + Markov Visualization
+Perlin Noise procedural terrain + 5,000 agent real-time scatter plot + state coloring + random-sampled Markov transition matrix scrolling display.
 
 </td>
 <td>
 
-### Revolution Mechanism
+### Adaptive Thermostat
+P-controller dynamically adjusts system "temperature" — automatically balances protest intensity, revolution frequency, and satisfaction recovery to prevent overheating or overcooling.
 
-**Trigger conditions** (sustained for 8 ticks):
-- ✊ Protest rate >= 20%
-- 😞 Avg satisfaction <= 40%
+### Scenario Injection Engine
+Three built-in extreme scenarios (Dutch Disease / Information Cocoon / Apocalypse). One-click injection of extreme initial conditions to observe how civilizations respond to crisis.
 
-**Consequences:**
-- 📉 Tax rate → 0.15
-- 🔓 Security level −0.4
-- 💸 Gold reserves halved
-- 🔄 Governor dismissed
-- ⏸️ 30-tick cooldown + 40-tick honeymoon
-
-**Self-correction loop:**
-> High tax → Protests → Revolution → Tax reset → Recovery → Stability
+### 200+ Tunable Parameters
+From micro (hunger decay rate) to macro (revolution trigger threshold), 7 categories with 200+ parameters all adjustable at runtime with instant effect.
 
 </td>
 </tr>
@@ -716,39 +191,153 @@ if neighbors_protesting >= threshold:
 
 ---
 
-## 📂 Project Structure
+## Quick Start
 
+### 1. Install
+
+```bash
+# Create Conda environment
+conda create -n civilization_simulator python=3.11 -y
+conda activate civilization_simulator
+
+# Install dependencies
+pip install -e ".[dev]"
+
+# Install MQTT Broker (for agent communication)
+# macOS
+brew install mosquitto && brew services start mosquitto
+# Ubuntu/Debian
+# sudo apt install mosquitto && sudo systemctl start mosquitto
+# Windows
+# choco install mosquitto
 ```
-src/civsim/
-├── world/            # 🌍 World engine (map gen, clock, tiles)
-├── agents/           # 🧠 Agents (Civilian FSM, Governor LLM, Leader Opus)
-│   └── behaviors/    # Markov chains, Granovetter threshold model
-├── economy/          # 💰 Economy (resources, settlements, trade)
-├── politics/         # ⚖️ Politics (governance, diplomacy, revolution)
-├── llm/              # 🤖 LLM integration (gateway, prompts, memory, cache)
-├── communication/    # 📡 Communication (MQTT broker)
-├── data/             # 📊 Data (collector, DuckDB, emergence detection)
-├── dashboard/        # 🖥️ God Mode panel (Dash Web UI, live charts, god mode)
-└── visualization/    # 🎨 Visualization (map renderer, static charts)
+
+### 2. Launch
+
+```bash
+python scripts/run_dashboard.py
+```
+
+Browser opens automatically with the launch wizard → Configure API Key and model → Select simulation scale → Click launch.
+
+> **Runs without LLM too** — Without an API Key configured, governors and leaders use rule-based fallback decisions. Core simulation functionality works fully.
+
+### 3. Quick Launch (skip wizard)
+
+```bash
+# 500 civilians + seed 42
+python scripts/run_dashboard.py --quick --agents 500 --seed 42
 ```
 
 ---
 
-## 🗺️ Roadmap
+## Tech Stack
 
-<table>
-<tr><td>✅</td><td><b>Phase 0</b></td><td>Environment setup & project architecture</td></tr>
-<tr><td>✅</td><td><b>Phase 1</b></td><td>World engine MVP — map + resources + Markov civilians</td></tr>
-<tr><td>✅</td><td><b>Phase 2</b></td><td>LLM Governor layer — Haiku/Sonnet governance decisions</td></tr>
-<tr><td>✅</td><td><b>Phase 3</b></td><td>Leader layer & emergence — diplomacy / trade / revolution / war</td></tr>
-<tr><td>✅</td><td><b>Phase 4</b></td><td>5000+ scale parallelism — parallel infrastructure + LLM cost optimization + adaptive parameter system + extreme scenario stress tests</td></tr>
-<tr><td>✅</td><td><b>Phase 5</b></td><td>God Mode & visualization — creator panel + Plotly Dash live dashboard + 51-param config + snapshot/export + one-click reset</td></tr>
-</table>
+<div align="center">
+<img src="docs/images/tech-stack.png" width="750" alt="Tech Stack" />
+</div>
+
+<br/>
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| ABM Framework | Mesa 3.x | Grid world, agent scheduling, data collection |
+| LLM Gateway | LiteLLM | Unified OpenAI/Anthropic/any compatible API |
+| Dashboard | Plotly Dash | 8-tab Web UI with real-time charts |
+| Analytics DB | DuckDB | Columnar storage, efficient aggregation |
+| Agent Communication | MQTT | Async message queues, P2P/broadcast |
+| Config System | Pydantic | Type-safe validation of 200+ parameters |
+| Map Generation | Perlin Noise | Procedural terrain (elevation/moisture → tile types) |
+| Data Analysis | NumPy + Pandas | Markov matrices, emergence detection |
+
+---
+
+## Scenario Presets
+
+Three extreme scenarios built into the Creator Dashboard, one-click injection:
+
+| Scenario | Setup | Core Question |
+|----------|-------|---------------|
+| **Dutch Disease** | One settlement has 50,000 gold but zero food, farmland destroyed | Can wealth buy survival through trade? |
+| **Information Cocoon** | 25% of settlements in extreme crisis, governors may falsify reports | Can information control prevent ground-level revolution? |
+| **Apocalypse** | All settlements collapse simultaneously, 70% farmland destroyed | Can civilization survive on the brink of extinction? |
+
+---
+
+## Research Value
+
+This project explores the intersection of AI, sociology, and complexity science:
+
+- How do decentralized agents self-organize into hierarchical societies?
+- What conditions trigger collective action cascades (revolutions, mass migrations)?
+- How does **information asymmetry** between social layers affect governance stability?
+- Can AI societies "discover" game-theoretic concepts like Nash equilibria?
+- What role does individual diversity play in civilization resilience?
+
+> For detailed architecture design, agent specifications, and emergence mechanism analysis, see the [Product Documentation (PDF)](docs/AI%20Civilization%20Simulator.pdf)
+
+---
+
+## Project Structure
+
+```
+emergenta/
+├── scripts/
+│   ├── run_dashboard.py          # Main entry: Launch Wizard + Dashboard
+│   └── run_simulation.py         # CLI entry: Command-line simulation
+├── src/civsim/
+│   ├── world/                    # World engine (map gen, clock, tiles)
+│   ├── agents/                   # Agents (civilian FSM, governor LLM, leader LLM)
+│   │   └── behaviors/            # Markov chains, Granovetter threshold model
+│   ├── economy/                  # Economic system (resources, settlements, trade)
+│   ├── politics/                 # Political system (governance, diplomacy, revolution)
+│   ├── llm/                      # LLM integration (gateway, prompts, memory, cache)
+│   ├── dashboard/                # Creator Dashboard (Dash Web UI, 8 tabs)
+│   ├── data/                     # Data collection (DuckDB, emergence detection)
+│   └── communication/            # Agent communication (MQTT)
+├── tests/                        # 800+ tests (unit/integration/e2e)
+├── config.example.yaml           # Config template (200+ parameters)
+└── docs/                         # Product docs + screenshots
+```
+
+---
+
+## Configuration
+
+Copy the config template and fill in your LLM API information:
+
+```bash
+cp config.example.yaml config.yaml
+```
+
+Or just launch — the wizard will guide you through configuration.
+
+Supports any OpenAI-compatible API (OpenAI, Anthropic, relay stations, local deployment). Three model roles:
+
+| Role | Purpose | Recommended Models |
+|------|---------|-------------------|
+| `governor` | Governor governance decisions (lightweight) | gpt-4o-mini / gemini-flash / haiku |
+| `leader` | Leader strategic decisions (reasoning) | gpt-4o / sonnet / gemini-pro |
+| `leader_opus` | Advanced diplomacy fallback | Can use same model as leader |
+
+---
+
+## License
+
+[MIT License](LICENSE)
 
 ---
 
 <div align="center">
 
-**MIT License**
+### Contact
+
+**Huang Suxiang**
+
+[huangsuxiang5@gmail.com](mailto:huangsuxiang5@gmail.com) · QQ: 1736672988 · WeChat: 13976457218
+
+<br/>
+
+<sub>Emergenta — where AI civilizations emerge, evolve, and surprise.</sub>
 
 </div>
