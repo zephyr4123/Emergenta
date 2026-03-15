@@ -337,13 +337,16 @@ def _register_scenario_description(app: object) -> None:
 
 def _register_reset(app: object) -> None:
     @app.callback(  # type: ignore[union-attr]
-        Output("god-mode-feedback", "children", allow_duplicate=True),
+        [
+            Output("god-mode-feedback", "children", allow_duplicate=True),
+            Output("slider-speed", "value"),
+        ],
         Input("btn-reset-sim", "n_clicks"),
         prevent_initial_call=True,
     )
-    def handle_reset(n_clicks: int | None) -> str:
+    def handle_reset(n_clicks: int | None) -> tuple[str, int]:
         if not n_clicks:
             raise PreventUpdate
         ss = _get_state(app)
         ss.enqueue_action(GodModeAction(action=GodAction.RESET))
-        return ""
+        return "", 1  # 速度重置为 1x
