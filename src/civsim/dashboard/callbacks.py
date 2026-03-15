@@ -66,12 +66,12 @@ def _register_status_bar(app: object) -> None:
         snap = ss.get_latest()
         paused_txt = "⏸" if ss.is_paused else "▶"
         return (
-            f"Tick: {snap.tick}",
+            f"Tick {snap.tick}",
             f"第{snap.year}年 {snap.season}",
-            f"人口: {snap.population}",
-            f"满意度: {snap.avg_satisfaction:.2f}",
-            f"抗议率: {snap.protest_ratio:.1%}",
-            f"革命: {snap.revolution_count}",
+            f"{snap.population:,}",
+            f"{snap.avg_satisfaction:.2f}",
+            f"{snap.protest_ratio:.1%}",
+            f"{snap.revolution_count}",
             f"{paused_txt} {ss.speed}x",
         )
 

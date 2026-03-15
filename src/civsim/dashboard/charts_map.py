@@ -13,10 +13,10 @@ from dash import html
 
 from civsim.dashboard.shared_state import MarkovTransition, TickSnapshot
 
-# 深色主题配色（与 charts.py 一致）
-_PAPER_BG = "#1a1a2e"
-_PLOT_BG = "#16213e"
-_FONT_COLOR = "#ecf0f1"
+# 深色主题配色（与 app.py 一致）
+_PAPER_BG = "#0a0c10"
+_PLOT_BG = "#0f1118"
+_FONT_COLOR = "#e2e8f0"
 
 # 地块类型序号→颜色映射（与 _serialize_tile_grid 一致）
 # 0=farmland, 1=forest, 2=mine, 3=water, 4=mountain, 5=barren, 6=settlement

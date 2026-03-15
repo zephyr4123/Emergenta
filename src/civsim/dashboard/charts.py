@@ -49,10 +49,10 @@ _RESOURCE_LABELS: dict[str, str] = {
 
 
 # 统一图表深色主题配色
-_CHART_PAPER_BG = "#1a1a2e"
-_CHART_PLOT_BG = "#16213e"
-_CHART_FONT_COLOR = "#ecf0f1"
-_CHART_GRID_COLOR = "#2c3e50"
+_CHART_PAPER_BG = "#0a0c10"
+_CHART_PLOT_BG = "#0f1118"
+_CHART_FONT_COLOR = "#e2e8f0"
+_CHART_GRID_COLOR = "rgba(255,255,255,0.06)"
 
 
 def _apply_dark_layout(fig: go.Figure, title: str = "") -> go.Figure:
