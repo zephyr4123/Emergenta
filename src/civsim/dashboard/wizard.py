@@ -151,6 +151,11 @@ def _build_html(llm_ok: bool, show_llm_setup: bool) -> str:
                            value="gpt-4o"
                            placeholder="gpt-4o / sonnet / gemini-pro">
                 </div>
+                <div style="grid-column:span 2;padding-top:8px;border-top:1px solid var(--card-border);">
+                    <p style="font-size:0.75rem;color:var(--text-dim);margin:0;">
+                        点击下方「启动文明仿真」时自动保存到 config.yaml
+                    </p>
+                </div>
             </div>
         </section>
         """
