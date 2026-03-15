@@ -45,6 +45,7 @@ class SimulationRunner:
         enable_db: bool = False,
     ) -> None:
         self.config = config or load_config(config_path)
+        self._init_config = self.config.model_copy(deep=True)
         self._init_seed = seed
         self._init_governors = enable_governors
         self._init_leaders = enable_leaders
@@ -568,13 +569,13 @@ class SimulationRunner:
 
 
     def _handle_reset(self, params: dict[str, Any]) -> None:
-        """重置仿真到初始状态。"""
+        """重置仿真到初始状态（使用启动时的缩放配置）。"""
         self.state.add_event("🔄 正在重置仿真...")
         was_paused = self.state.is_paused
         self.state.is_paused = True
 
-        # 重建配置和引擎
-        self.config = load_config()
+        # 恢复到启动时的配置（含缩放参数），而非磁盘默认值
+        self.config = self._init_config.model_copy(deep=True)
         self.engine = CivilizationEngine(
             config=self.config,
             seed=self._init_seed,
