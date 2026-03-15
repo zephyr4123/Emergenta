@@ -106,6 +106,8 @@ def main() -> None:
     config.world.grid.width = scaling["grid"]
     config.world.grid.height = scaling["grid"]
     config.world.settlement.initial_count = scaling["settlements"]
+    config.world.settlement.min_suitability_score = scaling["min_suitability"]
+    config.map_suitability.min_settlement_distance = scaling["min_distance"]
     config.resources.initial_stockpile.food = scaling["food"]
     config.resources.initial_stockpile.wood = scaling["wood"]
     config.resources.initial_stockpile.ore = scaling["ore"]
@@ -173,15 +175,16 @@ def main() -> None:
         logger.info("已停止")
 
 
-def _compute_scaling(agents: int) -> dict[str, int]:
+def _compute_scaling(agents: int) -> dict[str, int | float]:
     """根据平民数量计算所有自动缩放参数。
 
     缩放逻辑：
       - 地图边长 = sqrt(agents) * 2.5，范围 [20, 200]
       - 聚落数 = sqrt(agents) * 0.5，范围 [3, 50]
       - 首领数 = 聚落数 / 3，范围 [2, 15]
-      - 食物/聚落 = 400 + agents * 0.6（确保小规模也能存活）
-      - 其他资源按比例缩放
+      - 聚落间距 = 地图边长 / (sqrt(聚落数) + 1)，自适应地图大小
+      - 适宜度阈值 = 小地图降低以确保能放够聚落
+      - 食物/聚落 = 400 + agents * 0.6
     """
     import math
 
@@ -193,6 +196,11 @@ def _compute_scaling(agents: int) -> dict[str, int]:
     ore = round(30 + agents * 0.02)
     gold = round(80 + agents * 0.05)
 
+    # 聚落间距随地图缩放：确保能放下足够聚落
+    min_distance = max(3, round(grid / (math.sqrt(settlements) + 1)))
+    # 小地图降低适宜度阈值
+    min_suitability = 0.3 if grid <= 40 else (0.2 if grid <= 60 else 0.3)
+
     return {
         "grid": grid,
         "settlements": settlements,
@@ -201,6 +209,8 @@ def _compute_scaling(agents: int) -> dict[str, int]:
         "wood": wood,
         "ore": ore,
         "gold": gold,
+        "min_distance": min_distance,
+        "min_suitability": min_suitability,
     }
 
 
