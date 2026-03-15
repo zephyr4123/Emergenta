@@ -1,33 +1,27 @@
-"""启动向导 — 仿真参数配置 + LLM 连接检测。
+"""启动向导 — 浏览器端仿真参数配置 + LLM 连接检测。
 
-在启动 Dashboard 前弹出 tkinter 配置窗口，
-用户可视化配置仿真规模、随机种子等参数，
-并自动检测 LLM API 配置是否完整。
+启动临时 HTTP 服务，在浏览器中展示配置页面。
+用户提交后返回配置参数，临时服务自动关闭。
 """
 
 from __future__ import annotations
 
-import tkinter as tk
+import json
+import os
+import threading
+import webbrowser
 from dataclasses import dataclass
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-from tkinter import messagebox
 from typing import Any
+from urllib.parse import parse_qs
 
 import yaml
 
 
 @dataclass
 class LaunchConfig:
-    """向导输出的启动配置。
-
-    Attributes:
-        agents: 初始平民数量。
-        seed: 随机种子（None=随机）。
-        enable_governors: 是否启用镇长。
-        enable_leaders: 是否启用首领。
-        port: Dashboard 端口。
-        cancelled: 用户是否取消了向导。
-    """
+    """向导输出的启动配置。"""
 
     agents: int = 200
     seed: int | None = None
@@ -35,108 +29,6 @@ class LaunchConfig:
     enable_leaders: bool = True
     port: int = 8050
     cancelled: bool = False
-
-
-# ── 颜色主题 ─────────────────────────────────────────────────
-
-_BG = "#0f1019"
-_BG_CARD = "#171b2d"
-_BG_INPUT = "#0c0e18"
-_FG = "#ffffff"
-_FG_DIM = "#6b7280"
-_FG_LABEL = "#9ca3af"
-_ACCENT = "#3b82f6"
-_GREEN = "#22c55e"
-_RED = "#ef4444"
-_ORANGE = "#f59e0b"
-_BORDER = "#1e293b"
-_BORDER_INPUT = "#334155"
-
-
-# ── 通用组件 ─────────────────────────────────────────────────
-
-
-def _make_entry(
-    parent: tk.Widget,
-    var: tk.Variable,
-    width: int = 10,
-    show: str = "",
-) -> tk.Entry:
-    """创建统一风格的输入框。"""
-    entry = tk.Entry(
-        parent,
-        textvariable=var,
-        width=width,
-        show=show,
-        bg=_BG_INPUT,
-        fg=_FG,
-        insertbackground=_ACCENT,
-        relief="flat",
-        font=("SF Mono, Menlo, Consolas", 11),
-        highlightthickness=1,
-        highlightcolor=_ACCENT,
-        highlightbackground=_BORDER_INPUT,
-        selectbackground=_ACCENT,
-        selectforeground="#fff",
-    )
-    entry.configure(borderwidth=0)
-    return entry
-
-
-def _make_btn(
-    parent: tk.Widget,
-    text: str,
-    command: Any,
-    bg: str = _ACCENT,
-    fg: str = "#fff",
-    font_size: int = 11,
-    bold: bool = True,
-    padx: int = 20,
-    pady: int = 7,
-) -> tk.Label:
-    """创建可点击的现代按钮（用 Label 模拟，避免 tk.Button 丑陋边框）。"""
-    weight = "bold" if bold else "normal"
-    btn = tk.Label(
-        parent,
-        text=text,
-        bg=bg,
-        fg=fg,
-        font=("", font_size, weight),
-        cursor="hand2",
-        padx=padx,
-        pady=pady,
-    )
-
-    def on_enter(_e: tk.Event) -> None:
-        btn.configure(bg=_darken(bg, 0.15))
-
-    def on_leave(_e: tk.Event) -> None:
-        btn.configure(bg=bg)
-
-    def on_click(_e: tk.Event) -> None:
-        command()
-
-    btn.bind("<Enter>", on_enter)
-    btn.bind("<Leave>", on_leave)
-    btn.bind("<Button-1>", on_click)
-    return btn
-
-
-def _darken(hex_color: str, factor: float) -> str:
-    """将颜色变暗。"""
-    c = hex_color.lstrip("#")
-    r, g, b = int(c[:2], 16), int(c[2:4], 16), int(c[4:], 16)
-    r = max(0, int(r * (1 - factor)))
-    g = max(0, int(g * (1 - factor)))
-    b = max(0, int(b * (1 - factor)))
-    return f"#{r:02x}{g:02x}{b:02x}"
-
-
-def _center_window(win: tk.Tk, w: int, h: int) -> None:
-    """将窗口居中显示。"""
-    sx = (win.winfo_screenwidth() - w) // 2
-    sy = (win.winfo_screenheight() - h) // 2
-    win.geometry(f"{w}x{h}+{sx}+{sy}")
 
 
 # ── LLM 配置检测 ─────────────────────────────────────────────
@@ -158,16 +50,12 @@ def _check_llm_config(config_path: Path) -> dict[str, Any]:
     """检查 LLM 配置是否完整。"""
     with open(config_path, encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
-
     llm = raw.get("llm", {})
     api_key = llm.get("default_api_key", "")
     base_url = llm.get("default_base_url", "")
     models = llm.get("models", {})
-
     if isinstance(api_key, str) and api_key.startswith("${"):
-        import os
         api_key = os.environ.get(api_key[2:-1], "")
-
     return {
         "ok": bool(api_key) and bool(models),
         "api_key": api_key,
@@ -190,364 +78,403 @@ def _save_llm_config(
         yaml.dump(raw, f, allow_unicode=True, default_flow_style=False)
 
 
-# ── LLM 配置向导窗口 ─────────────────────────────────────────
+# ── HTML 页面生成 ─────────────────────────────────────────────
 
 
-def _show_llm_setup(config_path: Path, existing: dict) -> bool:
-    """弹出 LLM 配置窗口。"""
-    result = {"ok": False}
-    win = tk.Tk()
-    win.title("Emergenta")
-    win.configure(bg=_BG)
-    win.resizable(False, False)
-    _center_window(win, 500, 360)
-
-    # 标题
-    tk.Label(
-        win, text="LLM API 配置", bg=_BG, fg=_FG,
-        font=("", 18, "bold"),
-    ).pack(pady=(24, 4))
-    tk.Label(
-        win, text="镇长和首领的决策需要 LLM 支持",
-        bg=_BG, fg=_FG_DIM, font=("", 11),
-    ).pack(pady=(0, 16))
-
-    # 表单卡片
-    card = tk.Frame(win, bg=_BG_CARD, highlightthickness=1,
-                    highlightbackground=_BORDER)
-    card.pack(padx=32, fill="x")
-    inner = tk.Frame(card, bg=_BG_CARD)
-    inner.pack(padx=20, pady=16, fill="x")
-
-    tk.Label(inner, text="API Key", bg=_BG_CARD, fg=_FG_LABEL,
-             font=("", 10), anchor="w").pack(fill="x")
-    api_key_var = tk.StringVar(value=existing.get("api_key", ""))
-    _make_entry(inner, api_key_var, width=40, show="*").pack(
-        fill="x", pady=(4, 12), ipady=5,
+def _build_html(llm_ok: bool, show_llm_setup: bool) -> str:
+    """生成向导 HTML 页面。"""
+    llm_badge = (
+        '<div class="status-badge green">'
+        '<span class="status-dot"></span>LLM 已配置并就绪</div>'
+        if llm_ok else
+        '<div class="status-badge orange">'
+        '<span class="status-dot orange"></span>'
+        'LLM 未配置 — 使用规则回退</div>'
     )
 
-    tk.Label(inner, text="Base URL  (可选，中转站/自部署时填写)",
-             bg=_BG_CARD, fg=_FG_LABEL, font=("", 10),
-             anchor="w").pack(fill="x")
-    base_url_var = tk.StringVar(value=existing.get("base_url", ""))
-    _make_entry(inner, base_url_var, width=40).pack(
-        fill="x", pady=(4, 0), ipady=5,
-    )
+    llm_section = ""
+    if show_llm_setup:
+        llm_section = """
+        <section class="llm-setup">
+            <p class="section-title">LLM API 配置 · API CONFIGURATION</p>
+            <div class="config-panel">
+                <div class="input-group">
+                    <label>API Key</label>
+                    <input type="password" name="api_key" id="api_key"
+                           placeholder="OpenAI / Anthropic / 中转站密钥">
+                </div>
+                <div class="input-group">
+                    <label>Base URL (可选)</label>
+                    <input type="text" name="base_url" id="base_url"
+                           placeholder="中转站或自部署端点地址">
+                </div>
+            </div>
+        </section>
+        """
 
-    # 按钮
-    btn_row = tk.Frame(win, bg=_BG)
-    btn_row.pack(pady=(20, 0))
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMERGENTA - Launch</title>
+<style>
+:root {{
+    --primary: #3b82f6;
+    --primary-glow: rgba(59, 130, 246, 0.5);
+    --bg: #05070a;
+    --card-bg: rgba(255, 255, 255, 0.03);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --text-main: #e2e8f0;
+    --text-dim: #94a3b8;
+    --accent-green: #10b981;
+    --accent-orange: #f59e0b;
+}}
+* {{ margin:0; padding:0; box-sizing:border-box;
+     font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; }}
+body {{
+    background-color: var(--bg); color: var(--text-main);
+    display:flex; justify-content:center; align-items:center;
+    min-height:100vh; overflow:hidden;
+    background-image:
+        radial-gradient(circle at 50% 50%,rgba(59,130,246,0.08) 0%,transparent 50%),
+        linear-gradient(rgba(18,18,18,0.7) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(18,18,18,0.7) 1px,transparent 1px);
+    background-size:100% 100%,40px 40px,40px 40px;
+}}
+.container {{
+    width:880px; padding:40px;
+    background:rgba(10,12,16,0.85); backdrop-filter:blur(20px);
+    border-radius:24px; border:1px solid var(--card-border);
+    box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);
+    position:relative; z-index:10;
+}}
+header {{ text-align:center; margin-bottom:36px; }}
+h1 {{
+    font-size:2.8rem; letter-spacing:0.5rem; font-weight:800;
+    background:linear-gradient(to bottom,#fff 30%,#60a5fa 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    margin-bottom:6px;
+}}
+.subtitle {{ color:var(--text-dim); letter-spacing:0.2rem; font-size:0.85rem; margin-bottom:18px; }}
+.status-badge {{
+    display:inline-flex; align-items:center; padding:5px 14px;
+    border-radius:20px; font-size:0.8rem; font-weight:600;
+}}
+.status-badge.green {{
+    background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); color:var(--accent-green);
+}}
+.status-badge.orange {{
+    background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); color:var(--accent-orange);
+}}
+.status-dot {{
+    width:7px; height:7px; background:var(--accent-green); border-radius:50%;
+    margin-right:8px; box-shadow:0 0 8px var(--accent-green); animation:pulse 2s infinite;
+}}
+.status-dot.orange {{ background:var(--accent-orange); box-shadow:0 0 8px var(--accent-orange); }}
+.section-title {{
+    font-size:0.75rem; color:var(--text-dim); margin-bottom:14px;
+    text-transform:uppercase; letter-spacing:1px;
+}}
+.scale-grid {{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px; }}
+.scale-card {{
+    background:var(--card-bg); border:1px solid var(--card-border);
+    border-radius:14px; padding:22px 14px; text-align:center;
+    cursor:pointer; transition:all .25s ease; position:relative; overflow:hidden;
+}}
+.scale-card:hover {{ border-color:var(--primary); background:rgba(59,130,246,0.05); transform:translateY(-3px); }}
+.scale-card.active {{
+    border-color:var(--primary);
+    background:linear-gradient(135deg,rgba(59,130,246,0.18) 0%,transparent 100%);
+    box-shadow:0 0 20px rgba(59,130,246,0.15);
+}}
+.scale-card.active::after {{
+    content:''; position:absolute; top:0; left:0; width:100%; height:2px;
+    background:var(--primary); box-shadow:0 0 8px var(--primary);
+}}
+.scale-num {{ font-size:1.7rem; font-weight:700; display:block; margin-bottom:3px; }}
+.scale-label {{ font-size:0.85rem; font-weight:600; margin-bottom:6px; display:block; }}
+.scale-desc {{ font-size:0.72rem; color:var(--text-dim); line-height:1.4; }}
+.recommend-tag {{ font-size:0.68rem; color:var(--primary); margin-top:6px; display:block; }}
+.config-panel {{
+    background:rgba(255,255,255,0.02); border-radius:14px; padding:22px;
+    border:1px solid var(--card-border);
+    display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:30px;
+}}
+.input-group {{ display:flex; flex-direction:column; gap:6px; }}
+.input-group label {{ font-size:0.8rem; color:var(--text-dim); }}
+.input-group input {{
+    background:rgba(0,0,0,0.3); border:1px solid var(--card-border);
+    padding:10px 14px; border-radius:8px; color:white; font-size:0.95rem;
+    transition:all .25s; outline:none;
+}}
+.input-group input:focus {{ border-color:var(--primary); box-shadow:0 0 0 2px var(--primary-glow); }}
+.input-group input::placeholder {{ color:rgba(255,255,255,0.2); }}
+.toggle-row {{
+    display:flex; gap:28px; align-items:center; grid-column:span 2;
+    padding-top:10px; border-top:1px solid var(--card-border);
+}}
+.cb {{ display:flex; align-items:center; cursor:pointer; font-size:0.85rem; color:var(--text-dim); gap:8px; }}
+.cb input {{ display:none; }}
+.cb .box {{
+    width:16px; height:16px; border:2px solid var(--card-border);
+    border-radius:4px; position:relative; transition:all .2s; flex-shrink:0;
+}}
+.cb input:checked + .box {{ background:var(--primary); border-color:var(--primary); }}
+.cb input:checked + .box::after {{
+    content:'✓'; position:absolute; color:white; font-size:11px; left:2px; top:-2px;
+}}
+.start-btn {{
+    width:100%; padding:18px; background:var(--primary); color:white;
+    border:none; border-radius:12px; font-size:1.15rem; font-weight:700;
+    letter-spacing:4px; cursor:pointer; transition:all .25s;
+    box-shadow:0 8px 25px -8px var(--primary);
+}}
+.start-btn:hover {{ transform:translateY(-2px); box-shadow:0 12px 35px -8px var(--primary); filter:brightness(1.1); }}
+.start-btn:active {{ transform:translateY(1px); }}
+.hint {{ text-align:center; margin-top:16px; color:var(--text-dim); font-size:0.78rem; }}
+.llm-setup {{ margin-bottom:20px; }}
+@keyframes pulse {{
+    0% {{ opacity:.6; transform:scale(1); }}
+    50% {{ opacity:1; transform:scale(1.2); }}
+    100% {{ opacity:.6; transform:scale(1); }}
+}}
+.decor {{ position:fixed; width:400px; height:400px;
+    background:radial-gradient(circle,var(--primary-glow) 0%,transparent 70%);
+    z-index:1; filter:blur(60px); pointer-events:none; }}
+</style>
+</head>
+<body>
+<div class="decor" style="top:-100px;right:-100px;"></div>
+<div class="decor" style="bottom:-100px;left:-100px;opacity:.5;"></div>
 
-    def on_save() -> None:
-        key = api_key_var.get().strip()
-        if not key:
-            messagebox.showwarning("提示", "请填写 API Key")
-            return
-        _save_llm_config(config_path, key, base_url_var.get().strip())
-        result["ok"] = True
-        win.destroy()
+<main class="container">
+<form id="wizard-form" method="POST" action="/submit">
+    <header>
+        <h1>Emergenta</h1>
+        <p class="subtitle">AI CIVILIZATION SIMULATOR</p>
+        {llm_badge}
+    </header>
 
-    _make_btn(btn_row, "  保存并继续  ", on_save).pack(
-        side="left", padx=6,
-    )
-    _make_btn(
-        btn_row, "跳过", lambda: (result.update(ok=True), win.destroy()),
-        bg=_BG_CARD, fg=_FG_DIM, bold=False, font_size=10,
-    ).pack(side="left", padx=6)
+    {llm_section}
 
-    win.protocol("WM_DELETE_WINDOW", lambda: (
-        result.update({"ok": False}), win.destroy(),
-    ))
-    win.mainloop()
-    return result["ok"]
+    <section>
+        <p class="section-title">仿真规模选择 · SCALE SELECTION</p>
+        <div class="scale-grid">
+            <div class="scale-card" data-agents="100">
+                <span class="scale-num">100</span>
+                <span class="scale-label">小型演示</span>
+                <p class="scale-desc">快速启动<br>初步体验文明演化</p>
+            </div>
+            <div class="scale-card active" data-agents="500">
+                <span class="scale-num">500</span>
+                <span class="scale-label">中型仿真</span>
+                <p class="scale-desc">深度观察<br>社会网络关系丰富</p>
+                <span class="recommend-tag">推荐</span>
+            </div>
+            <div class="scale-card" data-agents="2000">
+                <span class="scale-num">2K</span>
+                <span class="scale-label">大型仿真</span>
+                <p class="scale-desc">文明兴起<br>需较高计算资源</p>
+            </div>
+            <div class="scale-card" data-agents="5000">
+                <span class="scale-num">5K</span>
+                <span class="scale-label">极限压测</span>
+                <p class="scale-desc">全系统压力<br>需顶级硬件支撑</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="config-panel">
+        <div class="input-group">
+            <label>平民初始数量 (Population)</label>
+            <input type="number" name="agents" id="agents" value="500" min="10">
+        </div>
+        <div class="input-group">
+            <label>随机种子 (Seed)</label>
+            <input type="text" name="seed" id="seed" placeholder="留空则随机生成">
+        </div>
+        <div class="input-group">
+            <label>访问端口 (Port)</label>
+            <input type="number" name="port" id="port" value="8050">
+        </div>
+        <div class="input-group">
+            <label>系统版本</label>
+            <input type="text" value="Emergenta v1.0" disabled style="opacity:.4;">
+        </div>
+        <div class="toggle-row">
+            <label class="cb">
+                <input type="checkbox" name="governors" checked>
+                <div class="box"></div>
+                启用镇长 (LLM 治理)
+            </label>
+            <label class="cb">
+                <input type="checkbox" name="leaders" checked>
+                <div class="box"></div>
+                启用首领 (LLM 战略)
+            </label>
+        </div>
+    </section>
+
+    <button type="submit" class="start-btn">启动文明仿真</button>
+    <p class="hint">地图、聚落及资源分布将根据平民数自动计算</p>
+</form>
+</main>
+
+<script>
+const cards = document.querySelectorAll('.scale-card');
+const agentsInput = document.getElementById('agents');
+cards.forEach(card => {{
+    card.addEventListener('click', () => {{
+        cards.forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        agentsInput.value = card.dataset.agents;
+    }});
+}});
+agentsInput.addEventListener('input', () => {{
+    cards.forEach(c => c.classList.remove('active'));
+}});
+</script>
+</body>
+</html>"""
 
 
-# ── 仿真配置向导窗口 ─────────────────────────────────────────
-
-_PRESETS: list[dict[str, Any]] = [
-    {
-        "name": "小型演示",
-        "agents": 100,
-        "icon": "100",
-        "desc": "快速启动 · 首次体验",
-        "color": _GREEN,
-    },
-    {
-        "name": "中型仿真",
-        "agents": 500,
-        "icon": "500",
-        "desc": "涌现明显 · 推荐",
-        "color": _ACCENT,
-    },
-    {
-        "name": "大型仿真",
-        "agents": 2000,
-        "icon": "2K",
-        "desc": "深度模拟 · 网络丰富",
-        "color": _ORANGE,
-    },
-    {
-        "name": "极限压测",
-        "agents": 5000,
-        "icon": "5K",
-        "desc": "全系统压力 · 需强硬件",
-        "color": _RED,
-    },
-]
+_LOADING_HTML = """<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<title>Emergenta — 启动中</title>
+<style>
+body{background:#05070a;color:#e2e8f0;display:flex;
+justify-content:center;align-items:center;height:100vh;
+font-family:Inter,-apple-system,sans-serif;flex-direction:column;}
+.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.1);
+border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite;
+margin-bottom:20px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+h2{font-weight:600;margin-bottom:8px;}
+p{color:#94a3b8;font-size:.9rem;}
+</style>
+</head><body>
+<div class="spinner"></div>
+<h2>正在初始化仿真引擎</h2>
+<p>Dashboard 启动后将自动跳转...</p>
+<script>setTimeout(()=>window.location='REDIRECT_URL',DELAY_MS);</script>
+</body></html>"""
 
 
-def _show_sim_setup(llm_ok: bool) -> LaunchConfig:
-    """弹出仿真参数配置窗口。"""
-    config = LaunchConfig(cancelled=True)
+# ── HTTP 向导服务器 ───────────────────────────────────────────
 
-    win = tk.Tk()
-    win.title("Emergenta")
-    win.configure(bg=_BG)
-    win.resizable(False, False)
-    _center_window(win, 540, 530)
 
-    # ── 标题 ──
-    tk.Label(
-        win, text="EMERGENTA", bg=_BG, fg=_FG,
-        font=("", 22, "bold"),
-    ).pack(pady=(20, 0))
-    tk.Label(
-        win, text="AI Civilization Simulator",
-        bg=_BG, fg=_FG_DIM, font=("", 10),
-    ).pack(pady=(2, 6))
+class _WizardHandler(BaseHTTPRequestHandler):
+    """处理向导 HTML 页面和表单提交。"""
 
-    # LLM 状态
-    llm_text = "LLM 已配置" if llm_ok else "LLM 未配置 — 使用规则回退"
-    llm_color = _GREEN if llm_ok else _ORANGE
-    tk.Label(
-        win, text=f"●  {llm_text}", bg=_BG, fg=llm_color,
-        font=("", 10),
-    ).pack(pady=(0, 12))
+    html: str = ""
+    result: dict[str, Any] = {}
+    config_path: Path | None = None
+    dashboard_port: int = 8050
 
-    # ── 规模预设 ──
-    tk.Label(
-        win, text="仿真规模", bg=_BG, fg=_FG_LABEL,
-        font=("", 10), anchor="w",
-    ).pack(fill="x", padx=32, pady=(0, 6))
+    def do_GET(self) -> None:
+        """返回向导页面。"""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(self.html.encode("utf-8"))
 
-    preset_frame = tk.Frame(win, bg=_BG)
-    preset_frame.pack(fill="x", padx=32)
+    def do_POST(self) -> None:
+        """处理表单提交。"""
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length).decode("utf-8")
+        params = parse_qs(body)
 
-    agents_var = tk.IntVar(value=500)
-    selected_idx = tk.IntVar(value=1)
+        # 解析参数
+        agents = int(params.get("agents", ["200"])[0])
+        seed_str = params.get("seed", [""])[0].strip()
+        port = int(params.get("port", ["8050"])[0])
+        governors = "governors" in params
+        leaders = "leaders" in params
 
-    preset_cards: list[tk.Frame] = []
-    num_labels: list[tk.Label] = []
-    name_labels: list[tk.Label] = []
-    desc_labels: list[tk.Label] = []
+        # 保存 LLM 配置（如果提供了）
+        api_key = params.get("api_key", [""])[0].strip()
+        base_url = params.get("base_url", [""])[0].strip()
+        if api_key and self.config_path:
+            _save_llm_config(self.config_path, api_key, base_url)
 
-    def select_preset(idx: int) -> None:
-        selected_idx.set(idx)
-        agents_var.set(_PRESETS[idx]["agents"])
-        for i in range(len(_PRESETS)):
-            is_sel = i == idx
-            c = _PRESETS[i]["color"] if is_sel else _BG_CARD
-            border = _PRESETS[i]["color"] if is_sel else _BORDER
-            fg_num = "#fff" if is_sel else _FG_DIM
-            fg_name = "#fff" if is_sel else _FG_LABEL
-            fg_desc = (
-                "rgba(255,255,255,0.7)" if is_sel else _FG_DIM
-            )
-            preset_cards[i].configure(
-                bg=c, highlightbackground=border,
-            )
-            num_labels[i].configure(bg=c, fg=fg_num)
-            name_labels[i].configure(bg=c, fg=fg_name)
-            desc_labels[i].configure(bg=c, fg=_FG_DIM)
+        self.__class__.result = {
+            "agents": agents,
+            "seed": int(seed_str) if seed_str else None,
+            "port": port,
+            "governors": governors,
+            "leaders": leaders,
+        }
+        self.__class__.dashboard_port = port
 
-    for i, p in enumerate(_PRESETS):
-        is_default = i == 1
-        bg = p["color"] if is_default else _BG_CARD
-        border = p["color"] if is_default else _BORDER
+        # 返回加载页面（带自动跳转）
+        redirect_url = f"http://localhost:{port}"
+        loading = _LOADING_HTML.replace(
+            "REDIRECT_URL", redirect_url,
+        ).replace("DELAY_MS", "4000")
 
-        card = tk.Frame(
-            preset_frame, bg=bg,
-            highlightthickness=1, highlightbackground=border,
-            cursor="hand2",
-        )
-        card.pack(side="left", expand=True, fill="both", padx=3)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(loading.encode("utf-8"))
 
-        num_lbl = tk.Label(
-            card, text=p["icon"], bg=bg,
-            fg="#fff" if is_default else _FG_DIM,
-            font=("", 18, "bold"),
-        )
-        num_lbl.pack(pady=(10, 0))
+        # 关闭服务器（在新线程中，避免死锁）
+        threading.Thread(
+            target=self.server.shutdown, daemon=True,
+        ).start()
 
-        n_lbl = tk.Label(
-            card, text=p["name"], bg=bg,
-            fg="#fff" if is_default else _FG_LABEL,
-            font=("", 9, "bold"),
-        )
-        n_lbl.pack(pady=(2, 0))
-
-        d_lbl = tk.Label(
-            card, text=p["desc"], bg=bg, fg=_FG_DIM,
-            font=("", 8), wraplength=100,
-        )
-        d_lbl.pack(pady=(1, 10))
-
-        preset_cards.append(card)
-        num_labels.append(num_lbl)
-        name_labels.append(n_lbl)
-        desc_labels.append(d_lbl)
-
-        # 绑定点击（card + 所有子组件）
-        for widget in (card, num_lbl, n_lbl, d_lbl):
-            widget.bind(
-                "<Button-1>", lambda _e, idx=i: select_preset(idx),
-            )
-
-    # ── 高级选项卡片 ──
-    adv_card = tk.Frame(
-        win, bg=_BG_CARD, highlightthickness=1,
-        highlightbackground=_BORDER,
-    )
-    adv_card.pack(fill="x", padx=32, pady=(14, 0))
-
-    adv_inner = tk.Frame(adv_card, bg=_BG_CARD)
-    adv_inner.pack(padx=16, pady=12, fill="x")
-
-    # 行 1: 平民数 + 种子
-    row1 = tk.Frame(adv_inner, bg=_BG_CARD)
-    row1.pack(fill="x", pady=(0, 8))
-
-    tk.Label(
-        row1, text="平民数量", bg=_BG_CARD, fg=_FG_LABEL,
-        font=("", 10), anchor="w",
-    ).pack(side="left")
-    _make_entry(row1, agents_var, width=7).pack(
-        side="left", padx=(6, 20), ipady=4,
-    )
-
-    tk.Label(
-        row1, text="随机种子", bg=_BG_CARD, fg=_FG_LABEL,
-        font=("", 10), anchor="w",
-    ).pack(side="left")
-    seed_var = tk.StringVar(value="")
-    _make_entry(row1, seed_var, width=7).pack(
-        side="left", padx=(6, 6), ipady=4,
-    )
-    tk.Label(
-        row1, text="空=随机", bg=_BG_CARD, fg=_FG_DIM,
-        font=("", 8),
-    ).pack(side="left")
-
-    # 行 2: 端口 + 开关
-    row2 = tk.Frame(adv_inner, bg=_BG_CARD)
-    row2.pack(fill="x")
-
-    tk.Label(
-        row2, text="端口", bg=_BG_CARD, fg=_FG_LABEL,
-        font=("", 10), anchor="w",
-    ).pack(side="left")
-    port_var = tk.IntVar(value=8050)
-    _make_entry(row2, port_var, width=7).pack(
-        side="left", padx=(6, 20), ipady=4,
-    )
-
-    # 自定义开关（用 Label 模拟 toggle）
-    gov_var = tk.BooleanVar(value=True)
-    lead_var = tk.BooleanVar(value=True)
-
-    def _make_toggle(
-        parent: tk.Widget, text: str, var: tk.BooleanVar,
-    ) -> tk.Frame:
-        frame = tk.Frame(parent, bg=_BG_CARD)
-
-        dot = tk.Label(
-            frame, text="●", bg=_BG_CARD,
-            fg=_GREEN, font=("", 8),
-        )
-        dot.pack(side="left", padx=(0, 3))
-
-        lbl = tk.Label(
-            frame, text=text, bg=_BG_CARD, fg=_FG_LABEL,
-            font=("", 9), cursor="hand2",
-        )
-        lbl.pack(side="left")
-
-        def toggle(_e: tk.Event | None = None) -> None:
-            var.set(not var.get())
-            dot.configure(fg=_GREEN if var.get() else _FG_DIM)
-
-        lbl.bind("<Button-1>", toggle)
-        dot.bind("<Button-1>", toggle)
-        return frame
-
-    _make_toggle(row2, "镇长", gov_var).pack(side="left", padx=(0, 10))
-    _make_toggle(row2, "首领", lead_var).pack(side="left")
-
-    # 提示
-    tk.Label(
-        win, text="地图·聚落·首领数量 根据平民数自动计算",
-        bg=_BG, fg=_FG_DIM, font=("", 9),
-    ).pack(pady=(10, 0))
-
-    # ── 启动按钮 ──
-    def on_start() -> None:
-        try:
-            n = agents_var.get()
-            if n < 10:
-                messagebox.showwarning("提示", "平民数量至少为 10")
-                return
-        except tk.TclError:
-            messagebox.showwarning("提示", "请输入有效的平民数量")
-            return
-        config.agents = n
-        s = seed_var.get().strip()
-        config.seed = int(s) if s else None
-        config.enable_governors = gov_var.get()
-        config.enable_leaders = lead_var.get()
-        try:
-            config.port = port_var.get()
-        except tk.TclError:
-            config.port = 8050
-        config.cancelled = False
-        win.destroy()
-
-    start_btn = _make_btn(
-        win, "  启动仿真  ", on_start,
-        font_size=14, padx=40, pady=10,
-    )
-    start_btn.pack(pady=(14, 16))
-
-    win.protocol("WM_DELETE_WINDOW", win.destroy)
-    win.mainloop()
-    return config
+    def log_message(self, format: str, *args: Any) -> None:
+        """静默日志。"""
+        pass
 
 
 # ── 公共入口 ─────────────────────────────────────────────────
 
 
-def run_wizard() -> LaunchConfig:
-    """运行完整启动向导流程。
+def run_wizard(wizard_port: int = 8051) -> LaunchConfig:
+    """运行浏览器端启动向导。
 
-    流程:
-      1. 检测 config.yaml LLM 配置
-      2. 如果缺失，弹出 LLM 配置窗口
-      3. 弹出仿真参数配置窗口
+    Args:
+        wizard_port: 向导临时服务器端口。
 
     Returns:
         用户配置的启动参数。
     """
     config_path = _find_config_path()
     llm_ok = False
+    show_llm_setup = False
 
     if config_path:
         llm_info = _check_llm_config(config_path)
         llm_ok = llm_info["ok"]
+        show_llm_setup = not llm_ok
 
-        if not llm_ok:
-            user_ok = _show_llm_setup(config_path, llm_info)
-            if not user_ok:
-                return LaunchConfig(cancelled=True)
-            llm_info = _check_llm_config(config_path)
-            llm_ok = llm_info["ok"]
+    html = _build_html(llm_ok, show_llm_setup)
 
-    return _show_sim_setup(llm_ok)
+    _WizardHandler.html = html
+    _WizardHandler.result = {}
+    _WizardHandler.config_path = config_path
+
+    server = HTTPServer(("127.0.0.1", wizard_port), _WizardHandler)
+
+    # 自动打开浏览器
+    url = f"http://localhost:{wizard_port}"
+    print(f"\n  启动向导已打开: {url}\n")
+    webbrowser.open(url)
+
+    # 阻塞直到用户提交
+    server.serve_forever()
+    server.server_close()
+
+    result = _WizardHandler.result
+    if not result:
+        return LaunchConfig(cancelled=True)
+
+    return LaunchConfig(
+        agents=result.get("agents", 200),
+        seed=result.get("seed"),
+        enable_governors=result.get("governors", True),
+        enable_leaders=result.get("leaders", True),
+        port=result.get("port", 8050),
+        cancelled=False,
+    )

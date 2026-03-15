@@ -15,6 +15,8 @@ import argparse
 import logging
 import socket
 import sys
+import threading
+import webbrowser
 from pathlib import Path
 
 # 确保项目根目录在路径中
@@ -134,6 +136,14 @@ def main() -> None:
 
     logger.info("造物主面板启动: http://localhost:%d", port)
     logger.info("按 Ctrl+C 停止")
+
+    # 自动打开浏览器（延迟 1.5s 等服务就绪）
+    def _open_browser() -> None:
+        import time
+        time.sleep(1.5)
+        webbrowser.open(f"http://localhost:{port}")
+
+    threading.Thread(target=_open_browser, daemon=True).start()
 
     try:
         app.run(
