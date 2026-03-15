@@ -9,25 +9,29 @@ project:
   version: "0.1.0"
 
 # --- LLM 配置 ---
+# 支持 OpenAI / Anthropic / 任何 OpenAI 兼容 API（中转站、本地部署等）
+# 填入你的 API 密钥和端点地址，首次启动时向导也会引导配置
 llm:
   gateway: "litellm"
-  # 如使用 OpenAI 兼容中转，取消下面两行注释并填入
-  # default_api_key: "your-api-key-here"
-  # default_base_url: "https://your-api-endpoint/v1"
+  default_api_key: ""                       # 你的 API Key
+  default_base_url: ""                      # API 端点（使用中转站时填写）
   models:
+    # governor: 镇长决策（每季度调用，轻量模型即可）
     governor:
-      provider: "anthropic"
-      model: "claude-3-5-haiku-20241022"
+      provider: "openai"
+      model: "gpt-4o-mini"                  # 推荐轻量模型: gpt-4o-mini / gemini-flash / haiku
       max_tokens: 1024
       temperature: 0.7
+    # leader: 首领战略决策（每半年调用，需要较强推理）
     leader:
-      provider: "anthropic"
-      model: "claude-sonnet-4-20250514"
+      provider: "openai"
+      model: "gpt-4o"                       # 推荐: gpt-4o / sonnet / gemini-pro
       max_tokens: 2048
       temperature: 0.8
+    # leader_opus: 首领高级决策回退（复杂外交谈判时使用）
     leader_opus:
-      provider: "anthropic"
-      model: "claude-opus-4-20250514"
+      provider: "openai"
+      model: "gpt-4o"                       # 推荐: gpt-4o / opus（可与 leader 用同一模型）
       max_tokens: 4096
       temperature: 0.9
   cache:

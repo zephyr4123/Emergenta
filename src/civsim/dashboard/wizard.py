@@ -65,7 +65,11 @@ def _check_llm_config(config_path: Path) -> dict[str, Any]:
 
 
 def _save_llm_config(
-    config_path: Path, api_key: str, base_url: str,
+    config_path: Path,
+    api_key: str,
+    base_url: str,
+    model_governor: str = "",
+    model_leader: str = "",
 ) -> None:
     """将 LLM API 配置写回 config.yaml。"""
     with open(config_path, encoding="utf-8") as f:
@@ -74,6 +78,33 @@ def _save_llm_config(
         raw["llm"] = {}
     raw["llm"]["default_api_key"] = api_key
     raw["llm"]["default_base_url"] = base_url
+
+    # 更新模型名称（如果用户指定了）
+    if model_governor or model_leader:
+        if "models" not in raw["llm"]:
+            raw["llm"]["models"] = {}
+        models = raw["llm"]["models"]
+        gov_model = model_governor or "gpt-4o-mini"
+        lead_model = model_leader or "gpt-4o"
+        models["governor"] = {
+            "provider": "openai",
+            "model": gov_model,
+            "max_tokens": 1024,
+            "temperature": 0.7,
+        }
+        models["leader"] = {
+            "provider": "openai",
+            "model": lead_model,
+            "max_tokens": 2048,
+            "temperature": 0.8,
+        }
+        models["leader_opus"] = {
+            "provider": "openai",
+            "model": lead_model,
+            "max_tokens": 4096,
+            "temperature": 0.9,
+        }
+
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(raw, f, allow_unicode=True, default_flow_style=False)
 
@@ -104,9 +135,21 @@ def _build_html(llm_ok: bool, show_llm_setup: bool) -> str:
                            placeholder="OpenAI / Anthropic / 中转站密钥">
                 </div>
                 <div class="input-group">
-                    <label>Base URL (可选)</label>
+                    <label>Base URL (可选，中转站/自部署时填写)</label>
                     <input type="text" name="base_url" id="base_url"
-                           placeholder="中转站或自部署端点地址">
+                           placeholder="https://api.openai.com/v1">
+                </div>
+                <div class="input-group">
+                    <label>镇长模型 (轻量，每季度调用)</label>
+                    <input type="text" name="model_governor" id="model_governor"
+                           value="gpt-4o-mini"
+                           placeholder="gpt-4o-mini / gemini-flash / haiku">
+                </div>
+                <div class="input-group">
+                    <label>首领模型 (推理强，每半年调用)</label>
+                    <input type="text" name="model_leader" id="model_leader"
+                           value="gpt-4o"
+                           placeholder="gpt-4o / sonnet / gemini-pro">
                 </div>
             </div>
         </section>
@@ -407,8 +450,13 @@ class _WizardHandler(BaseHTTPRequestHandler):
         # 保存 LLM 配置（如果提供了）
         api_key = params.get("api_key", [""])[0].strip()
         base_url = params.get("base_url", [""])[0].strip()
+        model_gov = params.get("model_governor", [""])[0].strip()
+        model_lead = params.get("model_leader", [""])[0].strip()
         if api_key and self.config_path:
-            _save_llm_config(self.config_path, api_key, base_url)
+            _save_llm_config(
+                self.config_path, api_key, base_url,
+                model_gov, model_lead,
+            )
 
         self.__class__.result = {
             "agents": agents,
