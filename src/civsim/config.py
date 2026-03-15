@@ -245,7 +245,7 @@ class ResourceRegenerationConfig(BaseModel):
 class ResourceConsumptionConfig(BaseModel):
     """资源消耗速率。"""
 
-    food_per_civilian_per_tick: float = Field(default=0.5, ge=0.0)
+    food_per_civilian_per_tick: float = Field(default=0.3, ge=0.0)
 
 
 class InitialStockpileConfig(BaseModel):
