@@ -292,7 +292,7 @@ h1 {{
         </div>
         <div class="input-group">
             <label>随机种子 (Seed)</label>
-            <input type="text" name="seed" id="seed" placeholder="留空则随机生成">
+            <input type="text" name="seed" id="seed" value="42" placeholder="留空则随机生成">
         </div>
         <div class="input-group">
             <label>访问端口 (Port)</label>
