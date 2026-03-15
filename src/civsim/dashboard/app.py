@@ -248,16 +248,12 @@ def _build_tab_settlements() -> dbc.Tab:
         tab_id="tab-settlements",
         children=dbc.Container(
             [
-                dbc.Row(
-                    [
-                        dbc.Col(
-                            dcc.Graph(
-                                id="chart-settlement-table",
-                                style={"height": "500px"},
-                            ),
-                            md=12,
-                        ),
-                    ],
+                html.Div(
+                    id="settlement-table-html",
+                    style={
+                        "maxHeight": "calc(100vh - 160px)",
+                        "overflowY": "auto",
+                    },
                 ),
             ],
             fluid=True,

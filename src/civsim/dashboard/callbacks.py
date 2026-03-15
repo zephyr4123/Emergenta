@@ -134,13 +134,15 @@ def _register_live_map(app: object) -> None:
 
 def _register_settlement_chart(app: object) -> None:
     @app.callback(  # type: ignore[union-attr]
-        Output("chart-settlement-table", "figure"),
+        Output("settlement-table-html", "children"),
         Input("interval-refresh", "n_intervals"),
     )
-    def update_settlements(_n: int) -> object:
+    def update_settlements(_n: int) -> list:
+        from civsim.dashboard.charts_map import build_settlement_html
+
         ss = _get_state(app)
         snap = ss.get_latest()
-        return charts.build_settlement_table(snap)
+        return build_settlement_html(snap)
 
 
 # ------------------------------------------------------------------

@@ -300,3 +300,212 @@ def build_markov_cards(
         cards.append(card)
 
     return cards
+
+
+# ── 聚落排行榜 HTML 表格 ─────────────────────────────────────
+
+_TH_STYLE: dict = {
+    "padding": "14px 16px",
+    "fontSize": "11px",
+    "textTransform": "uppercase",
+    "letterSpacing": "1px",
+    "color": "#94a3b8",
+    "fontWeight": "600",
+    "borderBottom": "1px solid rgba(255,255,255,0.08)",
+    "background": "rgba(255,255,255,0.03)",
+    "textAlign": "left",
+}
+
+_TD_STYLE: dict = {
+    "padding": "14px 16px",
+    "fontSize": "13px",
+    "borderBottom": "1px solid rgba(255,255,255,0.06)",
+    "color": "#e2e8f0",
+}
+
+
+def _bar(value: float, max_val: float, color: str) -> html.Div:
+    """生成进度条组件。"""
+    pct = min(100, max(0, (value / max_val * 100) if max_val > 0 else 0))
+    return html.Div([
+        html.Span(
+            f"{value:.0f}",
+            style={"minWidth": "40px", "fontSize": "13px"},
+        ),
+        html.Div(
+            html.Div(style={
+                "width": f"{pct:.0f}%",
+                "height": "100%",
+                "borderRadius": "3px",
+                "background": color,
+            }),
+            style={
+                "width": "80px",
+                "height": "6px",
+                "background": "rgba(255,255,255,0.08)",
+                "borderRadius": "3px",
+                "overflow": "hidden",
+            },
+        ),
+    ], style={"display": "flex", "alignItems": "center", "gap": "8px"})
+
+
+def _sat_dot(value: float) -> html.Div:
+    """满意度圆点 + 数值。"""
+    if value >= 0.6:
+        color, shadow = "#10b981", "0 0 8px #10b981"
+    elif value >= 0.35:
+        color, shadow = "#f59e0b", "0 0 8px #f59e0b"
+    else:
+        color, shadow = "#ef4444", "0 0 8px #ef4444"
+    return html.Div([
+        html.Span(style={
+            "width": "8px", "height": "8px",
+            "borderRadius": "50%",
+            "background": color,
+            "boxShadow": shadow,
+            "display": "inline-block",
+        }),
+        html.Span(f"{value:.2f}"),
+    ], style={"display": "flex", "alignItems": "center", "gap": "6px"})
+
+
+def _protest_cell(value: float) -> html.Span:
+    """抗议率着色。"""
+    color = "#10b981" if value < 0.05 else (
+        "#f59e0b" if value < 0.15 else "#ef4444"
+    )
+    weight = "bold" if value >= 0.1 else "normal"
+    return html.Span(
+        f"{value:.1%}",
+        style={"color": color, "fontWeight": weight},
+    )
+
+
+def build_settlement_html(snapshot: TickSnapshot) -> list:
+    """构建聚落排行榜 HTML 表格。"""
+    settlements = sorted(
+        snapshot.settlements,
+        key=lambda s: s.get("population", 0),
+        reverse=True,
+    )
+    if not settlements:
+        return [html.Div(
+            "暂无聚落数据",
+            style={"color": "#94a3b8", "textAlign": "center", "padding": "40px"},
+        )]
+
+    # 计算最大值用于进度条缩放
+    max_food = max((s.get("food", 0) for s in settlements), default=1) or 1
+    max_gold = max((s.get("gold", 0) for s in settlements), default=1) or 1
+
+    headers = ["聚落名称", "人口", "食物储备", "金币", "税率", "治安", "满意度", "抗议率"]
+    thead = html.Thead(html.Tr(
+        [html.Th(h, style=_TH_STYLE) for h in headers],
+    ))
+
+    rows: list = []
+    for s in settlements:
+        pop = s.get("population", 0)
+        food = s.get("food", 0)
+        gold = s.get("gold", 0)
+        tax = s.get("tax_rate", 0)
+        sec = s.get("security_level", 0)
+        sat = s.get("satisfaction", 0)
+        protest = s.get("protest_ratio", 0)
+        name = s.get("name", "?")
+
+        # 治安条颜色
+        sec_color = (
+            "#00f2ff" if sec >= 0.6 else
+            "#f59e0b" if sec >= 0.3 else "#ef4444"
+        )
+
+        row = html.Tr([
+            # 聚落名称
+            html.Td(
+                html.Div([
+                    html.Div(
+                        "🏛",
+                        style={
+                            "width": "30px", "height": "30px",
+                            "background": "linear-gradient(135deg,#1e293b,#0f172a)",
+                            "borderRadius": "6px",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                            "border": "1px solid rgba(255,255,255,0.08)",
+                            "fontSize": "14px",
+                            "flexShrink": "0",
+                        },
+                    ),
+                    html.Span(name, style={"fontWeight": "600"}),
+                ], style={
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": "10px",
+                }),
+                style=_TD_STYLE,
+            ),
+            # 人口
+            html.Td(
+                html.Span(
+                    f"{pop:,}",
+                    style={"fontFamily": "Monaco,monospace"},
+                ),
+                style=_TD_STYLE,
+            ),
+            # 食物储备（进度条）
+            html.Td(_bar(food, max_food, "#10b981"), style=_TD_STYLE),
+            # 金币
+            html.Td(
+                html.Span(
+                    f"{gold:,.0f}",
+                    style={"color": "#f59e0b", "fontWeight": "700"},
+                ),
+                style=_TD_STYLE,
+            ),
+            # 税率
+            html.Td(
+                html.Span(
+                    f"{tax:.0%}",
+                    style={
+                        "padding": "3px 8px",
+                        "borderRadius": "4px",
+                        "fontSize": "11px",
+                        "fontWeight": "700",
+                        "background": "rgba(255,255,255,0.05)",
+                    },
+                ),
+                style=_TD_STYLE,
+            ),
+            # 治安（进度条）
+            html.Td(
+                _bar(sec * 100, 100, sec_color),
+                style=_TD_STYLE,
+            ),
+            # 满意度（发光圆点）
+            html.Td(_sat_dot(sat), style=_TD_STYLE),
+            # 抗议率
+            html.Td(_protest_cell(protest), style=_TD_STYLE),
+        ], style={"transition": "all 0.2s", "cursor": "default"})
+        rows.append(row)
+
+    table = html.Table(
+        [thead, html.Tbody(rows)],
+        style={
+            "width": "100%",
+            "borderCollapse": "collapse",
+        },
+    )
+
+    return [html.Div(
+        table,
+        style={
+            "background": "rgba(20,24,33,0.7)",
+            "border": "1px solid rgba(255,255,255,0.08)",
+            "borderRadius": "12px",
+            "overflow": "hidden",
+            "boxShadow": "0 8px 24px rgba(0,0,0,0.4)",
+        },
+    )]
