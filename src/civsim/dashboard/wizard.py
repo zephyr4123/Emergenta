@@ -35,14 +35,25 @@ class LaunchConfig:
 
 
 def _find_config_path() -> Path | None:
-    """查找 config.yaml 路径。"""
-    candidates = [
-        Path.cwd() / "config.yaml",
-        Path(__file__).resolve().parent.parent.parent.parent / "config.yaml",
-    ]
-    for c in candidates:
-        if c.exists():
-            return c
+    """查找 config.yaml 路径，不存在时从 example 复制。"""
+    project_root = Path(__file__).resolve().parent.parent.parent.parent
+    config_path = project_root / "config.yaml"
+
+    if config_path.exists():
+        return config_path
+
+    # 从 example 复制
+    example = project_root / "config.example.yaml"
+    if example.exists():
+        import shutil
+        shutil.copy2(example, config_path)
+        return config_path
+
+    # 尝试当前目录
+    cwd_config = Path.cwd() / "config.yaml"
+    if cwd_config.exists():
+        return cwd_config
+
     return None
 
 
@@ -71,42 +82,89 @@ def _save_llm_config(
     model_governor: str = "",
     model_leader: str = "",
 ) -> None:
-    """将 LLM API 配置写回 config.yaml。"""
-    with open(config_path, encoding="utf-8") as f:
-        raw = yaml.safe_load(f) or {}
-    if "llm" not in raw:
-        raw["llm"] = {}
-    raw["llm"]["default_api_key"] = api_key
-    raw["llm"]["default_base_url"] = base_url
+    """将 LLM API 配置写入 config.yaml（保留注释和格式）。
 
-    # 更新模型名称（如果用户指定了）
-    if model_governor or model_leader:
-        if "models" not in raw["llm"]:
-            raw["llm"]["models"] = {}
-        models = raw["llm"]["models"]
-        gov_model = model_governor or "gpt-4o-mini"
-        lead_model = model_leader or "gpt-4o"
-        models["governor"] = {
-            "provider": "openai",
-            "model": gov_model,
-            "max_tokens": 1024,
-            "temperature": 0.7,
-        }
-        models["leader"] = {
-            "provider": "openai",
-            "model": lead_model,
-            "max_tokens": 2048,
-            "temperature": 0.8,
-        }
-        models["leader_opus"] = {
-            "provider": "openai",
-            "model": lead_model,
-            "max_tokens": 4096,
-            "temperature": 0.9,
-        }
+    使用行级文本替换而非 yaml.dump，避免破坏文件结构。
+    """
+    with open(config_path, encoding="utf-8") as f:
+        lines = f.readlines()
+
+    new_lines: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        # 替换 default_api_key 行
+        if "default_api_key" in line and ":" in line:
+            indent = line[: len(line) - len(line.lstrip())]
+            new_lines.append(f'{indent}default_api_key: "{api_key}"\n')
+            i += 1
+            continue
+
+        # 替换 default_base_url 行
+        if "default_base_url" in line and ":" in line:
+            indent = line[: len(line) - len(line.lstrip())]
+            new_lines.append(f'{indent}default_base_url: "{base_url}"\n')
+            i += 1
+            continue
+
+        # 替换 governor model 行
+        if model_governor and "governor:" in line and "model_governor" not in line:
+            new_lines.append(line)
+            i += 1
+            # 查找下面的 model: 行
+            while i < len(lines):
+                sub = lines[i]
+                new_lines.append(sub)
+                if "model:" in sub and "model_" not in sub:
+                    indent = sub[: len(sub) - len(sub.lstrip())]
+                    new_lines[-1] = f'{indent}model: "{model_governor}"\n'
+                    i += 1
+                    break
+                i += 1
+            continue
+
+        # 替换 leader model 行（不含 leader_opus）
+        if model_leader:
+            stripped = line.strip()
+            if stripped == "leader:" or stripped.startswith("leader: "):
+                # 确认不是 leader_opus
+                if "leader_opus" not in line:
+                    new_lines.append(line)
+                    i += 1
+                    while i < len(lines):
+                        sub = lines[i]
+                        new_lines.append(sub)
+                        if "model:" in sub and "model_" not in sub:
+                            indent = sub[: len(sub) - len(sub.lstrip())]
+                            new_lines[-1] = (
+                                f'{indent}model: "{model_leader}"\n'
+                            )
+                            i += 1
+                            break
+                        i += 1
+                    continue
+
+        # 替换 leader_opus model 行
+        if model_leader and "leader_opus:" in line:
+            new_lines.append(line)
+            i += 1
+            while i < len(lines):
+                sub = lines[i]
+                new_lines.append(sub)
+                if "model:" in sub and "model_" not in sub:
+                    indent = sub[: len(sub) - len(sub.lstrip())]
+                    new_lines[-1] = f'{indent}model: "{model_leader}"\n'
+                    i += 1
+                    break
+                i += 1
+            continue
+
+        new_lines.append(line)
+        i += 1
 
     with open(config_path, "w", encoding="utf-8") as f:
-        yaml.dump(raw, f, allow_unicode=True, default_flow_style=False)
+        f.writelines(new_lines)
 
 
 # ── HTML 页面生成 ─────────────────────────────────────────────
