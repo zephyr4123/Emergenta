@@ -339,7 +339,7 @@ agentsInput.addEventListener('input', () => {{
 }});
 function updateInfo() {{
     const n = parseInt(agentsInput.value) || 100;
-    const grid = Math.max(20, Math.min(200, Math.round(Math.sqrt(n) * 2.5)));
+    const grid = Math.max(30, Math.min(200, Math.round(Math.sqrt(n) * 3.5)));
     const sett = Math.max(3, Math.min(50, Math.round(Math.sqrt(n) * 0.5)));
     const lead = Math.max(2, Math.min(15, Math.round(sett / 3)));
     const food = Math.round(400 + n * 0.6);

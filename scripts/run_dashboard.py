@@ -188,7 +188,7 @@ def _compute_scaling(agents: int) -> dict[str, int | float]:
     """
     import math
 
-    grid = max(20, min(200, round(math.sqrt(agents) * 2.5)))
+    grid = max(30, min(200, round(math.sqrt(agents) * 3.5)))
     settlements = max(3, min(50, round(math.sqrt(agents) * 0.5)))
     leaders = max(2, min(15, round(settlements / 3)))
     food = round(400 + agents * 0.6)
