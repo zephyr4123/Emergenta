@@ -182,8 +182,9 @@ def _build_html(llm_ok: bool, show_llm_setup: bool) -> str:
      font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; }}
 body {{
     background-color: var(--bg); color: var(--text-main);
-    display:flex; justify-content:center; align-items:center;
-    min-height:100vh; overflow:hidden;
+    display:flex; justify-content:center; align-items:flex-start;
+    min-height:100vh; overflow-y:auto;
+    padding:40px 0;
     background-image:
         radial-gradient(circle at 50% 50%,rgba(59,130,246,0.08) 0%,transparent 50%),
         linear-gradient(rgba(18,18,18,0.7) 1px,transparent 1px),
