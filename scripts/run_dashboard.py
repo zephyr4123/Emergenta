@@ -99,16 +99,31 @@ def main() -> None:
     from civsim.config import load_config
 
     config = load_config(args.config)
+
+    # ── 按平民数自动缩放所有参数 ──
+    scaling = _compute_scaling(agents)
     config.agents.civilian.initial_count = agents
+    config.world.grid.width = scaling["grid"]
+    config.world.grid.height = scaling["grid"]
+    config.world.settlement.initial_count = scaling["settlements"]
+    config.resources.initial_stockpile.food = scaling["food"]
+    config.resources.initial_stockpile.wood = scaling["wood"]
+    config.resources.initial_stockpile.ore = scaling["ore"]
+    config.resources.initial_stockpile.gold = scaling["gold"]
 
     if enable_gov:
         config.agents.governor.initial_count = 1
     if enable_lead:
-        config.agents.leader.initial_count = 1
+        config.agents.leader.initial_count = scaling["leaders"]
 
     logger.info(
-        "启动参数: agents=%d, governors=%s, leaders=%s, seed=%s, port=%d",
-        agents, enable_gov, enable_lead, seed, port,
+        "启动参数: %d 平民, %dx%d 地图, %d 聚落, %d 首领, seed=%s",
+        agents, scaling["grid"], scaling["grid"],
+        scaling["settlements"], scaling["leaders"], seed,
+    )
+    logger.info(
+        "初始资源/聚落: 食物=%d, 木材=%d, 矿石=%d, 金币=%d",
+        scaling["food"], scaling["wood"], scaling["ore"], scaling["gold"],
     )
 
     # ── 创建仿真运行器 ──
@@ -156,6 +171,37 @@ def main() -> None:
     finally:
         runner.stop()
         logger.info("已停止")
+
+
+def _compute_scaling(agents: int) -> dict[str, int]:
+    """根据平民数量计算所有自动缩放参数。
+
+    缩放逻辑：
+      - 地图边长 = sqrt(agents) * 2.5，范围 [20, 200]
+      - 聚落数 = sqrt(agents) * 0.5，范围 [3, 50]
+      - 首领数 = 聚落数 / 3，范围 [2, 15]
+      - 食物/聚落 = 400 + agents * 0.6（确保小规模也能存活）
+      - 其他资源按比例缩放
+    """
+    import math
+
+    grid = max(20, min(200, round(math.sqrt(agents) * 2.5)))
+    settlements = max(3, min(50, round(math.sqrt(agents) * 0.5)))
+    leaders = max(2, min(15, round(settlements / 3)))
+    food = round(400 + agents * 0.6)
+    wood = round(150 + agents * 0.1)
+    ore = round(30 + agents * 0.02)
+    gold = round(80 + agents * 0.05)
+
+    return {
+        "grid": grid,
+        "settlements": settlements,
+        "leaders": leaders,
+        "food": food,
+        "wood": wood,
+        "ore": ore,
+        "gold": gold,
+    }
 
 
 def _ensure_port_free(port: int, logger: logging.Logger) -> None:

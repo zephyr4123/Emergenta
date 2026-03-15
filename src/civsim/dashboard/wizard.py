@@ -317,23 +317,35 @@ h1 {{
     </section>
 
     <button type="submit" class="start-btn">启动文明仿真</button>
-    <p class="hint">地图、聚落及资源分布将根据平民数自动计算</p>
+    <p class="hint" id="scaling-info">—</p>
 </form>
 </main>
 
 <script>
 const cards = document.querySelectorAll('.scale-card');
 const agentsInput = document.getElementById('agents');
+const infoEl = document.getElementById('scaling-info');
 cards.forEach(card => {{
     card.addEventListener('click', () => {{
         cards.forEach(c => c.classList.remove('active'));
         card.classList.add('active');
         agentsInput.value = card.dataset.agents;
+        updateInfo();
     }});
 }});
 agentsInput.addEventListener('input', () => {{
     cards.forEach(c => c.classList.remove('active'));
+    updateInfo();
 }});
+function updateInfo() {{
+    const n = parseInt(agentsInput.value) || 100;
+    const grid = Math.max(20, Math.min(200, Math.round(Math.sqrt(n) * 2.5)));
+    const sett = Math.max(3, Math.min(50, Math.round(Math.sqrt(n) * 0.5)));
+    const lead = Math.max(2, Math.min(15, Math.round(sett / 3)));
+    const food = Math.round(400 + n * 0.6);
+    infoEl.textContent = `${{grid}}x${{grid}} 地图 · ${{sett}} 聚落 · ${{lead}} 首领 · ${{food}} 食物/聚落`;
+}}
+updateInfo();
 </script>
 </body>
 </html>"""
