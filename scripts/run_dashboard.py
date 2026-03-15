@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import socket
 import sys
 from pathlib import Path
 
@@ -125,6 +126,9 @@ def main() -> None:
     app = create_app(runner.state)
     register_callbacks(app)
 
+    # ── 端口占用检测 ──
+    _ensure_port_free(port, logger)
+
     # ── 启动 ──
     runner.start()
 
@@ -142,6 +146,46 @@ def main() -> None:
     finally:
         runner.stop()
         logger.info("已停止")
+
+
+def _ensure_port_free(port: int, logger: logging.Logger) -> None:
+    """检查端口是否被占用，若占用则尝试释放。"""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if s.connect_ex(("127.0.0.1", port)) != 0:
+            return  # 端口空闲
+
+    logger.warning("端口 %d 被占用，正在尝试释放...", port)
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["lsof", "-ti", f":{port}"],
+            capture_output=True, text=True, timeout=5,
+        )
+        pids = result.stdout.strip().split("\n")
+        for pid in pids:
+            if pid.strip():
+                subprocess.run(
+                    ["kill", "-9", pid.strip()],
+                    timeout=3,
+                )
+                logger.info("已终止占用进程 PID %s", pid.strip())
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        logger.error(
+            "无法释放端口 %d，请手动执行: lsof -ti:%d | xargs kill -9",
+            port, port,
+        )
+        sys.exit(1)
+
+    # 等待端口释放
+    import time
+    for _ in range(10):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("127.0.0.1", port)) != 0:
+                logger.info("端口 %d 已释放", port)
+                return
+        time.sleep(0.3)
+    logger.error("端口 %d 释放超时", port)
+    sys.exit(1)
 
 
 if __name__ == "__main__":
