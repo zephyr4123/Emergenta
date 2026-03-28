@@ -12,23 +12,29 @@ import plotly.graph_objects as go
 from civsim.dashboard.shared_state import TickSnapshot
 
 
-# 统一配色常量
-_CHART_PAPER_BG = "#1a1a2e"
-_CHART_PLOT_BG = "#16213e"
-_CHART_FONT_COLOR = "#ecf0f1"
-_CHART_GRID_COLOR = "#2c3e50"
+# 统一配色常量（Imperial Observatory）
+_CHART_PAPER_BG = "#07080c"
+_CHART_PLOT_BG = "#0b0d14"
+_CHART_FONT_COLOR = "#e0dace"
+_CHART_GRID_COLOR = "rgba(201,168,76,0.05)"
 
 
 def _empty_figure(title: str = "") -> go.Figure:
     """生成空白占位图。"""
     fig = go.Figure()
     fig.update_layout(
-        title=dict(text=title, font=dict(color=_CHART_FONT_COLOR, size=14)),
+        title=dict(
+            text=title,
+            font=dict(color="#e8d5a3", size=13, family="DM Sans"),
+        ),
         template="plotly_dark",
         paper_bgcolor=_CHART_PAPER_BG,
         plot_bgcolor=_CHART_PLOT_BG,
         margin=dict(l=40, r=20, t=40, b=30),
-        font=dict(size=11, color=_CHART_FONT_COLOR),
+        font=dict(
+            size=11, color=_CHART_FONT_COLOR,
+            family="DM Sans, PingFang SC, sans-serif",
+        ),
     )
     return fig
 
@@ -67,7 +73,7 @@ def build_trade_sankey(
     fig = go.Figure(data=[go.Sankey(
         node=dict(
             label=labels,
-            color="#3498db",
+            color="#8b7a3e",
             pad=15,
             thickness=20,
         ),
@@ -75,17 +81,23 @@ def build_trade_sankey(
             source=sources,
             target=targets,
             value=values,
-            color="rgba(52, 152, 219, 0.3)",
+            color="rgba(201, 168, 76, 0.2)",
         ),
     )])
 
     fig.update_layout(
-        title=dict(text="贸易流量", font=dict(color=_CHART_FONT_COLOR, size=14)),
+        title=dict(
+            text="贸易流量",
+            font=dict(color="#e8d5a3", size=13, family="DM Sans"),
+        ),
         template="plotly_dark",
         paper_bgcolor=_CHART_PAPER_BG,
         plot_bgcolor=_CHART_PLOT_BG,
         margin=dict(l=20, r=20, t=40, b=20),
-        font=dict(size=11, color=_CHART_FONT_COLOR),
+        font=dict(
+            size=11, color=_CHART_FONT_COLOR,
+            family="DM Sans, PingFang SC, sans-serif",
+        ),
     )
     return fig
 
@@ -116,11 +128,11 @@ def build_diplomacy_network(
 
     # 边
     status_colors = {
-        "WAR": "#e74c3c",
-        "HOSTILE": "#e67e22",
-        "NEUTRAL": "#95a5a6",
-        "FRIENDLY": "#3498db",
-        "ALLIED": "#2ecc71",
+        "WAR": "#b5342a",
+        "HOSTILE": "#c87f3b",
+        "NEUTRAL": "#6b6358",
+        "FRIENDLY": "#5b7fb5",
+        "ALLIED": "#4a9e6e",
     }
     edge_traces = []
     for u, v, data in g.edges(data=True):
@@ -165,18 +177,21 @@ def build_diplomacy_network(
         mode="markers+text",
         marker=dict(
             size=node_sizes,
-            color="#3498db",
-            line=dict(width=2, color="white"),
+            color="#c9a84c",
+            line=dict(width=2, color="#e8d5a3"),
         ),
         text=node_labels,
         textposition="top center",
-        textfont=dict(color="white", size=11),
+        textfont=dict(color="#e8d5a3", size=11, family="DM Sans"),
         hoverinfo="text",
     )
 
     fig = go.Figure(data=edge_traces + [node_trace])
     fig.update_layout(
-        title=dict(text="外交关系网络", font=dict(color=_CHART_FONT_COLOR, size=14)),
+        title=dict(
+            text="外交关系网络",
+            font=dict(color="#e8d5a3", size=13, family="DM Sans"),
+        ),
         showlegend=False,
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
@@ -184,6 +199,9 @@ def build_diplomacy_network(
         paper_bgcolor=_CHART_PAPER_BG,
         plot_bgcolor=_CHART_PLOT_BG,
         margin=dict(l=10, r=10, t=40, b=10),
-        font=dict(size=11, color=_CHART_FONT_COLOR),
+        font=dict(
+            size=11, color=_CHART_FONT_COLOR,
+            family="DM Sans, PingFang SC, sans-serif",
+        ),
     )
     return fig

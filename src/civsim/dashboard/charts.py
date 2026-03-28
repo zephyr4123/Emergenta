@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 
 from civsim.dashboard.shared_state import SharedState, TickSnapshot
 
-# 状态中文标签与颜色
+# 状态中文标签与颜色（Imperial Observatory 暖色调）
 _STATE_LABELS: dict[str, str] = {
     "WORKING": "劳作",
     "RESTING": "休息",
@@ -23,21 +23,21 @@ _STATE_LABELS: dict[str, str] = {
     "FIGHTING": "战斗",
 }
 _STATE_COLORS: dict[str, str] = {
-    "WORKING": "#2ecc71",
-    "RESTING": "#3498db",
-    "TRADING": "#f1c40f",
-    "SOCIALIZING": "#1abc9c",
-    "MIGRATING": "#e67e22",
-    "PROTESTING": "#e74c3c",
-    "FIGHTING": "#8b0000",
+    "WORKING": "#4a9e6e",
+    "RESTING": "#5b7fb5",
+    "TRADING": "#c9a84c",
+    "SOCIALIZING": "#6ba3a0",
+    "MIGRATING": "#c87f3b",
+    "PROTESTING": "#b5342a",
+    "FIGHTING": "#7a1f1f",
 }
 
 # 资源颜色
 _RESOURCE_COLORS: dict[str, str] = {
-    "food": "#27ae60",
-    "wood": "#8B4513",
-    "ore": "#7f8c8d",
-    "gold": "#f39c12",
+    "food": "#4a9e6e",
+    "wood": "#8b6d4e",
+    "ore": "#8a8680",
+    "gold": "#c9a84c",
 }
 
 _RESOURCE_LABELS: dict[str, str] = {
@@ -48,24 +48,39 @@ _RESOURCE_LABELS: dict[str, str] = {
 }
 
 
-# 统一图表深色主题配色
-_CHART_PAPER_BG = "#0a0c10"
-_CHART_PLOT_BG = "#0f1118"
-_CHART_FONT_COLOR = "#e2e8f0"
-_CHART_GRID_COLOR = "rgba(255,255,255,0.06)"
+# 统一图表深色主题配色（Imperial Observatory）
+_CHART_PAPER_BG = "#07080c"
+_CHART_PLOT_BG = "#0b0d14"
+_CHART_FONT_COLOR = "#e0dace"
+_CHART_GRID_COLOR = "rgba(201,168,76,0.05)"
 
 
 def _apply_dark_layout(fig: go.Figure, title: str = "") -> go.Figure:
-    """应用统一的深色主题布局。"""
+    """应用统一的 Imperial Observatory 深色主题布局。"""
     fig.update_layout(
-        title=dict(text=title, font=dict(color=_CHART_FONT_COLOR, size=14)),
+        title=dict(
+            text=title,
+            font=dict(color="#e8d5a3", size=13, family="DM Sans"),
+        ),
         template="plotly_dark",
         paper_bgcolor=_CHART_PAPER_BG,
         plot_bgcolor=_CHART_PLOT_BG,
-        margin=dict(l=40, r=20, t=40, b=30),
-        font=dict(size=11, color=_CHART_FONT_COLOR),
-        xaxis=dict(gridcolor=_CHART_GRID_COLOR),
-        yaxis=dict(gridcolor=_CHART_GRID_COLOR),
+        margin=dict(l=45, r=20, t=42, b=32),
+        font=dict(
+            size=11,
+            color=_CHART_FONT_COLOR,
+            family="DM Sans, PingFang SC, sans-serif",
+        ),
+        xaxis=dict(
+            gridcolor=_CHART_GRID_COLOR,
+            linecolor="rgba(201,168,76,0.08)",
+            zerolinecolor="rgba(201,168,76,0.08)",
+        ),
+        yaxis=dict(
+            gridcolor=_CHART_GRID_COLOR,
+            linecolor="rgba(201,168,76,0.08)",
+            zerolinecolor="rgba(201,168,76,0.08)",
+        ),
     )
     return fig
 
@@ -144,21 +159,21 @@ def build_satisfaction_chart(history: list[TickSnapshot]) -> go.Figure:
         y=[s.avg_satisfaction for s in history],
         name="平均满意度",
         mode="lines",
-        line=dict(color="#2ecc71", width=2),
+        line=dict(color="#4a9e6e", width=2),
     ))
     fig.add_trace(go.Scatter(
         x=ticks,
         y=[s.protest_ratio for s in history],
         name="抗议率",
         mode="lines",
-        line=dict(color="#e74c3c", width=2),
+        line=dict(color="#b5342a", width=2),
     ))
     fig.add_trace(go.Scatter(
         x=ticks,
         y=[s.avg_hunger for s in history],
         name="平均饥饿度",
         mode="lines",
-        line=dict(color="#e67e22", width=2, dash="dash"),
+        line=dict(color="#c87f3b", width=2, dash="dash"),
     ))
 
     _apply_dark_layout(fig, "社会指标趋势")
@@ -196,15 +211,17 @@ def build_settlement_table(snapshot: TickSnapshot) -> go.Figure:
     fig = go.Figure(data=[go.Table(
         header=dict(
             values=headers,
-            fill_color="#1a1a2e",
-            font=dict(color="white", size=12),
+            fill_color="#0e111a",
+            font=dict(color="#e8d5a3", size=12, family="DM Sans"),
             align="center",
+            line_color="rgba(201,168,76,0.1)",
         ),
         cells=dict(
             values=cells,
-            fill_color="#16213e",
-            font=dict(color="white", size=11),
+            fill_color="#0b0d14",
+            font=dict(color="#e0dace", size=11, family="DM Sans"),
             align="center",
+            line_color="rgba(201,168,76,0.06)",
         ),
     )])
 
@@ -250,7 +267,7 @@ def build_revolution_timeline(
         y=rev_counts,
         name="累计革命次数",
         mode="lines",
-        line=dict(color="#e74c3c", width=2),
+        line=dict(color="#b5342a", width=2),
     ))
 
     # 事件标记点
@@ -265,7 +282,7 @@ def build_revolution_timeline(
             ],
             name="革命爆发",
             mode="markers",
-            marker=dict(color="#e74c3c", size=8, symbol="star"),
+            marker=dict(color="#c9a84c", size=9, symbol="star"),
         ))
 
     _apply_dark_layout(fig, "革命时间线")
@@ -295,7 +312,7 @@ def build_adaptive_chart(history: list[TickSnapshot]) -> go.Figure:
         y=[s.adaptive_info.get("temperature", 0) for s in valid],
         name="系统温度",
         mode="lines",
-        line=dict(color="#e74c3c", width=2),
+        line=dict(color="#c9a84c", width=2),
     ))
     fig.add_trace(go.Scatter(
         x=ticks,
@@ -305,7 +322,7 @@ def build_adaptive_chart(history: list[TickSnapshot]) -> go.Figure:
         ],
         name="抗议系数",
         mode="lines",
-        line=dict(color="#e67e22", width=1.5, dash="dash"),
+        line=dict(color="#b5342a", width=1.5, dash="dash"),
     ))
     fig.add_trace(go.Scatter(
         x=ticks,
@@ -315,7 +332,7 @@ def build_adaptive_chart(history: list[TickSnapshot]) -> go.Figure:
         ],
         name="恢复系数",
         mode="lines",
-        line=dict(color="#2ecc71", width=1.5, dash="dash"),
+        line=dict(color="#4a9e6e", width=1.5, dash="dash"),
     ))
 
     _apply_dark_layout(fig, "自适应控制器")

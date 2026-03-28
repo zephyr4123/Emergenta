@@ -15,7 +15,7 @@ from civsim.dashboard.param_registry import (
 )
 
 
-_MARK_STYLE: dict = {"color": "#ecf0f1", "fontSize": "11px"}
+_MARK_STYLE: dict = {"color": "#8a8272", "fontSize": "10px"}
 
 
 def _styled_marks(values: dict[float, str]) -> dict:

@@ -185,7 +185,7 @@ def _build_html(llm_ok: bool, show_llm_setup: bool) -> str:
     if show_llm_setup:
         llm_section = """
         <section class="llm-setup">
-            <p class="section-title">LLM API 配置 · API CONFIGURATION</p>
+            <p class="section-title">LLM API 配置 · API Configuration</p>
             <div class="config-panel">
                 <div class="input-group">
                     <label>API Key</label>
@@ -209,8 +209,8 @@ def _build_html(llm_ok: bool, show_llm_setup: bool) -> str:
                            value="gpt-4o"
                            placeholder="gpt-4o / sonnet / gemini-pro">
                 </div>
-                <div style="grid-column:span 2;padding-top:8px;border-top:1px solid var(--card-border);">
-                    <p style="font-size:0.75rem;color:var(--text-dim);margin:0;">
+                <div style="grid-column:span 2;padding-top:10px;border-top:1px solid var(--card-border);">
+                    <p style="font-size:0.72rem;color:var(--text-dim);margin:0;letter-spacing:0.3px;">
                         点击下方「启动文明仿真」时自动保存到 config.yaml
                     </p>
                 </div>
@@ -223,150 +223,199 @@ def _build_html(llm_ok: bool, show_llm_setup: bool) -> str:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EMERGENTA - Launch</title>
+<title>EMERGENTA — Launch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {{
-    --primary: #3b82f6;
-    --primary-glow: rgba(59, 130, 246, 0.5);
-    --bg: #05070a;
-    --card-bg: rgba(255, 255, 255, 0.03);
-    --card-border: rgba(255, 255, 255, 0.1);
-    --text-main: #e2e8f0;
-    --text-dim: #94a3b8;
-    --accent-green: #10b981;
-    --accent-orange: #f59e0b;
+    --gold: #c9a84c;
+    --gold-dim: #8b7a3e;
+    --gold-light: #e8d5a3;
+    --gold-glow: rgba(201, 168, 76, 0.35);
+    --bg: #07080c;
+    --card-bg: rgba(14, 17, 26, 0.7);
+    --card-border: rgba(201, 168, 76, 0.10);
+    --text-main: #e0dace;
+    --text-dim: #8a8272;
+    --accent-green: #4a9e6e;
+    --accent-orange: #c8870d;
 }}
 * {{ margin:0; padding:0; box-sizing:border-box;
-     font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; }}
+     font-family:'DM Sans','PingFang SC','Microsoft YaHei',sans-serif; }}
 body {{
     background-color: var(--bg); color: var(--text-main);
     display:flex; justify-content:center; align-items:flex-start;
     min-height:100vh; overflow-y:auto;
-    padding:40px 0;
+    padding:50px 0;
     background-image:
-        radial-gradient(circle at 50% 50%,rgba(59,130,246,0.08) 0%,transparent 50%),
-        linear-gradient(rgba(18,18,18,0.7) 1px,transparent 1px),
-        linear-gradient(90deg,rgba(18,18,18,0.7) 1px,transparent 1px);
-    background-size:100% 100%,40px 40px,40px 40px;
+        radial-gradient(ellipse at 30% 20%,rgba(201,168,76,0.05) 0%,transparent 50%),
+        radial-gradient(ellipse at 70% 80%,rgba(139,111,176,0.03) 0%,transparent 50%),
+        radial-gradient(circle at 50% 50%,#0e111a 0%,#07080c 100%);
 }}
 .container {{
-    width:880px; padding:40px;
-    background:rgba(10,12,16,0.85); backdrop-filter:blur(20px);
-    border-radius:24px; border:1px solid var(--card-border);
-    box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);
+    width:900px; padding:48px 52px;
+    background:rgba(10,12,18,0.9); backdrop-filter:blur(24px);
+    border-radius:16px; border:1px solid var(--card-border);
+    box-shadow:0 30px 60px -15px rgba(0,0,0,0.6),
+               inset 0 1px 0 rgba(201,168,76,0.06);
     position:relative; z-index:10;
 }}
-header {{ text-align:center; margin-bottom:36px; }}
+header {{ text-align:center; margin-bottom:42px; }}
 h1 {{
-    font-size:2.8rem; letter-spacing:0.5rem; font-weight:800;
-    background:linear-gradient(to bottom,#fff 30%,#60a5fa 100%);
+    font-family:'Cormorant Garamond',Georgia,serif;
+    font-size:3.2rem; letter-spacing:0.6rem; font-weight:600;
+    background:linear-gradient(135deg,var(--gold-light) 0%,var(--gold) 50%,var(--gold-dim) 100%);
     -webkit-background-clip:text; -webkit-text-fill-color:transparent;
-    margin-bottom:6px;
+    margin-bottom:8px;
 }}
-.subtitle {{ color:var(--text-dim); letter-spacing:0.2rem; font-size:0.85rem; margin-bottom:18px; }}
+.subtitle {{
+    color:var(--text-dim); letter-spacing:0.35rem; font-size:0.78rem;
+    margin-bottom:22px; font-weight:400; text-transform:uppercase;
+}}
 .status-badge {{
-    display:inline-flex; align-items:center; padding:5px 14px;
-    border-radius:20px; font-size:0.8rem; font-weight:600;
+    display:inline-flex; align-items:center; padding:6px 16px;
+    border-radius:20px; font-size:0.78rem; font-weight:600;
+    letter-spacing:0.3px;
 }}
 .status-badge.green {{
-    background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); color:var(--accent-green);
+    background:rgba(74,158,110,0.08); border:1px solid rgba(74,158,110,0.2);
+    color:var(--accent-green);
 }}
 .status-badge.orange {{
-    background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); color:var(--accent-orange);
+    background:rgba(200,135,13,0.08); border:1px solid rgba(200,135,13,0.2);
+    color:var(--accent-orange);
 }}
 .status-dot {{
     width:7px; height:7px; background:var(--accent-green); border-radius:50%;
-    margin-right:8px; box-shadow:0 0 8px var(--accent-green); animation:pulse 2s infinite;
+    margin-right:8px; box-shadow:0 0 6px var(--accent-green); animation:pulse 2.5s ease-in-out infinite;
 }}
-.status-dot.orange {{ background:var(--accent-orange); box-shadow:0 0 8px var(--accent-orange); }}
+.status-dot.orange {{ background:var(--accent-orange); box-shadow:0 0 6px var(--accent-orange); }}
 .section-title {{
-    font-size:0.75rem; color:var(--text-dim); margin-bottom:14px;
-    text-transform:uppercase; letter-spacing:1px;
+    font-size:0.72rem; color:var(--text-dim); margin-bottom:16px;
+    text-transform:uppercase; letter-spacing:1.5px; font-weight:500;
 }}
-.scale-grid {{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:28px; }}
+.scale-grid {{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:32px; }}
 .scale-card {{
     background:var(--card-bg); border:1px solid var(--card-border);
-    border-radius:14px; padding:22px 14px; text-align:center;
-    cursor:pointer; transition:all .25s ease; position:relative; overflow:hidden;
+    border-radius:10px; padding:24px 14px; text-align:center;
+    cursor:pointer; transition:all .3s ease; position:relative; overflow:hidden;
 }}
-.scale-card:hover {{ border-color:var(--primary); background:rgba(59,130,246,0.05); transform:translateY(-3px); }}
+.scale-card:hover {{
+    border-color:rgba(201,168,76,0.25);
+    background:rgba(201,168,76,0.04);
+    transform:translateY(-2px);
+    box-shadow:0 8px 24px rgba(0,0,0,0.3);
+}}
 .scale-card.active {{
-    border-color:var(--primary);
-    background:linear-gradient(135deg,rgba(59,130,246,0.18) 0%,transparent 100%);
-    box-shadow:0 0 20px rgba(59,130,246,0.15);
+    border-color:var(--gold-dim);
+    background:linear-gradient(135deg,rgba(201,168,76,0.12) 0%,rgba(201,168,76,0.02) 100%);
+    box-shadow:0 8px 30px rgba(201,168,76,0.1);
 }}
 .scale-card.active::after {{
     content:''; position:absolute; top:0; left:0; width:100%; height:2px;
-    background:var(--primary); box-shadow:0 0 8px var(--primary);
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
 }}
-.scale-num {{ font-size:1.7rem; font-weight:700; display:block; margin-bottom:3px; }}
-.scale-label {{ font-size:0.85rem; font-weight:600; margin-bottom:6px; display:block; }}
-.scale-desc {{ font-size:0.72rem; color:var(--text-dim); line-height:1.4; }}
-.recommend-tag {{ font-size:0.68rem; color:var(--primary); margin-top:6px; display:block; }}
+.scale-num {{
+    font-family:'JetBrains Mono',monospace;
+    font-size:1.6rem; font-weight:600; display:block; margin-bottom:4px;
+    color:var(--gold-light);
+}}
+.scale-label {{ font-size:0.82rem; font-weight:600; margin-bottom:8px; display:block;
+    color:var(--text-main); }}
+.scale-desc {{ font-size:0.72rem; color:var(--text-dim); line-height:1.5; }}
+.recommend-tag {{
+    font-size:0.66rem; color:var(--gold); margin-top:8px; display:block;
+    letter-spacing:1px; text-transform:uppercase; font-weight:600;
+}}
 .config-panel {{
-    background:rgba(255,255,255,0.02); border-radius:14px; padding:22px;
+    background:rgba(201,168,76,0.02); border-radius:10px; padding:26px;
     border:1px solid var(--card-border);
-    display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:30px;
+    display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-bottom:32px;
 }}
-.input-group {{ display:flex; flex-direction:column; gap:6px; }}
-.input-group label {{ font-size:0.8rem; color:var(--text-dim); }}
+.input-group {{ display:flex; flex-direction:column; gap:7px; }}
+.input-group label {{ font-size:0.78rem; color:var(--text-dim); font-weight:500; }}
 .input-group input {{
-    background:rgba(0,0,0,0.3); border:1px solid var(--card-border);
-    padding:10px 14px; border-radius:8px; color:white; font-size:0.95rem;
-    transition:all .25s; outline:none;
+    background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.06);
+    padding:11px 14px; border-radius:6px; color:var(--text-main); font-size:0.9rem;
+    transition:all .3s ease; outline:none; font-family:'DM Sans',sans-serif;
 }}
-.input-group input:focus {{ border-color:var(--primary); box-shadow:0 0 0 2px var(--primary-glow); }}
-.input-group input::placeholder {{ color:rgba(255,255,255,0.2); }}
+.input-group input[type="number"] {{
+    font-family:'JetBrains Mono',monospace; font-size:0.88rem;
+}}
+.input-group input:focus {{
+    border-color:var(--gold-dim);
+    box-shadow:0 0 0 2px rgba(201,168,76,0.12);
+}}
+.input-group input::placeholder {{ color:rgba(232,208,163,0.2); }}
 .toggle-row {{
-    display:flex; gap:28px; align-items:center; grid-column:span 2;
-    padding-top:10px; border-top:1px solid var(--card-border);
+    display:flex; gap:32px; align-items:center; grid-column:span 2;
+    padding-top:14px; border-top:1px solid var(--card-border);
 }}
-.cb {{ display:flex; align-items:center; cursor:pointer; font-size:0.85rem; color:var(--text-dim); gap:8px; }}
+.cb {{ display:flex; align-items:center; cursor:pointer; font-size:0.82rem;
+    color:var(--text-dim); gap:9px; transition:color .2s; }}
+.cb:hover {{ color:var(--text-main); }}
 .cb input {{ display:none; }}
 .cb .box {{
-    width:16px; height:16px; border:2px solid var(--card-border);
-    border-radius:4px; position:relative; transition:all .2s; flex-shrink:0;
+    width:16px; height:16px; border:1.5px solid rgba(201,168,76,0.25);
+    border-radius:4px; position:relative; transition:all .25s; flex-shrink:0;
 }}
-.cb input:checked + .box {{ background:var(--primary); border-color:var(--primary); }}
+.cb input:checked + .box {{
+    background:var(--gold-dim); border-color:var(--gold);
+}}
 .cb input:checked + .box::after {{
-    content:'✓'; position:absolute; color:white; font-size:11px; left:2px; top:-2px;
+    content:'✓'; position:absolute; color:var(--gold-light); font-size:11px; left:2px; top:-2px;
 }}
 .start-btn {{
-    width:100%; padding:18px; background:var(--primary); color:white;
-    border:none; border-radius:12px; font-size:1.15rem; font-weight:700;
-    letter-spacing:4px; cursor:pointer; transition:all .25s;
-    box-shadow:0 8px 25px -8px var(--primary);
+    width:100%; padding:18px; color:var(--gold-light);
+    border:none; border-radius:8px; font-size:1.05rem; font-weight:700;
+    letter-spacing:5px; cursor:pointer; transition:all .3s ease;
+    text-transform:uppercase; font-family:'DM Sans',sans-serif;
+    background:linear-gradient(135deg,var(--gold-dim) 0%,var(--gold) 50%,var(--gold-dim) 100%);
+    box-shadow:0 8px 30px -8px rgba(201,168,76,0.3);
+    color:#0e111a;
 }}
-.start-btn:hover {{ transform:translateY(-2px); box-shadow:0 12px 35px -8px var(--primary); filter:brightness(1.1); }}
+.start-btn:hover {{
+    transform:translateY(-2px);
+    box-shadow:0 12px 40px -8px rgba(201,168,76,0.4);
+    filter:brightness(1.08);
+}}
 .start-btn:active {{ transform:translateY(1px); }}
-.hint {{ text-align:center; margin-top:16px; color:var(--text-dim); font-size:0.78rem; }}
-.llm-setup {{ margin-bottom:20px; }}
-@keyframes pulse {{
-    0% {{ opacity:.6; transform:scale(1); }}
-    50% {{ opacity:1; transform:scale(1.2); }}
-    100% {{ opacity:.6; transform:scale(1); }}
+.hint {{
+    text-align:center; margin-top:18px; color:var(--text-dim); font-size:0.76rem;
+    font-family:'JetBrains Mono',monospace; letter-spacing:0.5px;
 }}
-.decor {{ position:fixed; width:400px; height:400px;
-    background:radial-gradient(circle,var(--primary-glow) 0%,transparent 70%);
-    z-index:1; filter:blur(60px); pointer-events:none; }}
+.llm-setup {{ margin-bottom:24px; }}
+@keyframes pulse {{
+    0% {{ opacity:.5; transform:scale(1); }}
+    50% {{ opacity:1; transform:scale(1.15); }}
+    100% {{ opacity:.5; transform:scale(1); }}
+}}
+.decor {{ position:fixed; width:500px; height:500px;
+    background:radial-gradient(circle,rgba(201,168,76,0.08) 0%,transparent 70%);
+    z-index:1; filter:blur(80px); pointer-events:none; }}
+/* ── Scrollbar ── */
+::-webkit-scrollbar{{width:5px}}
+::-webkit-scrollbar-thumb{{background:rgba(201,168,76,0.15);border-radius:10px}}
+::-webkit-scrollbar-track{{background:transparent}}
 </style>
 </head>
 <body>
-<div class="decor" style="top:-100px;right:-100px;"></div>
-<div class="decor" style="bottom:-100px;left:-100px;opacity:.5;"></div>
+<div class="decor" style="top:-120px;right:-80px;"></div>
+<div class="decor" style="bottom:-120px;left:-80px;opacity:.4;"></div>
 
 <main class="container">
 <form id="wizard-form" method="POST" action="/submit">
     <header>
         <h1>Emergenta</h1>
-        <p class="subtitle">AI CIVILIZATION SIMULATOR</p>
+        <p class="subtitle">AI Civilization Simulator</p>
         {llm_badge}
     </header>
 
     {llm_section}
 
     <section>
-        <p class="section-title">仿真规模选择 · SCALE SELECTION</p>
+        <p class="section-title">仿真规模选择 · Scale Selection</p>
         <div class="scale-grid">
             <div class="scale-card" data-agents="100">
                 <span class="scale-num">100</span>
@@ -377,7 +426,7 @@ h1 {{
                 <span class="scale-num">500</span>
                 <span class="scale-label">中型仿真</span>
                 <p class="scale-desc">深度观察<br>社会网络关系丰富</p>
-                <span class="recommend-tag">推荐</span>
+                <span class="recommend-tag">· 推荐 ·</span>
             </div>
             <div class="scale-card" data-agents="2000">
                 <span class="scale-num">2K</span>
@@ -407,7 +456,7 @@ h1 {{
         </div>
         <div class="input-group">
             <label>系统版本</label>
-            <input type="text" value="Emergenta v1.0" disabled style="opacity:.4;">
+            <input type="text" value="Emergenta v1.0" disabled style="opacity:.35;">
         </div>
         <div class="toggle-row">
             <label class="cb">
@@ -450,7 +499,7 @@ function updateInfo() {{
     const sett = Math.max(3, Math.min(50, Math.round(Math.sqrt(n) * 0.5)));
     const lead = Math.max(2, Math.min(15, Math.round(sett / 3)));
     const food = Math.round(400 + n * 0.6);
-    infoEl.textContent = `${{grid}}x${{grid}} 地图 · ${{sett}} 聚落 · ${{lead}} 首领 · ${{food}} 食物/聚落`;
+    infoEl.textContent = `${{grid}}×${{grid}} 地图 · ${{sett}} 聚落 · ${{lead}} 首领 · ${{food}} 食物/聚落`;
 }}
 updateInfo();
 </script>
@@ -461,16 +510,19 @@ updateInfo();
 _LOADING_HTML = """<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <title>Emergenta — 启动中</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
-body{background:#05070a;color:#e2e8f0;display:flex;
+body{background:#07080c;color:#e0dace;display:flex;
 justify-content:center;align-items:center;height:100vh;
-font-family:Inter,-apple-system,sans-serif;flex-direction:column;}
-.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.1);
-border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite;
-margin-bottom:20px;}
+font-family:'DM Sans',sans-serif;flex-direction:column;
+background-image:radial-gradient(ellipse at 50% 50%,rgba(201,168,76,0.04),transparent 60%)}
+.spinner{width:36px;height:36px;border:2px solid rgba(201,168,76,0.12);
+border-top-color:#c9a84c;border-radius:50%;animation:spin 1s linear infinite;
+margin-bottom:24px;}
 @keyframes spin{to{transform:rotate(360deg)}}
-h2{font-weight:600;margin-bottom:8px;}
-p{color:#94a3b8;font-size:.9rem;}
+h2{font-family:'Cormorant Garamond',serif;font-weight:500;
+font-size:1.4rem;margin-bottom:8px;letter-spacing:2px;color:#e8d5a3}
+p{color:#8a8272;font-size:.85rem;letter-spacing:0.5px}
 </style>
 </head><body>
 <div class="spinner"></div>

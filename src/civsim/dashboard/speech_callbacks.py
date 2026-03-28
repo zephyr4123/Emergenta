@@ -84,8 +84,9 @@ def _register_cards(app: object) -> None:
             return html.Div(
                 "等待 AI 决策...",
                 style={
-                    "color": "#7f8c8d", "textAlign": "center",
-                    "padding": "40px", "fontSize": "16px",
+                    "color": "#8a8272", "textAlign": "center",
+                    "padding": "40px", "fontSize": "15px",
+                    "letterSpacing": "1px",
                 },
             )
 

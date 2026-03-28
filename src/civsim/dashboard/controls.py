@@ -41,10 +41,10 @@ def build_god_mode_controls() -> dbc.Card:
             dcc.Slider(
                 id="slider-speed", min=1, max=20, step=1, value=1,
                 marks={
-                    1: {"label": "1x", "style": {"color": "#ecf0f1"}},
-                    5: {"label": "5x", "style": {"color": "#ecf0f1"}},
-                    10: {"label": "10x", "style": {"color": "#ecf0f1"}},
-                    20: {"label": "20x", "style": {"color": "#ecf0f1"}},
+                    1: {"label": "1x", "style": {"color": "#8a8272"}},
+                    5: {"label": "5x", "style": {"color": "#8a8272"}},
+                    10: {"label": "10x", "style": {"color": "#8a8272"}},
+                    20: {"label": "20x", "style": {"color": "#8a8272"}},
                 },
             ),
             html.Hr(),

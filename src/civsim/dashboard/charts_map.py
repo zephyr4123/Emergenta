@@ -13,36 +13,36 @@ from dash import html
 
 from civsim.dashboard.shared_state import MarkovTransition, TickSnapshot
 
-# 深色主题配色（与 app.py 一致）
-_PAPER_BG = "#0a0c10"
-_PLOT_BG = "#0f1118"
-_FONT_COLOR = "#e2e8f0"
+# 深色主题配色（Imperial Observatory）
+_PAPER_BG = "#07080c"
+_PLOT_BG = "#0b0d14"
+_FONT_COLOR = "#e0dace"
 
 # 地块类型序号→颜色映射（与 _serialize_tile_grid 一致）
 # 0=farmland, 1=forest, 2=mine, 3=water, 4=mountain, 5=barren, 6=settlement
 _TILE_COLORSCALE: list[list] = [
-    [0.0, "#3d6b35"],     # 0 farmland 深绿
-    [0.143, "#2d5016"],   # 1 forest   墨绿
-    [0.286, "#7f6b52"],   # 2 mine     棕灰
-    [0.429, "#2b5f8a"],   # 3 water    深蓝
-    [0.571, "#5c5c5c"],   # 4 mountain 灰
-    [0.714, "#3a3520"],   # 5 barren   暗黄
-    [1.0, "#8b6914"],     # 6 settlement 金棕
+    [0.0, "#3a5e34"],     # 0 farmland  深苔绿
+    [0.143, "#263d1e"],   # 1 forest    墨松绿
+    [0.286, "#6b5c48"],   # 2 mine      赭石棕
+    [0.429, "#2a4d6b"],   # 3 water     深靛蓝
+    [0.571, "#4a4a4a"],   # 4 mountain  玄武灰
+    [0.714, "#3a3225"],   # 5 barren    焦褐
+    [1.0, "#8b7430"],     # 6 settlement 古铜金
 ]
 
 _TILE_NAMES: list[str] = [
     "农田", "森林", "矿山", "水源", "山地", "荒地", "聚落",
 ]
 
-# Agent 状态→颜色映射
+# Agent 状态→颜色映射（暖色调）
 _STATE_COLORS: dict[int, str] = {
-    0: "#2ecc71",  # WORKING   绿
-    1: "#3498db",  # RESTING   蓝
-    2: "#f1c40f",  # TRADING   黄
-    3: "#1abc9c",  # SOCIALIZING 青
-    4: "#e67e22",  # MIGRATING 橙
-    5: "#e74c3c",  # PROTESTING 红
-    6: "#8b0000",  # FIGHTING  暗红
+    0: "#4a9e6e",  # WORKING   苔绿
+    1: "#5b7fb5",  # RESTING   灰蓝
+    2: "#c9a84c",  # TRADING   琥珀金
+    3: "#6ba3a0",  # SOCIALIZING 青瓷
+    4: "#c87f3b",  # MIGRATING 铜橙
+    5: "#b5342a",  # PROTESTING 朱红
+    6: "#7a1f1f",  # FIGHTING  殷红
 }
 
 _STATE_NAMES_CN: dict[int, str] = {
@@ -129,14 +129,14 @@ def build_interactive_map(snapshot: TickSnapshot) -> go.Figure:
             mode="markers+text",
             name="聚落",
             marker=dict(
-                color="#f39c12",
+                color="#c9a84c",
                 size=12,
                 symbol="diamond",
-                line=dict(width=1.5, color="#ffffff"),
+                line=dict(width=1.5, color="#e8d5a3"),
             ),
             text=names,
             textposition="top center",
-            textfont=dict(color="#f39c12", size=9),
+            textfont=dict(color="#e8d5a3", size=9),
             hovertext=labels,
             hovertemplate="%{hovertext}<extra></extra>",
             showlegend=False,
@@ -190,23 +190,23 @@ def build_markov_cards(
     if not transitions:
         return [html.Div(
             "等待仿真运行...",
-            style={"color": "#7f8c8d", "padding": "20px", "textAlign": "center"},
+            style={"color": "#8a8272", "padding": "20px", "textAlign": "center"},
         )]
 
     cards: list[html.Div] = []
     for t in reversed(transitions):  # 最新的在最上面
         # 状态转移是否发生变化
         changed = t.prev_state != t.next_state
-        arrow_color = "#e74c3c" if changed else "#7f8c8d"
-        prob_color = "#e74c3c" if t.probability < 0.2 else (
-            "#f39c12" if t.probability < 0.5 else "#2ecc71"
+        arrow_color = "#b5342a" if changed else "#6b6358"
+        prob_color = "#b5342a" if t.probability < 0.2 else (
+            "#c9a84c" if t.probability < 0.5 else "#4a9e6e"
         )
 
         # 性格标签颜色
         personality_colors = {
-            "顺从": "#2ecc71", "中立": "#3498db", "叛逆": "#e74c3c",
+            "顺从": "#4a9e6e", "中立": "#5b7fb5", "叛逆": "#b5342a",
         }
-        p_color = personality_colors.get(t.personality, "#95a5a6")
+        p_color = personality_colors.get(t.personality, "#8a8272")
 
         # Granovetter 标识
         grano_badge = ""
@@ -216,16 +216,17 @@ def build_markov_cards(
         # 构建因子标签
         factor_spans = []
         for f in t.factors:
-            f_color = "#e74c3c" if "传染" in f else "#e67e22"
+            f_color = "#b5342a" if "传染" in f else "#8b7a3e"
             factor_spans.append(html.Span(
                 f,
                 style={
                     "background": f_color,
-                    "color": "#fff",
-                    "padding": "1px 6px",
+                    "color": "#f5f0e6",
+                    "padding": "2px 7px",
                     "borderRadius": "3px",
                     "fontSize": "10px",
                     "marginRight": "4px",
+                    "letterSpacing": "0.2px",
                 },
             ))
 
@@ -234,11 +235,14 @@ def build_markov_cards(
             html.Div([
                 html.Span(
                     f"T{t.tick}",
-                    style={"color": "#7f8c8d", "fontSize": "10px"},
+                    style={
+                        "color": "#6b6358", "fontSize": "10px",
+                        "fontFamily": "JetBrains Mono, monospace",
+                    },
                 ),
                 html.Span(
                     f" #{t.agent_id} ",
-                    style={"color": _FONT_COLOR, "fontWeight": "700"},
+                    style={"color": _FONT_COLOR, "fontWeight": "600"},
                 ),
                 html.Span(
                     f"[{t.personality}]",
@@ -248,16 +252,17 @@ def build_markov_cards(
                 html.Span(
                     f"  饥饿:{t.hunger:.0%} 满意:{t.satisfaction:.0%}",
                     style={
-                        "color": "#95a5a6",
+                        "color": "#8a8272",
                         "fontSize": "10px",
                         "marginLeft": "auto",
+                        "fontFamily": "JetBrains Mono, monospace",
                     },
                 ),
             ], style={
                 "display": "flex",
                 "alignItems": "center",
                 "gap": "4px",
-                "marginBottom": "4px",
+                "marginBottom": "5px",
             }),
             # 状态转移行
             html.Div([
@@ -288,14 +293,20 @@ def build_markov_cards(
                 style={"marginTop": "3px"},
             ) if factor_spans else None,
         ], style={
-            "background": "#16213e",
+            "background": "rgba(14,17,26,0.85)",
             "borderLeft": (
-                "3px solid #e74c3c" if t.granovetter_triggered
-                else "3px solid #2c3e6b"
+                "3px solid #b5342a" if t.granovetter_triggered
+                else "3px solid rgba(201,168,76,0.15)"
             ),
-            "borderRadius": "4px",
-            "padding": "8px 10px",
-            "marginBottom": "6px",
+            "border": "1px solid rgba(201,168,76,0.08)",
+            "borderLeftWidth": "3px",
+            "borderLeftColor": (
+                "#b5342a" if t.granovetter_triggered
+                else "rgba(201,168,76,0.18)"
+            ),
+            "borderRadius": "5px",
+            "padding": "9px 12px",
+            "marginBottom": "7px",
         })
         cards.append(card)
 
@@ -305,22 +316,24 @@ def build_markov_cards(
 # ── 聚落排行榜 HTML 表格 ─────────────────────────────────────
 
 _TH_STYLE: dict = {
-    "padding": "14px 16px",
-    "fontSize": "11px",
+    "padding": "14px 18px",
+    "fontSize": "10.5px",
     "textTransform": "uppercase",
-    "letterSpacing": "1px",
-    "color": "#94a3b8",
+    "letterSpacing": "1.2px",
+    "color": "#8b7a3e",
     "fontWeight": "600",
-    "borderBottom": "1px solid rgba(255,255,255,0.08)",
-    "background": "rgba(255,255,255,0.03)",
+    "borderBottom": "1px solid rgba(201,168,76,0.10)",
+    "background": "rgba(201,168,76,0.03)",
     "textAlign": "left",
+    "fontFamily": "DM Sans, sans-serif",
 }
 
 _TD_STYLE: dict = {
-    "padding": "14px 16px",
+    "padding": "14px 18px",
     "fontSize": "13px",
-    "borderBottom": "1px solid rgba(255,255,255,0.06)",
-    "color": "#e2e8f0",
+    "borderBottom": "1px solid rgba(201,168,76,0.06)",
+    "color": "#e0dace",
+    "fontFamily": "DM Sans, sans-serif",
 }
 
 
@@ -330,20 +343,23 @@ def _bar(value: float, max_val: float, color: str) -> html.Div:
     return html.Div([
         html.Span(
             f"{value:.0f}",
-            style={"minWidth": "40px", "fontSize": "13px"},
+            style={
+                "minWidth": "40px", "fontSize": "12.5px",
+                "fontFamily": "JetBrains Mono, monospace",
+            },
         ),
         html.Div(
             html.Div(style={
                 "width": f"{pct:.0f}%",
                 "height": "100%",
-                "borderRadius": "3px",
-                "background": color,
+                "borderRadius": "2px",
+                "background": f"linear-gradient(90deg, {color}, {color}cc)",
             }),
             style={
                 "width": "80px",
-                "height": "6px",
-                "background": "rgba(255,255,255,0.08)",
-                "borderRadius": "3px",
+                "height": "5px",
+                "background": "rgba(201,168,76,0.06)",
+                "borderRadius": "2px",
                 "overflow": "hidden",
             },
         ),
@@ -353,11 +369,11 @@ def _bar(value: float, max_val: float, color: str) -> html.Div:
 def _sat_dot(value: float) -> html.Div:
     """满意度圆点 + 数值。"""
     if value >= 0.6:
-        color, shadow = "#10b981", "0 0 8px #10b981"
+        color, shadow = "#4a9e6e", "0 0 6px rgba(74,158,110,0.5)"
     elif value >= 0.35:
-        color, shadow = "#f59e0b", "0 0 8px #f59e0b"
+        color, shadow = "#c9a84c", "0 0 6px rgba(201,168,76,0.4)"
     else:
-        color, shadow = "#ef4444", "0 0 8px #ef4444"
+        color, shadow = "#b5342a", "0 0 6px rgba(181,52,42,0.5)"
     return html.Div([
         html.Span(style={
             "width": "8px", "height": "8px",
@@ -372,8 +388,8 @@ def _sat_dot(value: float) -> html.Div:
 
 def _protest_cell(value: float) -> html.Span:
     """抗议率着色。"""
-    color = "#10b981" if value < 0.05 else (
-        "#f59e0b" if value < 0.15 else "#ef4444"
+    color = "#4a9e6e" if value < 0.05 else (
+        "#c9a84c" if value < 0.15 else "#b5342a"
     )
     weight = "bold" if value >= 0.1 else "normal"
     return html.Span(
@@ -392,7 +408,7 @@ def build_settlement_html(snapshot: TickSnapshot) -> list:
     if not settlements:
         return [html.Div(
             "暂无聚落数据",
-            style={"color": "#94a3b8", "textAlign": "center", "padding": "40px"},
+            style={"color": "#8a8272", "textAlign": "center", "padding": "40px"},
         )]
 
     # 计算最大值用于进度条缩放
@@ -417,8 +433,8 @@ def build_settlement_html(snapshot: TickSnapshot) -> list:
 
         # 治安条颜色
         sec_color = (
-            "#00f2ff" if sec >= 0.6 else
-            "#f59e0b" if sec >= 0.3 else "#ef4444"
+            "#5b7fb5" if sec >= 0.6 else
+            "#c9a84c" if sec >= 0.3 else "#b5342a"
         )
 
         row = html.Tr([
@@ -429,12 +445,12 @@ def build_settlement_html(snapshot: TickSnapshot) -> list:
                         "🏛",
                         style={
                             "width": "30px", "height": "30px",
-                            "background": "linear-gradient(135deg,#1e293b,#0f172a)",
-                            "borderRadius": "6px",
+                            "background": "linear-gradient(135deg,rgba(201,168,76,0.08),rgba(14,17,26,0.6))",
+                            "borderRadius": "5px",
                             "display": "flex",
                             "alignItems": "center",
                             "justifyContent": "center",
-                            "border": "1px solid rgba(255,255,255,0.08)",
+                            "border": "1px solid rgba(201,168,76,0.12)",
                             "fontSize": "14px",
                             "flexShrink": "0",
                         },
@@ -451,17 +467,23 @@ def build_settlement_html(snapshot: TickSnapshot) -> list:
             html.Td(
                 html.Span(
                     f"{pop:,}",
-                    style={"fontFamily": "Monaco,monospace"},
+                    style={
+                        "fontFamily": "JetBrains Mono, monospace",
+                        "fontSize": "12.5px",
+                    },
                 ),
                 style=_TD_STYLE,
             ),
             # 食物储备（进度条）
-            html.Td(_bar(food, max_food, "#10b981"), style=_TD_STYLE),
+            html.Td(_bar(food, max_food, "#4a9e6e"), style=_TD_STYLE),
             # 金币
             html.Td(
                 html.Span(
                     f"{gold:,.0f}",
-                    style={"color": "#f59e0b", "fontWeight": "700"},
+                    style={
+                        "color": "#c9a84c", "fontWeight": "600",
+                        "fontFamily": "JetBrains Mono, monospace",
+                    },
                 ),
                 style=_TD_STYLE,
             ),
@@ -470,11 +492,13 @@ def build_settlement_html(snapshot: TickSnapshot) -> list:
                 html.Span(
                     f"{tax:.0%}",
                     style={
-                        "padding": "3px 8px",
-                        "borderRadius": "4px",
+                        "padding": "3px 9px",
+                        "borderRadius": "3px",
                         "fontSize": "11px",
-                        "fontWeight": "700",
-                        "background": "rgba(255,255,255,0.05)",
+                        "fontWeight": "600",
+                        "background": "rgba(201,168,76,0.06)",
+                        "border": "1px solid rgba(201,168,76,0.1)",
+                        "fontFamily": "JetBrains Mono, monospace",
                     },
                 ),
                 style=_TD_STYLE,
@@ -502,10 +526,10 @@ def build_settlement_html(snapshot: TickSnapshot) -> list:
     return [html.Div(
         table,
         style={
-            "background": "rgba(20,24,33,0.7)",
-            "border": "1px solid rgba(255,255,255,0.08)",
-            "borderRadius": "12px",
+            "background": "rgba(14,17,26,0.85)",
+            "border": "1px solid rgba(201,168,76,0.10)",
+            "borderRadius": "8px",
             "overflow": "hidden",
-            "boxShadow": "0 8px 24px rgba(0,0,0,0.4)",
+            "boxShadow": "0 4px 20px rgba(0,0,0,0.35)",
         },
     )]
