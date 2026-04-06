@@ -224,9 +224,9 @@ def _build_html(llm_ok: bool, show_llm_setup: bool) -> str:
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EMERGENTA — Launch</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.loli.net">
+<link rel="preconnect" href="https://gstatic.loli.net" crossorigin>
+<link href="https://fonts.loli.net/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root {{
     --gold: #c9a84c;
@@ -510,7 +510,7 @@ updateInfo();
 _LOADING_HTML = """<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <title>Emergenta — 启动中</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.loli.net/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
 body{background:#07080c;color:#e0dace;display:flex;
 justify-content:center;align-items:center;height:100vh;

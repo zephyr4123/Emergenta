@@ -20,7 +20,7 @@ _CSS = """
    classical typography, and atmospheric depth.
    ══════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+@import url('https://fonts.loli.net/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
 
 :root{
   --bg-deep:#07080c;
@@ -550,8 +550,8 @@ def create_app(shared_state: SharedState) -> dash.Dash:
     app.index_string = (
         "<!DOCTYPE html><html><head>"
         "{%metas%}<title>Emergenta</title>{%favicon%}{%css%}"
-        '<link rel="preconnect" href="https://fonts.googleapis.com">'
-        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+        '<link rel="preconnect" href="https://fonts.loli.net">'
+        '<link rel="preconnect" href="https://gstatic.loli.net" crossorigin>'
         "<style>" + _CSS + "</style>"
         "</head><body>"
         "{%app_entry%}<footer>{%config%}{%scripts%}{%renderer%}</footer>"
